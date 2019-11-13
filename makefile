@@ -1,4 +1,4 @@
-COMMON_CXXFLAGS := -std=c++14 -Wall -Wextra -Iinclude
+COMMON_CXXFLAGS := -std=c++14 -Wall -Wextra -Isrc -Iinclude
 CXX := arm-none-eabi-g++
 CXXFLAGS := $(COMMON_CXXFLAGS) -O3 -flto
 TEST_CXX := g++
@@ -10,8 +10,8 @@ object_dir := $(TARGET_DIR)/obj
 test_dep_dir := $(dep_dir)/test
 test_object_dir := $(object_dir)/test
 
-objects := $(addprefix $(object_dir)/,main.o)
-test_objects := $(addprefix $(test_object_dir)/,test.o)
+objects := $(addprefix $(object_dir)/,main.o parser.o buffer.o)
+test_objects := $(addprefix $(test_object_dir)/,test.o parser.o buffer.o)
 
 
 build: $(TARGET_DIR)/firmware.elf
