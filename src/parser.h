@@ -55,6 +55,8 @@ enum class Instruction : uint8_t {
 
 class Error {
   public:
+    Error() : code(0) {}
+
     explicit Error(uint8_t code) : code(code) {}
 
     bool is_ok() const {
@@ -65,9 +67,15 @@ class Error {
         return (this->code & 0b01000000) != 0;
     }
 
+    friend bool operator==(const Error& lhs, const Error& rhs);
+
   private:
     uint8_t code;
 };
+
+inline bool operator==(const Error& lhs, const Error& rhs) {
+    return lhs.code == rhs.code;
+}
 
 class Packet {
   public:
@@ -83,10 +91,18 @@ class Receiver {
 
     bool wait_for_header(Cursor& cursor);
 
+    /// Reads at most `num_bytes` from `cursor` into `dst` and returns the number of bytes read.
+    /// Bytes are counted and returned after stuffing has been removed. All read bytes (including
+    /// stuffing are used to update the crc checksum).
     size_t read(Cursor& cursor, uint8_t* dst, size_t num_bytes);
 
+    /// Like `Receiver::read` but uses and returns the number of bytes before stuffing has been
+    /// removed. The bytes written to `dst` have all stuffing removed and the length of `dst` is
+    /// written to `dst_len`.
     size_t read_raw_num_bytes(Cursor& cursor, uint8_t* dst, size_t* dst_len, size_t raw_num_bytes);
 
+    /// Reads `num_bytes` from `cursor` into `dst` and returns the number of bytes read. Does not
+    /// remove stuffing. __Does not update the crc checksum__.
     size_t read_raw(Cursor& cursor, uint8_t* dst, size_t num_bytes);
 
     uint16_t current_crc() const;
@@ -127,12 +143,26 @@ class ParseResult {
         return ParseResult(Result::NeedMoreData);
     }
 
+    friend bool operator==(const ParseResult& lhs, const ParseResult& rhs);
+
   private:
     ParseResult(Result result) : result(result) {}
 
     Result result;
     ParseError error;
 };
+
+inline bool operator==(const ParseResult& lhs, const ParseResult& rhs) {
+    if (lhs.result != rhs.result) {
+        return false;
+    }
+
+    if (lhs.result == ParseResult::Result::Error) {
+        return lhs.error == rhs.error;
+    } else {
+        return true;
+    }
+}
 
 enum class ParserState {
     Header,

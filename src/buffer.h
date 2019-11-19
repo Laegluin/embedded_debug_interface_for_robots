@@ -3,7 +3,10 @@
 
 #include <algorithm>
 #include <exception>
+#include <initializer_list>
+#include <iostream>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 class OutOfRange : public std::exception {
@@ -20,16 +23,27 @@ class FixedByteVector {
   public:
     FixedByteVector() : size_(0) {}
 
+    FixedByteVector(std::initializer_list<uint8_t> init) : size_(0) {
+        this->push_slice(init.begin(), init.size());
+    }
+
     bool try_push(uint8_t byte) {
         return try_push_slice(&byte, 1);
     }
 
-    bool try_push_slice(uint8_t* bytes, size_t len) {
+    void push_slice(const uint8_t* bytes, size_t len) {
+        if (!try_push_slice(bytes, len)) {
+            throw OutOfRange();
+        }
+    }
+
+    bool try_push_slice(const uint8_t* bytes, size_t len) {
         if (this->size() + len > CAPACITY) {
             return false;
         }
 
         memcpy(this->buf + this->size(), bytes, len);
+        this->size_ += len;
         return true;
     }
 
@@ -75,6 +89,41 @@ class FixedByteVector {
     uint8_t buf[CAPACITY];
     size_t size_;
 };
+
+template <size_t LHS_CAP, size_t RHS_CAP>
+inline bool operator==(const FixedByteVector<LHS_CAP>& lhs, const FixedByteVector<RHS_CAP>& rhs) {
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < lhs.size(); i++) {
+        if (lhs[i] != rhs[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+template <size_t CAPACITY>
+inline std::ostream& operator<<(std::ostream& out, const FixedByteVector<CAPACITY>& vector) {
+    out << "[";
+
+    if (vector.size() > 0) {
+        char str_buf[5];
+
+        for (size_t i = 0; i < vector.size() - 1; i++) {
+            sprintf(str_buf, "0x%02x", vector[i]);
+            out << str_buf << ", ";
+        }
+
+        sprintf(str_buf, "0x%02x", vector[vector.size() - 1]);
+        out << str_buf;
+    }
+
+    out << "]";
+    return out;
+}
 
 class Cursor {
   public:
