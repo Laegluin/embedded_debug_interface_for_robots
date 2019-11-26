@@ -4,8 +4,8 @@
 /// See <http://emanual.robotis.com/docs/en/dxl/protocol2/>
 
 #include "buffer.h"
+#include "option.h"
 #include <array>
-#include <option.h>
 #include <stddef.h>
 #include <stdint.h>
 
