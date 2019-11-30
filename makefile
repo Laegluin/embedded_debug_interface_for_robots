@@ -10,8 +10,8 @@ object_dir := $(TARGET_DIR)/obj
 test_dep_dir := $(dep_dir)/test
 test_object_dir := $(object_dir)/test
 
-objects := $(addprefix $(object_dir)/,main.o parser.o buffer.o)
-test_objects := $(addprefix $(test_object_dir)/,test.o parser.o buffer.o)
+objects := $(addprefix $(object_dir)/,main.o parser.o buffer.o control_table.o mx64_control_table.o mx106_control_table.o)
+test_objects := $(addprefix $(test_object_dir)/,test.o parser.o buffer.o control_table.o mx64_control_table.o mx106_control_table.o)
 
 
 build: $(TARGET_DIR)/firmware.elf

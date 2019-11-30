@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "endian_convert.h"
 #include <array>
 
 const std::array<uint8_t, 3> HEADER = {0xff, 0xff, 0xfd};
@@ -153,10 +154,6 @@ Option<Instruction> try_instruction_from_byte(uint8_t instr) {
     }
 }
 
-uint16_t uint16_le(uint8_t bytes[2]) {
-    return (bytes[1] << 8) + bytes[0];
-}
-
 ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
     // fallthrough is intended here; we only need the switch to resume when we reenter after getting
     // new data
@@ -196,7 +193,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             // no stuffing can happen for it or the (possibly) following error
 
             // clang-format off
-            this->raw_remaining_data_len = uint16_le(buf.data() + 1) 
+            this->raw_remaining_data_len = uint16_from_le(buf.data() + 1) 
                 - 1                                                     // instruction field
                 - (packet.instruction == Instruction::Status)           // error field (only present on status packets)
                 - 2;                                                    // crc checksum
@@ -256,7 +253,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
                 return ParseResult::need_more_data();
             }
 
-            auto checksum = uint16_le(this->buf.data());
+            auto checksum = uint16_from_le(this->buf.data());
             this->buf.clear();
             this->current_state = ParserState::Header;
 
