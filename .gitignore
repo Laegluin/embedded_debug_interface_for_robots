@@ -1,2 +1,3 @@
 /target/
 /.vscode/
+/vendor/stm32_cube_f7_1.15.0
