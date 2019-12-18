@@ -20,13 +20,37 @@ class Option {
 
     Option(const T& val) : some(val), is_some_(true) {}
 
+    Option(const Option<T>& src) : is_some_(src.is_some_) {
+        if (src.is_some()) {
+            this->some = src.some;
+        }
+    }
+
     ~Option() {
         if (this->is_some_) {
             this->some.~T();
         }
     }
 
+    Option<T>& operator=(const Option<T>& rhs) {
+        this->is_some_ = rhs.is_some_;
+
+        if (this->is_some()) {
+            this->some = rhs.some;
+        }
+
+        return *this;
+    }
+
     const T& unwrap() const {
+        if (this->is_none()) {
+            throw NoneUnwrap();
+        }
+
+        return this->some;
+    }
+
+    T& unwrap() {
         if (this->is_none()) {
             throw NoneUnwrap();
         }

@@ -268,6 +268,170 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
     }
 }
 
+InstructionPacket::InstructionPacket(const InstructionPacket& src) : instruction(src.instruction) {
+    switch (src.instruction) {
+        case Instruction::Ping: {
+            break;
+        }
+        case Instruction::Read: {
+            this->read = src.read;
+            break;
+        }
+        case Instruction::Write: {
+            this->write = src.write;
+            break;
+        }
+        case Instruction::RegWrite: {
+            this->reg_write = src.reg_write;
+            break;
+        }
+        case Instruction::Action: {
+            break;
+        }
+        case Instruction::FactoryReset: {
+            this->factory_reset = src.factory_reset;
+            break;
+        }
+        case Instruction::Reboot: {
+            break;
+        }
+        case Instruction::Clear: {
+            break;
+        }
+        case Instruction::Status: {
+            break;
+        }
+        case Instruction::SyncRead: {
+            this->sync_read = src.sync_read;
+            break;
+        }
+        case Instruction::SyncWrite: {
+            this->sync_write = src.sync_write;
+            break;
+        }
+        case Instruction::BulkRead: {
+            this->bulk_read = src.bulk_read;
+            break;
+        }
+        case Instruction::BulkWrite: {
+            this->bulk_write = src.bulk_write;
+            break;
+        }
+    }
+}
+
+InstructionPacket::~InstructionPacket() {
+    switch (this->instruction) {
+        case Instruction::Ping: {
+            break;
+        }
+        case Instruction::Read: {
+            this->read.~ReadArgs();
+            break;
+        }
+        case Instruction::Write: {
+            this->write.~WriteArgs();
+            break;
+        }
+        case Instruction::RegWrite: {
+            this->reg_write.~WriteArgs();
+            break;
+        }
+        case Instruction::Action: {
+            break;
+        }
+        case Instruction::FactoryReset: {
+            this->factory_reset.~FactoryResetArgs();
+            break;
+        }
+        case Instruction::Reboot: {
+            break;
+        }
+        case Instruction::Clear: {
+            break;
+        }
+        case Instruction::Status: {
+            break;
+        }
+        case Instruction::SyncRead: {
+            this->sync_read.~SyncReadArgs();
+            break;
+        }
+        case Instruction::SyncWrite: {
+            this->sync_write.~SyncWriteArgs();
+            break;
+        }
+        case Instruction::BulkRead: {
+            this->bulk_read.~BulkReadArgs();
+            break;
+        }
+        case Instruction::BulkWrite: {
+            this->bulk_write.~BulkWriteArgs();
+            break;
+        }
+    }
+}
+
+InstructionPacket& InstructionPacket::operator=(const InstructionPacket& rhs) {
+    switch (rhs.instruction) {
+        case Instruction::Ping: {
+            break;
+        }
+        case Instruction::Read: {
+            this->read = rhs.read;
+            break;
+        }
+        case Instruction::Write: {
+            this->write = rhs.write;
+            break;
+        }
+        case Instruction::RegWrite: {
+            this->reg_write = rhs.reg_write;
+            break;
+        }
+        case Instruction::Action: {
+            break;
+        }
+        case Instruction::FactoryReset: {
+            this->factory_reset = rhs.factory_reset;
+            break;
+        }
+        case Instruction::Reboot: {
+            break;
+        }
+        case Instruction::Clear: {
+            break;
+        }
+        case Instruction::Status: {
+            break;
+        }
+        case Instruction::SyncRead: {
+            this->sync_read = rhs.sync_read;
+            break;
+        }
+        case Instruction::SyncWrite: {
+            this->sync_write = rhs.sync_write;
+            break;
+        }
+        case Instruction::BulkRead: {
+            this->bulk_read = rhs.bulk_read;
+            break;
+        }
+        case Instruction::BulkWrite: {
+            this->bulk_write = rhs.bulk_write;
+            break;
+        }
+    }
+
+    return *this;
+}
+
+InstrPacketParseResult
+    parse_instruction_packet(const Packet& packet, InstructionPacket& instr_packet) {
+    // TODO: parse packet
+    return InstrPacketParseResult::Ok;
+}
+
 #ifdef TEST
 #include "catch2/catch.hpp"
 

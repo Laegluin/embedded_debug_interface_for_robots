@@ -8,6 +8,7 @@
 #include <array>
 #include <stddef.h>
 #include <stdint.h>
+#include <vector>
 
 const uint32_t PACKET_BUF_LEN = 256;
 
@@ -25,6 +26,8 @@ class DeviceId {
 
     friend bool operator==(const DeviceId& lhs, const DeviceId& rhs);
 
+    friend class std::hash<DeviceId>;
+
   private:
     uint8_t id;
 };
@@ -35,6 +38,15 @@ inline bool operator==(const DeviceId& lhs, const DeviceId& rhs) {
 
 inline bool operator!=(const DeviceId& lhs, const DeviceId& rhs) {
     return !(lhs == rhs);
+}
+
+namespace std {
+    template <>
+    struct hash<DeviceId> {
+        size_t operator()(const DeviceId& device_id) const {
+            return std::hash<uint8_t>()(device_id.id);
+        }
+    };
 }
 
 enum class Instruction : uint8_t {
@@ -77,8 +89,7 @@ inline bool operator==(const Error& lhs, const Error& rhs) {
     return lhs.code == rhs.code;
 }
 
-class Packet {
-  public:
+struct Packet {
     DeviceId device_id;
     Instruction instruction;
     Error error;
@@ -164,6 +175,10 @@ inline bool operator==(const ParseResult& lhs, const ParseResult& rhs) {
     }
 }
 
+inline bool operator!=(const ParseResult& lhs, const ParseResult& rhs) {
+    return !(lhs == rhs);
+}
+
 enum class ParserState {
     Header,
     CommonFields,
@@ -186,5 +201,79 @@ class Parser {
     ParserState current_state;
     size_t raw_remaining_data_len;
 };
+
+struct ReadArgs {
+    DeviceId device_id;
+    uint16_t start_addr;
+    uint16_t len;
+};
+
+struct WriteArgs {
+    DeviceId device_id;
+    uint16_t start_addr;
+    std::vector<uint8_t> data;
+};
+
+enum class FactoryReset : uint8_t {
+    ResetAll = 0xff,
+    ResetAllExceptId = 0x01,
+    ResetAllExceptIdAndBaudRate = 0x02,
+};
+
+struct FactoryResetArgs {
+    DeviceId device_id;
+    FactoryReset reset;
+};
+
+struct SyncReadArgs {
+    std::vector<DeviceId> devices;
+    uint16_t start_addr;
+    uint16_t len;
+};
+
+struct SyncWriteArgs {
+    std::vector<DeviceId> devices;
+    uint16_t start_addr;
+    uint16_t len;
+    std::vector<uint8_t> data;
+};
+
+struct BulkReadArgs {
+    std::vector<ReadArgs> reads;
+};
+
+struct BulkWriteArgs {
+    std::vector<WriteArgs> writes;
+};
+
+struct InstructionPacket {
+    InstructionPacket() : instruction(Instruction::Ping) {}
+
+    InstructionPacket(const InstructionPacket& src);
+
+    ~InstructionPacket();
+
+    InstructionPacket& operator=(const InstructionPacket& rhs);
+
+    Instruction instruction;
+    union {
+        ReadArgs read;
+        WriteArgs write;
+        WriteArgs reg_write;
+        FactoryResetArgs factory_reset;
+        SyncReadArgs sync_read;
+        SyncWriteArgs sync_write;
+        BulkReadArgs bulk_read;
+        BulkWriteArgs bulk_write;
+    };
+};
+
+enum class InstrPacketParseResult {
+    Ok,
+    Error,
+};
+
+InstrPacketParseResult
+    parse_instruction_packet(const Packet& packet, InstructionPacket& instr_packet);
 
 #endif
