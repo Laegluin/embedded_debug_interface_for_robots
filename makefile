@@ -2,8 +2,8 @@ STM_CUBE_DIR := vendor/stm32_cube_f7_1.15.0
 
 INCLUDE_FLAGS := \
 	-Isrc \
+	-Isrc/config \
 	-Iinclude \
-	-Iconfig \
 	-I$(STM_CUBE_DIR)/Middlewares/ST/STemWin/inc \
 	-I$(STM_CUBE_DIR)/Drivers/STM32F7xx_HAL_Driver/Inc \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Device/ST/STM32F7xx/Include \
@@ -84,7 +84,7 @@ $(object_dir)/%.o: src/%.s | $(object_dir)
 $(object_dir)/%.o: src/%.cpp | $(object_dir) $(dep_dir)
 	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
-$(object_dir)/%.o: config/%.c | $(object_dir) $(dep_dir)
+$(object_dir)/%.o: src/config/%.c | $(object_dir) $(dep_dir)
 	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # vendor objects
