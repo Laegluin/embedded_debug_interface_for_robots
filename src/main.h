@@ -1,7 +1,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include "stm32f7xx.h"
+#include <stm32f7xx.h>
 
 const uint32_t SDRAM_TIMEOUT = 0xffff;
 const uint32_t UART_BAUDRATE = 4000000;
