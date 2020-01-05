@@ -12,7 +12,10 @@ static void init_led(void);
 static void init_usb(void);
 
 int main(void) {
-    HAL_Init();
+    if (HAL_Init() != HAL_OK) {
+        on_error();
+    }
+
     init_clocks();
     HAL_NVIC_EnableIRQ(SysTick_IRQn);
     SCB_EnableICache();
@@ -86,11 +89,21 @@ static void init_led(void) {
 }
 
 static void init_usb(void) {
-    USBD_Init(&USB_DEVICE, &USB_DESCRIPTOR, 0);
-    USBD_RegisterClass(&USB_DEVICE, USBD_CDC_CLASS);
-    USBD_CDC_RegisterInterface(&USB_DEVICE, &USB_CDC_INTERFACE);
+    if (USBD_Init(&USB_DEVICE, &USB_DESCRIPTOR, 0) != USBD_OK) {
+        on_error();
+    }
 
-    USBD_Start(&USB_DEVICE);
+    if (USBD_RegisterClass(&USB_DEVICE, USBD_CDC_CLASS) != USBD_OK) {
+        on_error();
+    }
+
+    if (USBD_CDC_RegisterInterface(&USB_DEVICE, &USB_CDC_INTERFACE) != USBD_OK) {
+        on_error();
+    }
+
+    if (USBD_Start(&USB_DEVICE) != USBD_OK) {
+        on_error();
+    }
 }
 
 __attribute__((noinline)) void on_error(void) {
