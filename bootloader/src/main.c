@@ -3,12 +3,14 @@
 #include "usb_interface.h"
 #include <stm32f7xx.h>
 #include <stm32f7xx_hal_pwr_ex.h>
+#include <stm32f7508_discovery_qspi.h>
 #include <usbd_cdc.h>
 
 USBD_HandleTypeDef USB_DEVICE;
 
 static void init_clocks(void);
 static void init_led(void);
+static void init_qspi(void);
 static void init_usb(void);
 
 int main(void) {
@@ -22,6 +24,7 @@ int main(void) {
     SCB_EnableDCache();
 
     init_led();
+    init_qspi();
     init_usb();
 
     while (1) {
@@ -86,6 +89,12 @@ static void init_led(void) {
 
     HAL_GPIO_Init(GPIOI, &gpio_config);
     HAL_GPIO_WritePin(GPIOI, GPIO_PIN_1, GPIO_PIN_SET);
+}
+
+static void init_qspi(void) {
+    if (BSP_QSPI_Init() != QSPI_OK) {
+        on_error();
+    }
 }
 
 static void init_usb(void) {

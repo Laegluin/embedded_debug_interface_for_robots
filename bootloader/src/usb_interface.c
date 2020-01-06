@@ -1,12 +1,10 @@
 #include "usb_interface.h"
 #include "main.h"
-#include <string.h>
+#include "protocol.h"
 #include <usbd_core.h>
 
-#define NUM_SEND_BUFS 4
-static uint8_t SEND_BUFS[NUM_SEND_BUFS][USB_MAX_EP0_SIZE];
-static size_t CURRENT_SEND_BUF_IDX = 0;
-
+static Bootloader BOOTLOADER;
+static uint8_t SEND_BUF[USB_MAX_EP0_SIZE];
 static uint8_t RECV_BUF[USB_MAX_EP0_SIZE];
 
 static int8_t cdc_init(void);
@@ -20,7 +18,9 @@ USBD_CDC_ItfTypeDef USB_CDC_INTERFACE = {.Init = cdc_init,
                                          .Receive = cdc_receive};
 
 static int8_t cdc_init(void) {
-    USBD_CDC_SetTxBuffer(&USB_DEVICE, SEND_BUFS[CURRENT_SEND_BUF_IDX], 0);
+    bootloader_init(&BOOTLOADER);
+
+    USBD_CDC_SetTxBuffer(&USB_DEVICE, SEND_BUF, 0);
     USBD_CDC_SetRxBuffer(&USB_DEVICE, RECV_BUF);
 
     return USBD_OK;
@@ -52,21 +52,12 @@ static int8_t cdc_control(uint8_t cmd, uint8_t* buf, uint16_t len) {
 
 static int8_t cdc_receive(uint8_t* buf, uint32_t* len) {
     USBD_CDC_SetRxBuffer(&USB_DEVICE, buf);
-    USBD_CDC_ReceivePacket(&USB_DEVICE);
 
-    USBD_CDC_HandleTypeDef* cdc_handle = (USBD_CDC_HandleTypeDef*) USB_DEVICE.pClassData;
-
-    if (cdc_handle->TxState != 0) {
-        if (CURRENT_SEND_BUF_IDX + 1 >= NUM_SEND_BUFS) {
-            return USBD_BUSY;
-        }
-
-        CURRENT_SEND_BUF_IDX++;
-    } else {
-        CURRENT_SEND_BUF_IDX = 0;
+    USBD_StatusTypeDef result = USBD_CDC_ReceivePacket(&USB_DEVICE);
+    if (result != USBD_OK) {
+        return result;
     }
 
-    memcpy(SEND_BUFS[CURRENT_SEND_BUF_IDX], buf, *len);
-    USBD_CDC_SetTxBuffer(&USB_DEVICE, SEND_BUFS[CURRENT_SEND_BUF_IDX], *len);
-    return USBD_CDC_TransmitPacket(&USB_DEVICE);
+    bootloader_process(&BOOTLOADER, buf, *len);
+    return USBD_OK;
 }

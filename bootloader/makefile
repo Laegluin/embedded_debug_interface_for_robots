@@ -26,6 +26,7 @@ object_dir := $(TARGET_DIR)/obj
 objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.c src/config/*.c)))))
 
 vendor_objects := $(addprefix $(object_dir)/,\
+	stm32f7xx_ll_usb.o \
 	stm32f7xx_hal.o \
 	stm32f7xx_hal_cortex.o \
 	stm32f7xx_hal_gpio.o \
@@ -35,7 +36,9 @@ vendor_objects := $(addprefix $(object_dir)/,\
 	stm32f7xx_hal_rcc_ex.o \
 	stm32f7xx_hal_pcd.o \
 	stm32f7xx_hal_pcd_ex.o \
-	stm32f7xx_ll_usb.o \
+	stm32f7xx_hal_dma.o \
+	stm32f7xx_hal_qspi.o \
+	stm32f7508_discovery_qspi.o \
 	usbd_core.o \
 	usbd_ctlreq.o \
 	usbd_ioreq.o \
