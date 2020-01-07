@@ -1,12 +1,17 @@
 #include "main.h"
 #include "usb_descriptor.h"
 #include "usb_interface.h"
+#include <stm32f7508_discovery_qspi.h>
 #include <stm32f7xx.h>
 #include <stm32f7xx_hal_pwr_ex.h>
-#include <stm32f7508_discovery_qspi.h>
 #include <usbd_cdc.h>
 
 USBD_HandleTypeDef USB_DEVICE;
+
+LedState LED_STATE = {
+    .last_toggle_tick = 0,
+    .mode = LED_DISABLED,
+};
 
 static void init_clocks(void);
 static void init_led(void);
@@ -24,6 +29,7 @@ int main(void) {
     SCB_EnableDCache();
 
     init_led();
+    set_led_mode(LED_BLINKING);
     init_qspi();
     init_usb();
 
@@ -88,7 +94,42 @@ static void init_led(void) {
     gpio_config.Speed = GPIO_SPEED_HIGH;
 
     HAL_GPIO_Init(GPIOI, &gpio_config);
-    HAL_GPIO_WritePin(GPIOI, GPIO_PIN_1, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOI, GPIO_PIN_1, GPIO_PIN_RESET);
+}
+
+void on_led_tick(void) {
+    if (LED_STATE.mode != LED_BLINKING) {
+        return;
+    }
+
+    uint32_t now = HAL_GetTick();
+
+    // toggle every 500 ms
+    if (now - LED_STATE.last_toggle_tick > 500) {
+        HAL_GPIO_TogglePin(GPIOI, GPIO_PIN_1);
+    }
+}
+
+void set_led_mode(LedMode mode) {
+    switch (mode) {
+        case LED_ENABLED: {
+            LED_STATE.mode = LED_ENABLED;
+            HAL_GPIO_WritePin(GPIOI, GPIO_PIN_1, GPIO_PIN_SET);
+            break;
+        }
+        case LED_BLINKING: {
+            HAL_GPIO_WritePin(GPIOI, GPIO_PIN_1, GPIO_PIN_SET);
+            LED_STATE.last_toggle_tick = HAL_GetTick();
+            LED_STATE.mode = LED_BLINKING;
+            break;
+        }
+        case LED_DISABLED: {
+            LED_STATE.mode = LED_DISABLED;
+            HAL_GPIO_WritePin(GPIOI, GPIO_PIN_1, GPIO_PIN_RESET);
+            break;
+        }
+        default: { break; }
+    }
 }
 
 static void init_qspi(void) {
@@ -116,6 +157,8 @@ static void init_usb(void) {
 }
 
 __attribute__((noinline)) void on_error(void) {
+    set_led_mode(LED_DISABLED);
+    
     while (1) {
         // spin
     }

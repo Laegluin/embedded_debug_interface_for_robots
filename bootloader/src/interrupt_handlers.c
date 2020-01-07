@@ -1,8 +1,10 @@
+#include "main.h"
 #include "usbd_conf.h"
 #include <stm32f7xx.h>
 
 void SysTick_Handler(void) {
     HAL_IncTick();
+    on_led_tick();
 }
 
 void OTG_FS_IRQHandler(void) {

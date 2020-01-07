@@ -1,4 +1,7 @@
 #include "protocol.h"
+#include "main.h"
+#include "start_user_app.h"
+#include "usb_interface.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -45,7 +48,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                         break;
                     }
                     default: {
-                        // unknown command
+                        usb_serial_print("error: unknown command\n");
                         self->state = WAITING;
                         break;
                     }
@@ -55,6 +58,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
             }
             case IMAGE_LEN: {
                 if (is_start(self->last_byte, byte)) {
+                    usb_serial_print("error: unexpected start byte");
                     self->state = COMMAND;
                     break;
                 }
@@ -74,6 +78,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
 
                 // nothing to write if the payload is empty
                 if (self->image_len == 0) {
+                    usb_serial_print("ok: nothing to flash because payload is empty");
                     self->state = WAITING;
                 } else {
                     self->state = FLASHING;
@@ -83,6 +88,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
             }
             case FLASHING: {
                 if (is_start(self->last_byte, byte)) {
+                    usb_serial_print("error: unexpected start byte");
                     self->state = COMMAND;
                     break;
                 }
@@ -101,6 +107,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                 }
 
                 if (remaining_bytes(self) == 0) {
+                    usb_serial_print("ok: flashed image successfully");
                     self->state = WAITING;
                 }
 
@@ -149,5 +156,19 @@ static void flash_block(uintptr_t start_addr, uint8_t* buf, size_t buf_len) {
 }
 
 static void exec_run(void) {
-    // TODO: impl
+    // stop usb driver
+    if (USBD_DeInit(&USB_DEVICE) != USBD_OK) {
+        on_error();
+    }
+
+    // disable all interrupts (user application may not handle them)
+    HAL_NVIC_DisableIRQ(OTG_FS_WKUP_IRQn);
+    HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
+    HAL_NVIC_DisableIRQ(SysTick_IRQn);
+
+    usb_serial_print("ok: starting user program");
+    set_led_mode(LED_ENABLED);
+
+    // configure stack and jump to user application
+    start_user_app();
 }

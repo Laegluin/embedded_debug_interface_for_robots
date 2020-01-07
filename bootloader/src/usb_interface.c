@@ -1,10 +1,10 @@
 #include "usb_interface.h"
 #include "main.h"
 #include "protocol.h"
+#include <string.h>
 #include <usbd_core.h>
 
 static Bootloader BOOTLOADER;
-static uint8_t SEND_BUF[USB_MAX_EP0_SIZE];
 static uint8_t RECV_BUF[USB_MAX_EP0_SIZE];
 
 static int8_t cdc_init(void);
@@ -20,7 +20,7 @@ USBD_CDC_ItfTypeDef USB_CDC_INTERFACE = {.Init = cdc_init,
 static int8_t cdc_init(void) {
     bootloader_init(&BOOTLOADER);
 
-    USBD_CDC_SetTxBuffer(&USB_DEVICE, SEND_BUF, 0);
+    USBD_CDC_SetTxBuffer(&USB_DEVICE, NULL, 0);
     USBD_CDC_SetRxBuffer(&USB_DEVICE, RECV_BUF);
 
     return USBD_OK;
@@ -60,4 +60,12 @@ static int8_t cdc_receive(uint8_t* buf, uint32_t* len) {
 
     bootloader_process(&BOOTLOADER, buf, *len);
     return USBD_OK;
+}
+
+void usb_serial_print(char* msg) {
+    USBD_CDC_SetTxBuffer(&USB_DEVICE, (uint8_t*) msg, strlen(msg));
+
+    if (USBD_CDC_TransmitPacket(&USB_DEVICE) != USBD_OK) {
+        on_error();
+    }
 }
