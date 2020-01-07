@@ -58,7 +58,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
             }
             case IMAGE_LEN: {
                 if (is_start(self->last_byte, byte)) {
-                    usb_serial_print("error: unexpected start byte");
+                    usb_serial_print("error: unexpected start byte\n");
                     self->state = COMMAND;
                     break;
                 }
@@ -78,7 +78,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
 
                 // nothing to write if the payload is empty
                 if (self->image_len == 0) {
-                    usb_serial_print("ok: nothing to flash because payload is empty");
+                    usb_serial_print("ok: nothing to flash because payload is empty\n");
                     self->state = WAITING;
                 } else {
                     self->state = FLASHING;
@@ -88,7 +88,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
             }
             case FLASHING: {
                 if (is_start(self->last_byte, byte)) {
-                    usb_serial_print("error: unexpected start byte");
+                    usb_serial_print("error: unexpected start byte\n");
                     self->state = COMMAND;
                     break;
                 }
@@ -107,7 +107,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                 }
 
                 if (remaining_bytes(self) == 0) {
-                    usb_serial_print("ok: flashed image successfully");
+                    usb_serial_print("ok: flashed image successfully\n");
                     self->state = WAITING;
                 }
 
@@ -166,7 +166,7 @@ static void exec_run(void) {
     HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
     HAL_NVIC_DisableIRQ(SysTick_IRQn);
 
-    usb_serial_print("ok: starting user program");
+    usb_serial_print("ok: starting user program\n");
     set_led_mode(LED_ENABLED);
 
     // configure stack and jump to user application
