@@ -14,7 +14,7 @@ CXX := arm-none-eabi-g++
 CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -Wall -Wextra -O3
 LDFLAGS := $(ARCH_FLAGS) -flto
 TEST_CXX := g++
-TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -Wall -Wextra -DTEST
+TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra -DTEST
 TEST_LDFLAGS :=
 
 TARGET_DIR := target
