@@ -107,6 +107,7 @@ void on_led_tick(void) {
     // toggle every 500 ms
     if (now - LED_STATE.last_toggle_tick > 500) {
         HAL_GPIO_TogglePin(GPIOI, GPIO_PIN_1);
+        LED_STATE.last_toggle_tick = now;
     }
 }
 
@@ -158,7 +159,7 @@ static void init_usb(void) {
 
 __attribute__((noinline)) void on_error(void) {
     set_led_mode(LED_DISABLED);
-    
+
     while (1) {
         // spin
     }
