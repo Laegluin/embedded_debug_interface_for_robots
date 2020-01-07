@@ -49,6 +49,8 @@ void run(const std::vector<UART_HandleTypeDef*>& uarts) {
         connections.push_back(Connection(uart));
     }
 
+    GUI_DispString("Hello world");
+
     while (true) {
         GUI_Exec();
 
