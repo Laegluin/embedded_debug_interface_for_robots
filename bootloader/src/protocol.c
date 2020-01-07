@@ -166,6 +166,11 @@ static void exec_run(void) {
     HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
     HAL_NVIC_DisableIRQ(SysTick_IRQn);
 
+    // enable mmap mode for running the user code
+    if (BSP_QSPI_EnableMemoryMappedMode() != QSPI_OK) {
+        on_error();
+    }
+
     usb_serial_print("ok: starting user program\n");
     set_led_mode(LED_ENABLED);
 
