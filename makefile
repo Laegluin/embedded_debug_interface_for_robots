@@ -1,4 +1,10 @@
+SERIAL ?= /dev/ttyS4
+
 STM_CUBE_DIR := vendor/stm32_cube_f7_1.15.0
+
+CXX := arm-none-eabi-g++
+SIZE := arm-none-eabi-size
+OBJCOPY := arm-none-eabi-objcopy
 
 INCLUDE_FLAGS := \
 	-Isrc \
@@ -10,7 +16,6 @@ INCLUDE_FLAGS := \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Core/Include
 
 ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
-CXX := arm-none-eabi-g++
 CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -Wall -Wextra -O3
 LDFLAGS := $(ARCH_FLAGS) -flto
 TEST_CXX := g++
@@ -59,7 +64,13 @@ vendor_objects := $(addprefix $(object_dir)/,\
 archives := $(STM_CUBE_DIR)/Middlewares/ST/STemWin/Lib/STemWin_CM7_wc32_ot_ARGB.a
 
 
-build: $(TARGET_DIR)/firmware.elf
+build: $(TARGET_DIR)/firmware.bin
+
+flash: $(TARGET_DIR)/firmware.bin
+	./flash.sh $(SERIAL) $<
+
+start:
+	./start.sh $(SERIAL)
 
 test: $(TARGET_DIR)/test
 	@$(abspath $<)
@@ -95,11 +106,15 @@ $(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/STM32F7xx_HAL_Driver/Src/%.c | $(obje
 $(TARGET_DIR)/firmware.elf: $(objects) $(vendor_objects) $(archives) src/linker.ld | $(TARGET_DIR)
 	@$(CXX) $(LDFLAGS) --specs=rdimon.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o %.a,$^)
 
+$(TARGET_DIR)/firmware.bin: $(TARGET_DIR)/firmware.elf
+	@$(SIZE) $<
+	@$(OBJCOPY) -O binary $< $@
+
 # test binary
 $(TARGET_DIR)/test: $(test_objects) | $(TARGET_DIR)
 	@$(TEST_CXX) $(TEST_LDFLAGS) -o $@ $^
 
-.PHONY: build test format clean
+.PHONY: build flash start test format clean
 
 
 include $(wildcard $(dep_dir)/*.d)
