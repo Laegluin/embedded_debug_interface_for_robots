@@ -20,5 +20,5 @@ LEN_HEX_STR=$(printf "%.8x" "$LEN_STR")
 LEN_HEX_STR_LE=$(hex_be_to_le "$LEN_HEX_STR")
 
 printf '\xff\x00' > "$SERIAL"
-echo -n "0x$LEN_HEX_STR_LE" | xxd -r > "$SERIAL"
-cp "$IMAGE_PATH" "$SERIAL"
+echo -n "0x$LEN_HEX_STR_LE" | xxd -r | sed 's/\xff/\xff\xff/g' >> "$SERIAL"
+cat "$IMAGE_PATH" | sed 's/\xff/\xff\xff/g' >> "$SERIAL"
