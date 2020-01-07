@@ -62,42 +62,42 @@ archives := $(STM_CUBE_DIR)/Middlewares/ST/STemWin/Lib/STemWin_CM7_wc32_ot_ARGB.
 build: $(TARGET_DIR)/firmware.elf
 
 test: $(TARGET_DIR)/test
-	$(abspath $<)
+	@$(abspath $<)
 
 format:
-	clang-format -style=file -i src/*.cpp src/*.h
+	@clang-format -style=file -i src/*.cpp src/*.h
 
 clean:
-	rm -rf $(TARGET_DIR)
+	@rm -rf $(TARGET_DIR)
 
 $(TARGET_DIR) $(object_dir) $(test_object_dir) $(dep_dir) $(test_dep_dir):
-	mkdir -p $@
+	@mkdir -p $@
 
 # test objects
 $(test_object_dir)/%.o: src/%.cpp | $(test_object_dir) $(test_dep_dir)
-	$(TEST_CXX) $(TEST_CXXFLAGS) -MT $@ -MD -MP -MF $(test_dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+	@$(TEST_CXX) $(TEST_CXXFLAGS) -MT $@ -MD -MP -MF $(test_dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # project objects
 $(object_dir)/%.o: src/%.s | $(object_dir)
-	$(CXX) -c $< -o $@
+	@$(CXX) -c $< -o $@
 
 $(object_dir)/%.o: src/%.cpp | $(object_dir) $(dep_dir)
-	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 $(object_dir)/%.o: src/config/%.c | $(object_dir) $(dep_dir)
-	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # vendor objects
 $(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/STM32F7xx_HAL_Driver/Src/%.c | $(object_dir) $(dep_dir)
-	$(CXX) $(CXXFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # actual binary for mcu
 $(TARGET_DIR)/firmware.elf: $(objects) $(vendor_objects) $(archives) src/linker.ld | $(TARGET_DIR)
-	$(CXX) $(LDFLAGS) --specs=rdimon.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o %.a,$^)
+	@$(CXX) $(LDFLAGS) --specs=rdimon.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o %.a,$^)
 
 # test binary
 $(TARGET_DIR)/test: $(test_objects) | $(TARGET_DIR)
-	$(TEST_CXX) $(TEST_LDFLAGS) -o $@ $^
+	@$(TEST_CXX) $(TEST_LDFLAGS) -o $@ $^
 
 .PHONY: build test format clean
 
