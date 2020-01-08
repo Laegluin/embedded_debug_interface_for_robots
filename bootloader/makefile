@@ -59,7 +59,7 @@ $(TARGET_DIR) $(object_dir) $(dep_dir):
 
 # project
 $(object_dir)/%.o: src/%.s | $(object_dir)
-	@$(CC) -c $< -o $@
+	@$(CC) -g -c $< -o $@
 
 $(object_dir)/%.o: src/%.c | $(object_dir) $(dep_dir)
 	@$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@

@@ -14,7 +14,6 @@
 
 static bool is_start(const Bootloader* self, uint8_t byte);
 static bool is_stuffing(const Bootloader* self, uint8_t byte);
-static size_t remaining_bytes(const Bootloader* self);
 static void push_last_byte(Bootloader* self, uint8_t byte);
 static void flash_block(uintptr_t start_addr, uint8_t* buf, size_t buf_len);
 static void exec_run(void);
@@ -46,9 +45,11 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                     case COMMAND_FLASH: {
                         // read next field for flash command
                         self->state = IMAGE_LEN;
+                        self->buf_len = 0;
                         break;
                     }
                     case COMMAND_RUN: {
+                        usb_serial_print("ok: starting user program\n");
                         exec_run();
                         break;
                     }
@@ -78,6 +79,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                 if (self->buf_len >= 4) {
                     memcpy(&self->image_len, self->buf, 4);
                     self->buf_len = 0;
+                    self->remaining_image_bytes = self->image_len;
                     self->next_block_addr = QSPI_START_ADDR;
                     self->state = FLASHING;
                 }
@@ -102,14 +104,15 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
 
                 self->buf[self->buf_len] = byte;
                 self->buf_len++;
+                self->remaining_image_bytes--;
 
-                if (self->buf_len == QSPI_BLOCK_LEN || remaining_bytes(self) == 0) {
+                if (self->buf_len == QSPI_BLOCK_LEN || self->remaining_image_bytes == 0) {
                     flash_block(self->next_block_addr, self->buf, self->buf_len);
                     self->next_block_addr += QSPI_BLOCK_LEN;
                     self->buf_len = 0;
                 }
 
-                if (remaining_bytes(self) == 0) {
+                if (self->remaining_image_bytes == 0) {
                     usb_serial_print("ok: flashed image successfully\n");
                     self->state = WAITING;
                 }
@@ -134,13 +137,6 @@ static bool is_start(const Bootloader* self, uint8_t byte) {
 static bool is_stuffing(const Bootloader* self, uint8_t byte) {
     return self->last_bytes[0] != START_BYTE && self->last_bytes[1] == START_BYTE
         && byte == START_BYTE;
-}
-
-static size_t remaining_bytes(const Bootloader* self) {
-    size_t written_bytes = self->next_block_addr - QSPI_START_ADDR;
-    size_t buffered_bytes = self->buf_len;
-
-    return self->image_len - (written_bytes + buffered_bytes);
 }
 
 static void push_last_byte(Bootloader* self, uint8_t byte) {
@@ -181,7 +177,6 @@ static void exec_run(void) {
         on_error();
     }
 
-    usb_serial_print("ok: starting user program\n");
     set_led_mode(LED_ENABLED);
 
     // configure stack and jump to user application

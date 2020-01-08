@@ -18,6 +18,7 @@ typedef struct Bootloader {
     uint8_t buf[QSPI_BLOCK_LEN];
     size_t buf_len;
     uint32_t image_len;
+    uint32_t remaining_image_bytes;
     uintptr_t next_block_addr;
 } Bootloader;
 

@@ -10,7 +10,7 @@ start_user_app:
     cmp r0, #0              @ 0 means processor is running in thread mode
     beq in_thread_mode      @ exit handler mode if necessary
         ldr r0, =in_thread_mode     @ load continuation address for when we're in thread mode
-        str r0, [sp, 0x18]          @ overwrite the saved pc for exception return
+        str r0, [sp, #0x18]         @ overwrite the saved pc for exception return
         ldr lr, exception_return    @ write magic value that forces return to thread mode
         bx lr                       @ return to thread mode
     in_thread_mode:
