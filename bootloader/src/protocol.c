@@ -179,6 +179,9 @@ static void exec_run(void) {
 
     set_led_mode(LED_ENABLED);
 
+    SCB_DisableICache();
+    SCB_DisableDCache();
+
     // configure stack and jump to user application
     start_user_app();
 }
