@@ -90,7 +90,7 @@ $(test_object_dir)/%.o: src/%.cpp | $(test_object_dir) $(test_dep_dir)
 
 # project objects
 $(object_dir)/%.o: src/%.s | $(object_dir)
-	@$(CXX) -c $< -o $@
+	@$(CXX) -g -c $< -o $@
 
 $(object_dir)/%.o: src/%.cpp | $(object_dir) $(dep_dir)
 	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
