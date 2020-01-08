@@ -64,8 +64,5 @@ static int8_t cdc_receive(uint8_t* buf, uint32_t* len) {
 
 void usb_serial_print(char* msg) {
     USBD_CDC_SetTxBuffer(&USB_DEVICE, (uint8_t*) msg, strlen(msg));
-
-    if (USBD_CDC_TransmitPacket(&USB_DEVICE) != USBD_OK) {
-        on_error();
-    }
+    USBD_CDC_TransmitPacket(&USB_DEVICE);
 }

@@ -67,10 +67,10 @@ archives := $(STM_CUBE_DIR)/Middlewares/ST/STemWin/Lib/STemWin_CM7_wc32_ot_ARGB.
 build: $(TARGET_DIR)/firmware.bin
 
 flash: $(TARGET_DIR)/firmware.bin
-	./flash.sh $(SERIAL) $<
+	@./flash.sh $(SERIAL) $<
 
 start:
-	./start.sh $(SERIAL)
+	@./start.sh $(SERIAL)
 
 test: $(TARGET_DIR)/test
 	@$(abspath $<)

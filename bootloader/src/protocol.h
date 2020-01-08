@@ -14,7 +14,7 @@ typedef enum BootloaderState {
 
 typedef struct Bootloader {
     BootloaderState state;
-    uint8_t last_byte;
+    uint8_t last_bytes[2];
     uint8_t buf[QSPI_BLOCK_LEN];
     size_t buf_len;
     uint32_t image_len;

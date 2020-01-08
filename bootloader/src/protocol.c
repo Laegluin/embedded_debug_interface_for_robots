@@ -12,17 +12,22 @@
 #define COMMAND_FLASH 0x00
 #define COMMAND_RUN 0x01
 
+static bool is_start(const Bootloader* self, uint8_t byte);
+static bool is_stuffing(const Bootloader* self, uint8_t byte);
 static size_t remaining_bytes(const Bootloader* self);
-static bool is_start(uint8_t last_byte, uint8_t byte);
-static bool is_stuffing(uint8_t last_byte, uint8_t byte);
+static void push_last_byte(Bootloader* self, uint8_t byte);
 static void flash_block(uintptr_t start_addr, uint8_t* buf, size_t buf_len);
 static void exec_run(void);
 
 void bootloader_init(Bootloader* self) {
     self->state = WAITING;
-    self->last_byte = 0;
+    self->last_bytes[0] = START_BYTE;
+    self->last_bytes[1] = START_BYTE;
     self->buf_len = 0;
 }
+
+#pragma GCC push_options
+#pragma GCC optimize("O0")
 
 void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
     for (size_t i = 0; i < buf_len; i++) {
@@ -30,7 +35,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
 
         switch (self->state) {
             case WAITING: {
-                if (is_start(self->last_byte, byte)) {
+                if (is_start(self, byte)) {
                     self->state = COMMAND;
                 }
 
@@ -57,13 +62,13 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                 break;
             }
             case IMAGE_LEN: {
-                if (is_start(self->last_byte, byte)) {
+                if (is_start(self, byte)) {
                     usb_serial_print("error: unexpected start byte\n");
                     self->state = COMMAND;
                     break;
                 }
 
-                if (is_stuffing(self->last_byte, byte)) {
+                if (is_stuffing(self, byte)) {
                     break;
                 }
 
@@ -74,26 +79,24 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                     memcpy(&self->image_len, self->buf, 4);
                     self->buf_len = 0;
                     self->next_block_addr = QSPI_START_ADDR;
-                }
-
-                // nothing to write if the payload is empty
-                if (self->image_len == 0) {
-                    usb_serial_print("ok: nothing to flash because payload is empty\n");
-                    self->state = WAITING;
-                } else {
                     self->state = FLASHING;
                 }
 
                 break;
             }
             case FLASHING: {
-                if (is_start(self->last_byte, byte)) {
+                // nothing to write if the payload is empty
+                if (self->image_len == 0) {
+                    usb_serial_print("ok: nothing to flash because payload is empty\n");
+                }
+
+                if (is_start(self, byte)) {
                     usb_serial_print("error: unexpected start byte\n");
                     self->state = COMMAND;
                     break;
                 }
 
-                if (is_stuffing(self->last_byte, byte)) {
+                if (is_stuffing(self, byte)) {
                     break;
                 }
 
@@ -119,8 +122,18 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
             }
         }
 
-        self->last_byte = byte;
+        push_last_byte(self, byte);
     }
+}
+
+static bool is_start(const Bootloader* self, uint8_t byte) {
+    return self->last_bytes[0] != START_BYTE && self->last_bytes[1] == START_BYTE
+        && byte != START_BYTE;
+}
+
+static bool is_stuffing(const Bootloader* self, uint8_t byte) {
+    return self->last_bytes[0] != START_BYTE && self->last_bytes[1] == START_BYTE
+        && byte == START_BYTE;
 }
 
 static size_t remaining_bytes(const Bootloader* self) {
@@ -130,12 +143,9 @@ static size_t remaining_bytes(const Bootloader* self) {
     return self->image_len - (written_bytes + buffered_bytes);
 }
 
-static bool is_start(uint8_t last_byte, uint8_t byte) {
-    return byte == START_BYTE && last_byte != START_BYTE;
-}
-
-static bool is_stuffing(uint8_t last_byte, uint8_t byte) {
-    return byte == START_BYTE && last_byte == START_BYTE;
+static void push_last_byte(Bootloader* self, uint8_t byte) {
+    self->last_bytes[0] = self->last_bytes[1];
+    self->last_bytes[1] = byte;
 }
 
 /// Writes `buf` to the block starting at `start_addr`. The write may be smaller than
@@ -177,3 +187,5 @@ static void exec_run(void) {
     // configure stack and jump to user application
     start_user_app();
 }
+
+#pragma GCC pop_options
