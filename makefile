@@ -66,11 +66,11 @@ archives := $(STM_CUBE_DIR)/Middlewares/ST/STemWin/Lib/STemWin_CM7_wc32_ot_ARGB.
 
 build: $(TARGET_DIR)/firmware.bin
 
-flash: $(TARGET_DIR)/firmware.bin
-	@./flash.sh $(SERIAL) $<
+flash: $(TARGET_DIR)/firmware.bin $(TARGET_DIR)/send_command
+	@$(abspath $(TARGET_DIR)/send_command) flash $(SERIAL) $<
 
-start:
-	@./start.sh $(SERIAL)
+start: $(TARGET_DIR)/send_command
+	@$(abspath $(TARGET_DIR)/send_command) start $(SERIAL)
 
 test: $(TARGET_DIR)/test
 	@$(abspath $<)
@@ -113,6 +113,9 @@ $(TARGET_DIR)/firmware.bin: $(TARGET_DIR)/firmware.elf
 # test binary
 $(TARGET_DIR)/test: $(test_objects) | $(TARGET_DIR)
 	@$(TEST_CXX) $(TEST_LDFLAGS) -o $@ $^
+
+$(TARGET_DIR)/send_command: send_command.c
+	@gcc -std=c99 -Wall -Wextra -O3 $< -o $@
 
 .PHONY: build flash start test format clean
 
