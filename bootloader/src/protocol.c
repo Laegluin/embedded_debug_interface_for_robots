@@ -25,9 +25,6 @@ void bootloader_init(Bootloader* self) {
     self->buf_len = 0;
 }
 
-#pragma GCC push_options
-#pragma GCC optimize("O0")
-
 void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
     for (size_t i = 0; i < buf_len; i++) {
         uint8_t byte = buf[i];
@@ -185,5 +182,3 @@ static void exec_run(void) {
     // configure stack and jump to user application
     start_user_app();
 }
-
-#pragma GCC pop_options
