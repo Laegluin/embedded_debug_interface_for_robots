@@ -1,3 +1,5 @@
+#define _DEFAULT_SOURCE
+
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -5,13 +7,14 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <sys/termios.h>
 #include <sys/types.h>
+#include <termios.h>
 #include <unistd.h>
 
 void flash(const char* serial_path, const char* image_path);
 void write_stuffed(int fd, const uint8_t* buf, size_t len, uint8_t* last_byte);
 void start(const char* serial_path);
+void init_serial(int fd);
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -54,10 +57,7 @@ void flash(const char* serial_path, const char* image_path) {
         exit(1);
     }
 
-    if (ioctl(serial_fd, TCFLSH, TCIFLUSH) == -1) {
-        fprintf(stderr, "error: cannot flush receive buffer for `%s`\n", serial_path);
-        exit(1);
-    }
+    init_serial(serial_fd);
 
     struct stat info;
     if (fstat(image_fd, &info) == -1) {
@@ -128,14 +128,31 @@ void start(const char* serial_path) {
         exit(1);
     }
 
-    if (ioctl(serial_fd, TCFLSH, TCIFLUSH) == -1) {
-        fprintf(stderr, "error: cannot flush receive buffer for `%s`\n", serial_path);
-        exit(1);
-    }
+    init_serial(serial_fd);
 
     uint8_t command[] = {0x00, 0xff, 0x00, 0x01};
     if (write(serial_fd, command, sizeof(command)) == -1) {
         fprintf(stderr, "error: cannot write command to `%s`\n", serial_path);
+        exit(1);
+    }
+}
+
+void init_serial(int fd) {
+    if (tcflush(fd, TCIFLUSH) == -1) {
+        fprintf(stderr, "error: cannot flush receive buffer\n");
+        exit(1);
+    }
+
+    struct termios term;
+    if (tcgetattr(fd, &term) == -1) {
+        fprintf(stderr, "cannot get serial device attributes\n");
+        exit(1);
+    }
+
+    cfmakeraw(&term);
+
+    if (tcsetattr(fd, TCSANOW, &term) == -1) {
+        fprintf(stderr, "cannot enable raw mode\n");
         exit(1);
     }
 }
