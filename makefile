@@ -16,7 +16,7 @@ INCLUDE_FLAGS := \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Core/Include
 
 ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
-CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -Wall -Wextra -O3
+CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -g -Wall -Wextra -O3
 LDFLAGS := $(ARCH_FLAGS) -flto
 TEST_CXX := g++
 TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra -DTEST
@@ -30,8 +30,8 @@ test_object_dir := $(object_dir)/test
 
 
 objects := $(addprefix $(object_dir)/,\
-	startup.o \
 	init.o \
+	startup.o \
 	system_stm32f7xx.o \
 	main.o \
 	app.o \
@@ -104,7 +104,7 @@ $(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/STM32F7xx_HAL_Driver/Src/%.c | $(obje
 
 # actual binary for mcu
 $(TARGET_DIR)/firmware.elf: $(objects) $(vendor_objects) $(archives) src/linker.ld | $(TARGET_DIR)
-	@$(CXX) $(LDFLAGS) --specs=rdimon.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o %.a,$^)
+	@$(CXX) $(LDFLAGS) --specs=nosys.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o %.a,$^)
 
 $(TARGET_DIR)/firmware.bin: $(TARGET_DIR)/firmware.elf
 	@$(SIZE) $<

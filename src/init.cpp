@@ -1,7 +1,7 @@
 #include "main.h"
 #include <stm32f7xx.h>
 
-void init() {
+extern "C" void init() {
     // enable FPU (full access)
     SCB->CPACR |= ((3UL << 10 * 2) | (3UL << 11 * 2));
 

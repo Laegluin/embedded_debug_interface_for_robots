@@ -82,7 +82,7 @@ $(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class
 
 # bootloader binary
 $(TARGET_DIR)/bootloader.elf: $(objects) $(vendor_objects) src/linker.ld | $(TARGET_DIR)
-	@$(CC) $(LDFLAGS) --specs=rdimon.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o,$^)
+	@$(CC) $(LDFLAGS) --specs=nosys.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o,$^)
 
 $(TARGET_DIR)/bootloader.bin: $(TARGET_DIR)/bootloader.elf
 	@$(SIZE) $<

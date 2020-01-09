@@ -105,9 +105,10 @@ LoopFillZerobss:
   cmp  r2, r3
   bcc  FillZerobss
 
-  bl  _init
-  bl  _start
-  bx  lr    
+  bl init
+  bl __libc_init_array
+  bl main
+  bx lr    
 .size  Reset_Handler, .-Reset_Handler
 
 /**
