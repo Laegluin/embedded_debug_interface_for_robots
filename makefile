@@ -72,6 +72,10 @@ flash: $(TARGET_DIR)/firmware.bin $(TARGET_DIR)/send_command
 start: $(TARGET_DIR)/send_command
 	@$(abspath $(TARGET_DIR)/send_command) start $(SERIAL)
 
+run: $(TARGET_DIR)/firmware.bin $(TARGET_DIR)/send_command
+	@$(abspath $(TARGET_DIR)/send_command) flash $(SERIAL) $<
+	@$(abspath $(TARGET_DIR)/send_command) start $(SERIAL)
+
 test: $(TARGET_DIR)/test
 	@$(abspath $<)
 
@@ -117,7 +121,7 @@ $(TARGET_DIR)/test: $(test_objects) | $(TARGET_DIR)
 $(TARGET_DIR)/send_command: send_command.c
 	@gcc -std=c99 -Wall -Wextra -O3 $< -o $@
 
-.PHONY: build flash start test format clean
+.PHONY: build flash start run test format clean
 
 
 include $(wildcard $(dep_dir)/*.d)
