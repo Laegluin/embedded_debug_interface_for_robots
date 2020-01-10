@@ -16,6 +16,7 @@ LedState LED_STATE = {
 static void init_clocks(void);
 static void init_led(void);
 static void init_qspi(void);
+static void init_button(void);
 static void init_usb(void);
 
 int main(void) {
@@ -31,6 +32,7 @@ int main(void) {
     init_led();
     set_led_mode(LED_BLINKING);
     init_qspi();
+    init_button();
     init_usb();
 
     while (1) {
@@ -137,6 +139,20 @@ static void init_qspi(void) {
     if (BSP_QSPI_Init() != QSPI_OK) {
         on_error();
     }
+}
+
+static void init_button(void) {
+    __HAL_RCC_GPIOI_CLK_ENABLE();
+
+    GPIO_InitTypeDef gpio_config;
+    gpio_config.Pin = GPIO_PIN_11;
+    gpio_config.Pull = GPIO_NOPULL;
+    gpio_config.Speed = GPIO_SPEED_FAST;
+    gpio_config.Mode = GPIO_MODE_IT_FALLING;
+    HAL_GPIO_Init(GPIOI, &gpio_config);
+
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0x0f, 0x00);
+    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
 static void init_usb(void) {

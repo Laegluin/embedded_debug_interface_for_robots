@@ -26,4 +26,6 @@ void bootloader_init(Bootloader* self);
 
 void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len);
 
+void exec_start_command(void);
+
 #endif

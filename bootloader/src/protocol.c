@@ -16,7 +16,6 @@ static bool is_start(const Bootloader* self, uint8_t byte);
 static bool is_stuffing(const Bootloader* self, uint8_t byte);
 static void push_last_byte(Bootloader* self, uint8_t byte);
 static void flash_block(uintptr_t start_addr, uint8_t* buf, size_t buf_len);
-static void exec_run(void);
 
 void bootloader_init(Bootloader* self) {
     self->state = WAITING;
@@ -47,7 +46,7 @@ void bootloader_process(Bootloader* self, const uint8_t* buf, size_t buf_len) {
                     }
                     case COMMAND_RUN: {
                         usb_serial_print("ok: starting user program\n");
-                        exec_run();
+                        exec_start_command();
                         break;
                     }
                     default: {
@@ -158,13 +157,14 @@ static void flash_block(uintptr_t start_addr, uint8_t* buf, size_t buf_len) {
     }
 }
 
-static void exec_run(void) {
+void exec_start_command(void) {
     // stop usb driver
     if (USBD_DeInit(&USB_DEVICE) != USBD_OK) {
         on_error();
     }
 
     // disable all interrupts (user application may not handle them)
+    HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
     HAL_NVIC_DisableIRQ(OTG_FS_WKUP_IRQn);
     HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
     HAL_NVIC_DisableIRQ(SysTick_IRQn);
