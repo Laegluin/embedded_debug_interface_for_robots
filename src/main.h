@@ -12,4 +12,6 @@ const uintptr_t QSPI_START_ADDR = 0x90000000;
 
 HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef* handle);
 
+void on_error();
+
 #endif

@@ -176,6 +176,7 @@ void exec_start_command(void) {
 
     set_led_mode(LED_ENABLED);
 
+    // disable caches
     SCB_DisableICache();
     SCB_DisableDCache();
 

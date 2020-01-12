@@ -45,13 +45,13 @@ static void init_clocks(void) {
     RCC_OscInitTypeDef oscillator_config;
     oscillator_config.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     oscillator_config.HSEState = RCC_HSE_ON;
-    oscillator_config.HSIState = RCC_HSI_OFF;
     oscillator_config.PLL.PLLState = RCC_PLL_ON;
     oscillator_config.PLL.PLLSource = RCC_PLLSOURCE_HSE;
     oscillator_config.PLL.PLLM = 25;
     oscillator_config.PLL.PLLN = 432;
     oscillator_config.PLL.PLLP = RCC_PLLP_DIV2;
     oscillator_config.PLL.PLLQ = 9;
+
     if (HAL_RCC_OscConfig(&oscillator_config) != HAL_OK) {
         on_error();
     }
@@ -61,27 +61,35 @@ static void init_clocks(void) {
         on_error();
     }
 
-    // Select PLLSAI output as USB clock source
-    RCC_PeriphCLKInitTypeDef peripheral_clock_config;
-    peripheral_clock_config.PeriphClockSelection = RCC_PERIPHCLK_CLK48;
-    peripheral_clock_config.Clk48ClockSelection = RCC_CLK48SOURCE_PLLSAIP;
-    peripheral_clock_config.PLLSAI.PLLSAIN = 384;
-    peripheral_clock_config.PLLSAI.PLLSAIQ = 7;
-    peripheral_clock_config.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV8;
-    if (HAL_RCCEx_PeriphCLKConfig(&peripheral_clock_config) != HAL_OK) {
-        on_error();
-    }
-
     // Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 clocks dividers
     RCC_ClkInitTypeDef rcc_config;
     rcc_config.ClockType =
-        (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+        RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     rcc_config.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     rcc_config.AHBCLKDivider = RCC_SYSCLK_DIV1;
     rcc_config.APB1CLKDivider = RCC_HCLK_DIV4;
     rcc_config.APB2CLKDivider = RCC_HCLK_DIV2;
 
     if (HAL_RCC_ClockConfig(&rcc_config, FLASH_LATENCY_7) != HAL_OK) {
+        on_error();
+    }
+
+    // USB -> PLLQ
+    // LTDC -> PLLSAI1 (9.5 MHz)
+    // USART6 -> SYSCLK
+    RCC_PeriphCLKInitTypeDef peripheral_clock_config;
+    peripheral_clock_config.PeriphClockSelection =
+        RCC_PERIPHCLK_CLK48 | RCC_PERIPHCLK_LTDC | RCC_PERIPHCLK_USART6;
+    peripheral_clock_config.Clk48ClockSelection = RCC_CLK48SOURCE_PLL;
+    peripheral_clock_config.Usart6ClockSelection = RCC_USART6CLKSOURCE_SYSCLK;
+    peripheral_clock_config.PLLSAI.PLLSAIN = 152;
+    peripheral_clock_config.PLLSAI.PLLSAIR = 4;
+    peripheral_clock_config.PLLSAI.PLLSAIQ = 2;
+    peripheral_clock_config.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2;
+    peripheral_clock_config.PLLSAIDivQ = 1;
+    peripheral_clock_config.PLLSAIDivR = RCC_PLLSAIDIVR_4;
+
+    if (HAL_RCCEx_PeriphCLKConfig(&peripheral_clock_config) != HAL_OK) {
         on_error();
     }
 }

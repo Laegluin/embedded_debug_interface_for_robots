@@ -5,7 +5,6 @@
 #include <stm32f7xx_hal_rcc_ex.h>
 #include <vector>
 
-HAL_StatusTypeDef init_clocks();
 void init_mpu();
 HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef*);
 void reset_lcd_controller(LTDC_HandleTypeDef*);
@@ -14,18 +13,15 @@ HAL_StatusTypeDef init_uarts(std::vector<UART_HandleTypeDef*>&);
 
 int main() {
     {
+        SCB_EnableICache();
+        SCB_EnableDCache();
+        init_mpu();
+
         if (HAL_Init() != HAL_OK) {
             goto cleanup;
         }
 
-        if (init_clocks() != HAL_OK) {
-            goto cleanup;
-        }
-
         HAL_NVIC_EnableIRQ(SysTick_IRQn);
-        init_mpu();
-        SCB_EnableICache();
-        SCB_EnableDCache();
 
         if (init_sdram() != HAL_OK) {
             goto cleanup;
@@ -54,56 +50,6 @@ cleanup:
     return 0;
 }
 
-HAL_StatusTypeDef init_clocks() {
-    HAL_PWR_EnableBkUpAccess();
-    __HAL_RCC_PWR_CLK_ENABLE();
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-
-    RCC_OscInitTypeDef rcc_config = {};
-    rcc_config.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI;
-    rcc_config.HSIState = RCC_HSI_ON;
-    rcc_config.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    rcc_config.LSIState = RCC_LSI_ON;
-    rcc_config.PLL.PLLState = RCC_PLL_ON;
-    rcc_config.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-    rcc_config.PLL.PLLM = 16;
-    rcc_config.PLL.PLLN = 400;
-    rcc_config.PLL.PLLP = RCC_PLLP_DIV2;
-    rcc_config.PLL.PLLQ = 2;
-
-    auto result = HAL_RCC_OscConfig(&rcc_config);
-    if (result != HAL_OK) {
-        return result;
-    }
-
-    RCC_ClkInitTypeDef rcc_clock_config = {};
-    rcc_clock_config.ClockType =
-        RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    rcc_clock_config.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    rcc_clock_config.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    rcc_clock_config.APB1CLKDivider = RCC_HCLK_DIV4;
-    rcc_clock_config.APB2CLKDivider = RCC_HCLK_DIV2;
-
-    result = HAL_RCC_ClockConfig(&rcc_clock_config, FLASH_LATENCY_6);
-    if (result != HAL_OK) {
-        return result;
-    }
-
-    RCC_PeriphCLKInitTypeDef peripheral_clock_config = {};
-    peripheral_clock_config.PeriphClockSelection =
-        RCC_PERIPHCLK_LTDC | RCC_PERIPHCLK_RTC | RCC_PERIPHCLK_USART6;
-    peripheral_clock_config.PLLSAI.PLLSAIN = 190;
-    peripheral_clock_config.PLLSAI.PLLSAIR = 5;
-    peripheral_clock_config.PLLSAI.PLLSAIQ = 2;
-    peripheral_clock_config.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV4;
-    peripheral_clock_config.PLLSAIDivQ = 1;
-    peripheral_clock_config.PLLSAIDivR = RCC_PLLSAIDIVR_4;
-    peripheral_clock_config.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
-    peripheral_clock_config.Usart6ClockSelection = RCC_USART6CLKSOURCE_PCLK2;
-
-    return HAL_RCCEx_PeriphCLKConfig(&peripheral_clock_config);
-}
-
 void init_mpu() {
     HAL_MPU_Disable();
 
@@ -128,7 +74,7 @@ void init_mpu() {
     frame_buf_1.Number = MPU_REGION_NUMBER1;
     frame_buf_1.BaseAddress = FRAME_BUF_1_ADDR;
     frame_buf_1.Size = MPU_REGION_SIZE_512KB;
-    frame_buf_1.SubRegionDisable = true;
+    frame_buf_1.SubRegionDisable = false;
     frame_buf_1.TypeExtField = MPU_TEX_LEVEL1;  // normal
     frame_buf_1.AccessPermission = MPU_REGION_FULL_ACCESS;
     frame_buf_1.DisableExec = true;
@@ -143,7 +89,7 @@ void init_mpu() {
     frame_buf_2.Number = MPU_REGION_NUMBER2;
     frame_buf_2.BaseAddress = FRAME_BUF_2_ADDR;
     frame_buf_2.Size = MPU_REGION_SIZE_512KB;
-    frame_buf_2.SubRegionDisable = true;
+    frame_buf_2.SubRegionDisable = false;
     frame_buf_2.TypeExtField = MPU_TEX_LEVEL1;  // normal
     frame_buf_2.AccessPermission = MPU_REGION_FULL_ACCESS;
     frame_buf_2.DisableExec = true;
@@ -173,7 +119,7 @@ void init_mpu() {
     installed_qspi.Number = MPU_REGION_NUMBER4;
     installed_qspi.BaseAddress = QSPI_START_ADDR;
     installed_qspi.Size = MPU_REGION_SIZE_16MB;
-    installed_qspi.SubRegionDisable = true;
+    installed_qspi.SubRegionDisable = false;
     installed_qspi.TypeExtField = MPU_TEX_LEVEL1;  // normal
     installed_qspi.AccessPermission = MPU_REGION_PRIV_RO;
     installed_qspi.DisableExec = false;
@@ -474,6 +420,16 @@ HAL_StatusTypeDef init_uarts(std::vector<UART_HandleTypeDef*>& uarts) {
     return HAL_OK;
 }
 
+// TODO: separate file
 void SysTick_Handler() {
     HAL_IncTick();
+}
+
+__attribute__((noinline)) void on_error() {
+    GUI_Exit();
+    reset_lcd_controller(&LCD_CONTROLLER);
+
+    while (1) {
+        // spin
+    }
 }
