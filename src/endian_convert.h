@@ -2,25 +2,26 @@
 #define ENDIAN_CONVERT_H
 
 #include <stdint.h>
+#include <string.h>
 
 inline uint16_t uint16_from_le(const uint8_t bytes[2]) {
-    return (bytes[1] << 8) + bytes[0];
+    uint16_t val;
+    memcpy(&val, bytes, 2);
+    return val;
 }
 
 inline uint32_t uint32_from_le(const uint8_t bytes[4]) {
-    return (bytes[3] << 24) + (bytes[1] << 16) + (bytes[1] << 8) + bytes[0];
+    uint32_t val;
+    memcpy(&val, bytes, 4);
+    return val;
 }
 
 inline void uint16_to_le(uint8_t bytes[2], uint16_t val) {
-    bytes[0] = 0x00ff & val;
-    bytes[1] = 0xff00 & val;
+    memcpy(bytes, &val, 2);
 }
 
 inline void uint32_to_le(uint8_t bytes[4], uint32_t val) {
-    bytes[0] = 0x000000ff & val;
-    bytes[1] = 0x0000ff00 & val;
-    bytes[2] = 0x00ff0000 & val;
-    bytes[3] = 0xff000000 & val;
+    memcpy(bytes, &val, 4);
 }
 
 #endif
