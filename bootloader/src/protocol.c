@@ -169,16 +169,18 @@ void exec_start_command(void) {
     HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
     HAL_NVIC_DisableIRQ(SysTick_IRQn);
 
+    // remove any pending interrupts
+    HAL_NVIC_ClearPendingIRQ(EXTI15_10_IRQn);
+    HAL_NVIC_ClearPendingIRQ(OTG_FS_WKUP_IRQn);
+    HAL_NVIC_ClearPendingIRQ(OTG_FS_IRQn);
+    HAL_NVIC_ClearPendingIRQ(SysTick_IRQn);
+
     // enable mmap mode for running the user code
     if (BSP_QSPI_EnableMemoryMappedMode() != QSPI_OK) {
         on_error();
     }
 
     set_led_mode(LED_ENABLED);
-
-    // disable caches
-    SCB_DisableICache();
-    SCB_DisableDCache();
 
     // configure stack and jump to user application
     start_user_app();

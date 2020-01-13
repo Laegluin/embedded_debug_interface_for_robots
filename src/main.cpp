@@ -6,61 +6,45 @@
 #include <vector>
 
 void init_mpu();
-HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef*);
+void init_lcd_controller(LTDC_HandleTypeDef*);
 void reset_lcd_controller(LTDC_HandleTypeDef*);
-HAL_StatusTypeDef init_sdram();
-HAL_StatusTypeDef init_uarts(std::vector<UART_HandleTypeDef*>&);
+void init_sdram();
+void init_uarts(std::vector<UART_HandleTypeDef*>&);
+void init_gui();
 
 int main() {
-    {
-        SCB_EnableICache();
-        SCB_EnableDCache();
-        init_mpu();
+    std::vector<UART_HandleTypeDef*> uarts;
 
-        if (HAL_Init() != HAL_OK) {
-            goto cleanup;
-        }
-
-        HAL_NVIC_EnableIRQ(SysTick_IRQn);
-
-        if (init_sdram() != HAL_OK) {
-            goto cleanup;
-        }
-
-        std::vector<UART_HandleTypeDef*> uarts;
-        if (init_uarts(uarts) != HAL_OK) {
-            goto cleanup;
-        }
-
-        if (GUI_Init() != 0) {
-            goto cleanup;
-        }
-
-        try {
-            run(uarts);
-        } catch (...) {
-            goto cleanup;
-        }
+    if (HAL_Init() != HAL_OK) {
+        on_error();
     }
 
-cleanup:
-    GUI_Exit();
-    reset_lcd_controller(&LCD_CONTROLLER);
-    HAL_DeInit();
-    return 0;
+    init_mpu();
+    HAL_NVIC_EnableIRQ(SysTick_IRQn);
+
+    init_sdram();
+    init_uarts(uarts);
+    init_gui();
+
+    try {
+        run(uarts);
+    } catch (...) {
+        on_error();
+    }
 }
 
 void init_mpu() {
     HAL_MPU_Disable();
 
-    // complete sdram address space
+    // complete sdram address space:
+    // normal, read and write caching, shareable
     MPU_Region_InitTypeDef generic_sdram;
     generic_sdram.Enable = true;
     generic_sdram.Number = MPU_REGION_NUMBER0;
     generic_sdram.BaseAddress = SDRAM_START_ADDR;
     generic_sdram.Size = MPU_REGION_SIZE_8MB;
     generic_sdram.SubRegionDisable = false;
-    generic_sdram.TypeExtField = MPU_TEX_LEVEL1;  // normal
+    generic_sdram.TypeExtField = MPU_TEX_LEVEL1;
     generic_sdram.AccessPermission = MPU_REGION_FULL_ACCESS;
     generic_sdram.DisableExec = true;
     generic_sdram.IsShareable = true;
@@ -68,59 +52,63 @@ void init_mpu() {
     generic_sdram.IsBufferable = true;
     HAL_MPU_ConfigRegion(&generic_sdram);
 
-    // frame buffer 1 on sdram
+    // frame buffer 1 on sdram:
+    // normal, read caching and write-through, shareable
     MPU_Region_InitTypeDef frame_buf_1;
     frame_buf_1.Enable = true;
     frame_buf_1.Number = MPU_REGION_NUMBER1;
     frame_buf_1.BaseAddress = FRAME_BUF_1_ADDR;
     frame_buf_1.Size = MPU_REGION_SIZE_512KB;
     frame_buf_1.SubRegionDisable = false;
-    frame_buf_1.TypeExtField = MPU_TEX_LEVEL1;  // normal
+    frame_buf_1.TypeExtField = MPU_TEX_LEVEL0;
     frame_buf_1.AccessPermission = MPU_REGION_FULL_ACCESS;
     frame_buf_1.DisableExec = true;
     frame_buf_1.IsShareable = true;
-    frame_buf_1.IsCacheable = true;    // cache reads
-    frame_buf_1.IsBufferable = false;  // write-through
+    frame_buf_1.IsCacheable = true;
+    frame_buf_1.IsBufferable = false;
     HAL_MPU_ConfigRegion(&frame_buf_1);
 
     // frame buffer 2 on sdram
+    // normal, read caching and write-through, shareable
     MPU_Region_InitTypeDef frame_buf_2;
     frame_buf_2.Enable = true;
     frame_buf_2.Number = MPU_REGION_NUMBER2;
     frame_buf_2.BaseAddress = FRAME_BUF_2_ADDR;
     frame_buf_2.Size = MPU_REGION_SIZE_512KB;
     frame_buf_2.SubRegionDisable = false;
-    frame_buf_2.TypeExtField = MPU_TEX_LEVEL1;  // normal
+    frame_buf_2.TypeExtField = MPU_TEX_LEVEL0;
     frame_buf_2.AccessPermission = MPU_REGION_FULL_ACCESS;
     frame_buf_2.DisableExec = true;
     frame_buf_2.IsShareable = true;
-    frame_buf_2.IsCacheable = true;    // cache reads
-    frame_buf_2.IsBufferable = false;  // write-through
+    frame_buf_2.IsCacheable = true;
+    frame_buf_2.IsBufferable = false;
     HAL_MPU_ConfigRegion(&frame_buf_2);
 
-    // complete qspi address space
+    // complete qspi address space:
+    // strongly-ordered, shareable (not accessible)
     MPU_Region_InitTypeDef generic_qspi;
     generic_qspi.Enable = true;
     generic_qspi.Number = MPU_REGION_NUMBER3;
     generic_qspi.BaseAddress = QSPI_START_ADDR;
     generic_qspi.Size = MPU_REGION_SIZE_256MB;
     generic_qspi.SubRegionDisable = false;
-    generic_qspi.TypeExtField = MPU_TEX_LEVEL0;  // strongly-ordered
+    generic_qspi.TypeExtField = MPU_TEX_LEVEL0;
     generic_qspi.AccessPermission = MPU_REGION_NO_ACCESS;
     generic_qspi.DisableExec = true;
-    generic_qspi.IsShareable = false;
+    generic_qspi.IsShareable = true;
     generic_qspi.IsCacheable = false;
     generic_qspi.IsBufferable = false;
     HAL_MPU_ConfigRegion(&generic_qspi);
 
-    // installed qspi flash
+    // installed qspi flash:
+    // normal, read caching and write-through, not shareable (read-only)
     MPU_Region_InitTypeDef installed_qspi;
     installed_qspi.Enable = true;
     installed_qspi.Number = MPU_REGION_NUMBER4;
     installed_qspi.BaseAddress = QSPI_START_ADDR;
     installed_qspi.Size = MPU_REGION_SIZE_16MB;
     installed_qspi.SubRegionDisable = false;
-    installed_qspi.TypeExtField = MPU_TEX_LEVEL1;  // normal
+    installed_qspi.TypeExtField = MPU_TEX_LEVEL0;
     installed_qspi.AccessPermission = MPU_REGION_PRIV_RO;
     installed_qspi.DisableExec = false;
     installed_qspi.IsShareable = false;
@@ -134,7 +122,7 @@ void init_mpu() {
 /// Initializes the LCD controller. On success, `handle` is initialized.
 ///
 /// _Note:_ Is called from `LCDConf.c`.
-HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef* handle) {
+void init_lcd_controller(LTDC_HandleTypeDef* handle) {
     // GPIO and clock init
     __HAL_RCC_LTDC_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -147,40 +135,40 @@ HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef* handle) {
     gpio_config.Pin = GPIO_PIN_4;
     gpio_config.Mode = GPIO_MODE_AF_PP;
     gpio_config.Pull = GPIO_NOPULL;
-    gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
+    gpio_config.Speed = GPIO_SPEED_FAST;
     gpio_config.Alternate = GPIO_AF14_LTDC;
     HAL_GPIO_Init(GPIOE, &gpio_config);
 
-    gpio_config.Pin = GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15 | GPIO_PIN_11 | GPIO_PIN_8
-        | GPIO_PIN_10 | GPIO_PIN_7 | GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_3
-        | GPIO_PIN_2 | GPIO_PIN_0 | GPIO_PIN_1;
+    gpio_config.Pin = GPIO_PIN_12;
     gpio_config.Mode = GPIO_MODE_AF_PP;
-    gpio_config.Pull = GPIO_NOPULL;
-    gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
+    gpio_config.Alternate = GPIO_AF9_LTDC;
+    HAL_GPIO_Init(GPIOG, &gpio_config);
+
+    gpio_config.Pin = GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+    gpio_config.Mode = GPIO_MODE_AF_PP;
+    gpio_config.Alternate = GPIO_AF14_LTDC;
+    HAL_GPIO_Init(GPIOI, &gpio_config);
+
+    gpio_config.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5
+        | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11
+        | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+    gpio_config.Mode = GPIO_MODE_AF_PP;
     gpio_config.Alternate = GPIO_AF14_LTDC;
     HAL_GPIO_Init(GPIOJ, &gpio_config);
 
     gpio_config.Pin =
-        GPIO_PIN_7 | GPIO_PIN_6 | GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_0;
+        GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
     gpio_config.Mode = GPIO_MODE_AF_PP;
-    gpio_config.Pull = GPIO_NOPULL;
-    gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
     gpio_config.Alternate = GPIO_AF14_LTDC;
     HAL_GPIO_Init(GPIOK, &gpio_config);
 
-    gpio_config.Pin = GPIO_PIN_12;
-    gpio_config.Mode = GPIO_MODE_AF_PP;
-    gpio_config.Pull = GPIO_NOPULL;
-    gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
-    gpio_config.Alternate = GPIO_AF9_LTDC;
-    HAL_GPIO_Init(GPIOG, &gpio_config);
+    gpio_config.Pin = LCD_DISPLAY_ENABLE_PIN;
+    gpio_config.Mode = GPIO_MODE_OUTPUT_PP;
+    HAL_GPIO_Init(LCD_DISPLAY_ENABLE_PORT, &gpio_config);
 
-    gpio_config.Pin = GPIO_PIN_10 | GPIO_PIN_9 | GPIO_PIN_15 | GPIO_PIN_14;
-    gpio_config.Mode = GPIO_MODE_AF_PP;
-    gpio_config.Pull = GPIO_NOPULL;
-    gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
-    gpio_config.Alternate = GPIO_AF14_LTDC;
-    HAL_GPIO_Init(GPIOI, &gpio_config);
+    gpio_config.Pin = LCD_BACKLIGHT_ENABLE_PIN;
+    gpio_config.Mode = GPIO_MODE_OUTPUT_PP;
+    HAL_GPIO_Init(LCD_BACKLIGHT_ENABLE_PORT, &gpio_config);
 
     // lcd controller init
     handle->Instance = LTDC;
@@ -188,7 +176,7 @@ HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef* handle) {
     // make sure the controller is reset
     auto result = HAL_LTDC_DeInit(handle);
     if (result != HAL_OK) {
-        return result;
+        on_error();
     }
 
     handle->Init.HSPolarity = LTDC_HSPOLARITY_AL;
@@ -209,8 +197,12 @@ HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef* handle) {
 
     result = HAL_LTDC_Init(handle);
     if (result != HAL_OK) {
-        return result;
+        on_error();
     }
+
+    // enable display and backlight
+    HAL_GPIO_WritePin(LCD_DISPLAY_ENABLE_PORT, LCD_DISPLAY_ENABLE_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(LCD_BACKLIGHT_ENABLE_PORT, LCD_BACKLIGHT_ENABLE_PIN, GPIO_PIN_SET);
 
     LTDC_LayerCfgTypeDef layer_config;
     layer_config.WindowX0 = 0;
@@ -229,34 +221,43 @@ HAL_StatusTypeDef init_lcd_controller(LTDC_HandleTypeDef* handle) {
     layer_config.Backcolor.Green = 0;
     layer_config.Backcolor.Red = 0;
 
-    return HAL_LTDC_ConfigLayer(handle, &layer_config, 0);
+    result = HAL_LTDC_ConfigLayer(handle, &layer_config, 0);
+    if (result != HAL_OK) {
+        on_error();
+    }
 }
 
 void reset_lcd_controller(LTDC_HandleTypeDef* handle) {
     HAL_LTDC_DeInit(handle);
-
     __HAL_RCC_LTDC_CLK_DISABLE();
 
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_4);
+    HAL_GPIO_DeInit(GPIOG, GPIO_PIN_12);
+    HAL_GPIO_DeInit(GPIOI, GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15);
 
     HAL_GPIO_DeInit(
         GPIOJ,
-        GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15 | GPIO_PIN_11 | GPIO_PIN_8 | GPIO_PIN_10
-            | GPIO_PIN_7 | GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_3
-            | GPIO_PIN_2 | GPIO_PIN_0 | GPIO_PIN_1);
+        GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6
+            | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_13
+            | GPIO_PIN_14 | GPIO_PIN_15);
 
     HAL_GPIO_DeInit(
         GPIOK,
-        GPIO_PIN_7 | GPIO_PIN_6 | GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_0);
+        GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 
-    HAL_GPIO_DeInit(GPIOG, GPIO_PIN_12);
-
-    HAL_GPIO_DeInit(GPIOI, GPIO_PIN_10 | GPIO_PIN_9 | GPIO_PIN_15 | GPIO_PIN_14);
+    HAL_GPIO_DeInit(LCD_DISPLAY_ENABLE_PORT, LCD_DISPLAY_ENABLE_PIN);
+    HAL_GPIO_DeInit(LCD_BACKLIGHT_ENABLE_PORT, LCD_BACKLIGHT_ENABLE_PIN);
 }
 
-HAL_StatusTypeDef init_sdram() {
+void init_sdram() {
     // GPIO and clock init
     __HAL_RCC_FMC_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    __HAL_RCC_GPIOG_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_GPIOF_CLK_ENABLE();
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
 
     GPIO_InitTypeDef gpio_config;
     gpio_config.Pin = GPIO_PIN_1 | GPIO_PIN_0 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_11 | GPIO_PIN_14
@@ -329,7 +330,7 @@ HAL_StatusTypeDef init_sdram() {
 
     auto result = HAL_SDRAM_Init(&handle, &timing);
     if (result != HAL_OK) {
-        return result;
+        on_error();
     }
 
     // SDRAM initialization
@@ -341,7 +342,7 @@ HAL_StatusTypeDef init_sdram() {
 
     result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
     if (result != HAL_OK) {
-        return result;
+        on_error();
     }
 
     HAL_Delay(1);
@@ -353,7 +354,7 @@ HAL_StatusTypeDef init_sdram() {
 
     result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
     if (result != HAL_OK) {
-        return result;
+        on_error();
     }
 
     command.CommandMode = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
@@ -363,7 +364,7 @@ HAL_StatusTypeDef init_sdram() {
 
     result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
     if (result != HAL_OK) {
-        return result;
+        on_error();
     }
 
     const uint32_t MODEREG_BURST_LENGTH_1 = 0x00000000;
@@ -380,13 +381,16 @@ HAL_StatusTypeDef init_sdram() {
 
     result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
     if (result != HAL_OK) {
-        return result;
+        on_error();
     }
 
-    return HAL_SDRAM_ProgramRefreshRate(&handle, 1674);
+    result = HAL_SDRAM_ProgramRefreshRate(&handle, 1674);
+    if (result != HAL_OK) {
+        on_error();
+    }
 }
 
-HAL_StatusTypeDef init_uarts(std::vector<UART_HandleTypeDef*>& uarts) {
+void init_uarts(std::vector<UART_HandleTypeDef*>& uarts) {
     __HAL_RCC_USART6_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
 
@@ -399,11 +403,11 @@ HAL_StatusTypeDef init_uarts(std::vector<UART_HandleTypeDef*>& uarts) {
     HAL_GPIO_Init(GPIOC, &gpio_config);
 
     // the handle is leaked and never freed, which is fine since we need
-    // for the whole program run time anyway
+    // for the whole program runtime anyway
     UART_HandleTypeDef* handle = new UART_HandleTypeDef;
     handle->Instance = USART6;
     handle->Init.BaudRate = UART_BAUDRATE;
-    handle->Init.WordLength = UART_WORDLENGTH_8B;
+    handle->Init.WordLength = UART_WORDLENGTH_9B;
     handle->Init.StopBits = UART_STOPBITS_1;
     handle->Init.Parity = UART_PARITY_NONE;
     handle->Init.Mode = UART_MODE_RX;
@@ -411,18 +415,20 @@ HAL_StatusTypeDef init_uarts(std::vector<UART_HandleTypeDef*>& uarts) {
     handle->Init.OverSampling = UART_OVERSAMPLING_8;
     handle->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
 
-    auto result = HAL_UART_Init(handle);
-    if (result != HAL_OK) {
-        return result;
+    if (HAL_UART_Init(handle) != HAL_OK) {
+        on_error();
     }
 
     uarts.push_back(handle);
-    return HAL_OK;
 }
 
-// TODO: separate file
-void SysTick_Handler() {
-    HAL_IncTick();
+void init_gui() {
+    // CRC is required by the ST implementation
+    __HAL_RCC_CRC_CLK_ENABLE();
+
+    if (GUI_Init() != 0) {
+        on_error();
+    }
 }
 
 __attribute__((noinline)) void on_error() {

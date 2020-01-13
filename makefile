@@ -15,9 +15,10 @@ INCLUDE_FLAGS := \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Device/ST/STM32F7xx/Include \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Core/Include
 
+# TODO: enable opt and lto
 ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
-CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -g -Wall -Wextra -O3
-LDFLAGS := $(ARCH_FLAGS) -flto
+CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -g -Wall -Wextra -O0
+LDFLAGS := $(ARCH_FLAGS)
 TEST_CXX := g++
 TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra -DTEST
 TEST_LDFLAGS :=
@@ -30,9 +31,9 @@ test_object_dir := $(object_dir)/test
 
 
 objects := $(addprefix $(object_dir)/,\
-	init.o \
 	startup.o \
 	system_stm32f7xx.o \
+	interrupt_handlers.o \
 	main.o \
 	app.o \
 	GUI_X.o \

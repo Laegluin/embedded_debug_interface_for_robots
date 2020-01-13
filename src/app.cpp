@@ -49,6 +49,7 @@ void run(const std::vector<UART_HandleTypeDef*>& uarts) {
         connections.push_back(Connection(uart));
     }
 
+    GUI_SetColor(GUI_GREEN);
     GUI_DispString("Hello world");
 
     while (true) {

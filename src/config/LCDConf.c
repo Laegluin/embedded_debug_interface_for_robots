@@ -201,11 +201,8 @@ int LCD_X_DisplayDriver(unsigned LayerIndex, unsigned Cmd, void * pData) {
     // controller is not initialized by any external routine this needs
     // to be adapted by the customer...
     //
-    if (init_lcd_controller(&LCD_CONTROLLER) != HAL_OK) {
-      return -2;
-    } else {
-      return 0;
-    }
+    init_lcd_controller(&LCD_CONTROLLER);
+    return 0;
   }
   case LCD_X_SETVRAMADDR: {
     //
@@ -214,11 +211,15 @@ int LCD_X_DisplayDriver(unsigned LayerIndex, unsigned Cmd, void * pData) {
     //
     LCD_X_SETVRAMADDR_INFO* info = (LCD_X_SETVRAMADDR_INFO*)pData;
 
-    if (HAL_LTDC_SetAddress(&LCD_CONTROLLER, (uint32_t)info->pVRAM, 0) != HAL_OK) {
+    if (HAL_LTDC_SetAddress_NoReload(&LCD_CONTROLLER, (uint32_t)info->pVRAM, 0) != HAL_OK) {
       return -2;
-    } else {
-      return 0;
     }
+
+    if (HAL_LTDC_Reload(&LCD_CONTROLLER, LTDC_RELOAD_VERTICAL_BLANKING) != HAL_OK) {
+      return -2;
+    }
+
+    return 0;
   }
   case LCD_X_SHOWBUFFER: {
     //
@@ -227,11 +228,15 @@ int LCD_X_DisplayDriver(unsigned LayerIndex, unsigned Cmd, void * pData) {
     LCD_X_SHOWBUFFER_INFO* info = (LCD_X_SHOWBUFFER_INFO*)pData;
     intptr_t addr = info->Index == 0 ? FRAME_BUF_1_ADDR : FRAME_BUF_2_ADDR;
 
-    if (HAL_LTDC_SetAddress(&LCD_CONTROLLER, addr, 0) != HAL_OK) {
+    if (HAL_LTDC_SetAddress_NoReload(&LCD_CONTROLLER, addr, 0) != HAL_OK) {
       return -2;
-    } else {
-      return 0;
     }
+
+    if (HAL_LTDC_Reload(&LCD_CONTROLLER, LTDC_RELOAD_VERTICAL_BLANKING) != HAL_OK) {
+      return -2;
+    }
+
+    return 0;
   }
   case LCD_X_ON: {
     __HAL_LTDC_ENABLE(&LCD_CONTROLLER);

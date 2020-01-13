@@ -105,7 +105,6 @@ LoopFillZerobss:
   cmp  r2, r3
   bcc  FillZerobss
 
-  bl init
   bl __libc_init_array
   bl main
   bx lr    

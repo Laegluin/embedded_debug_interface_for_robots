@@ -23,6 +23,9 @@ start_user_app:
         ldr lr, exception_return    @ write magic value that forces return to thread mode
         bx lr                       @ return to thread mode
     in_thread_mode:
+    ldr r0, scb_vtor_addr       @ load address of VTOR register
+    ldr r1, stackpointer_addr   @ load user application image address
+    str r1, [r0]                @ relocate to user supplied isr vector
     ldr r0, stackpointer_addr   @ load stackpointer address for user application
     ldr r1, entry_point_addr    @ load entry point address for user application
     ldr sp, [r0]    @ set new stackpointer
@@ -37,6 +40,8 @@ start_user_app:
     .word 0xfffffe00
     exception_return:
     .word 0xfffffff9
+    scb_vtor_addr:
+    .word 0xe000ed08
     stackpointer_addr:
     .word 0x90000000
     entry_point_addr:
