@@ -20,7 +20,7 @@ ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
 CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -g -Wall -Wextra -O0
 LDFLAGS := $(ARCH_FLAGS)
 TEST_CXX := g++
-TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra -DTEST
+TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra
 TEST_LDFLAGS :=
 
 TARGET_DIR := target
@@ -30,23 +30,10 @@ test_dep_dir := $(dep_dir)/test
 test_object_dir := $(object_dir)/test
 
 
-objects := $(addprefix $(object_dir)/,\
-	startup.o \
-	system_stm32f7xx.o \
-	interrupt_handlers.o \
-	main.o \
-	app.o \
-	GUI_X.o \
-	LCDConf.o \
-	GUIConf.o \
-	parser.o \
-	buffer.o \
-	control_table.o \
-	mx64_control_table.o \
-	mx106_control_table.o \
-)
+objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.cpp src/config/*.c)))))
 
-test_objects := $(addprefix $(test_object_dir)/,test.o parser.o buffer.o control_table.o mx64_control_table.o mx106_control_table.o)
+test_objects := $(addprefix $(test_object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/test/*.cpp)))))
+test_objects += $(addprefix $(test_object_dir)/,$(filter-out main.o app.o interrupt_handlers.o,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.cpp)))))) 
 
 vendor_objects := $(addprefix $(object_dir)/,\
 	stm32f7xx_hal.o \
@@ -81,7 +68,7 @@ test: $(TARGET_DIR)/test
 	@$(abspath $<)
 
 format:
-	@clang-format -style=file -i src/*.cpp src/*.h
+	@clang-format -style=file -i src/*.cpp src/*.h src/test/*.cpp
 
 clean:
 	@rm -rf $(TARGET_DIR)
@@ -91,6 +78,9 @@ $(TARGET_DIR) $(object_dir) $(test_object_dir) $(dep_dir) $(test_dep_dir):
 
 # test objects
 $(test_object_dir)/%.o: src/%.cpp | $(test_object_dir) $(test_dep_dir)
+	@$(TEST_CXX) $(TEST_CXXFLAGS) -MT $@ -MD -MP -MF $(test_dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(test_object_dir)/%.o: src/test/%.cpp | $(test_object_dir) $(test_dep_dir)
 	@$(TEST_CXX) $(TEST_CXXFLAGS) -MT $@ -MD -MP -MF $(test_dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # project objects

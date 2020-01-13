@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <exception>
 #include <initializer_list>
+#include <iostream>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -104,9 +105,6 @@ inline bool operator==(const FixedByteVector<LHS_CAP>& lhs, const FixedByteVecto
     return true;
 }
 
-#ifdef TEST
-#include <iostream>
-
 template <size_t CAPACITY>
 inline std::ostream& operator<<(std::ostream& out, const FixedByteVector<CAPACITY>& vector) {
     out << "[";
@@ -126,7 +124,6 @@ inline std::ostream& operator<<(std::ostream& out, const FixedByteVector<CAPACIT
     out << "]";
     return out;
 }
-#endif
 
 class Cursor {
   public:
