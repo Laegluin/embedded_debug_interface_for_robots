@@ -5,21 +5,24 @@
 #include <stm32f7xx_hal_rcc_ex.h>
 #include <vector>
 
+DMA_HandleTypeDef DMA2_STREAM1;
+
 void init_mpu();
 void init_lcd_controller(LTDC_HandleTypeDef*);
 void reset_lcd_controller(LTDC_HandleTypeDef*);
 void init_sdram();
-void init_uarts(std::vector<UART_HandleTypeDef*>&);
+void init_uarts(std::vector<ReceiveBuf*>&);
 void init_gui();
 
 int main() {
-    std::vector<UART_HandleTypeDef*> uarts;
+    std::vector<ReceiveBuf*> uarts;
 
     if (HAL_Init() != HAL_OK) {
         on_error();
     }
 
     init_mpu();
+    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(SysTick_IRQn);
 
     init_sdram();
@@ -390,7 +393,31 @@ void init_sdram() {
     }
 }
 
-void init_uarts(std::vector<UART_HandleTypeDef*>& uarts) {
+void init_uarts(std::vector<ReceiveBuf*>& bufs) {
+    // init dma stream
+    __HAL_RCC_DMA2_CLK_ENABLE();
+    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+
+    DMA2_STREAM1.Instance = DMA2_Stream1;
+    DMA2_STREAM1.Init.Channel = DMA_CHANNEL_5;
+    DMA2_STREAM1.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    DMA2_STREAM1.Init.PeriphInc = DMA_PINC_DISABLE;
+    DMA2_STREAM1.Init.MemInc = DMA_MINC_ENABLE;
+    DMA2_STREAM1.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    DMA2_STREAM1.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    DMA2_STREAM1.Init.Mode = DMA_CIRCULAR;
+    DMA2_STREAM1.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    DMA2_STREAM1.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+    DMA2_STREAM1.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
+    DMA2_STREAM1.Init.MemBurst = DMA_MBURST_INC8;
+    DMA2_STREAM1.Init.PeriphBurst = DMA_PBURST_SINGLE;
+
+    if (HAL_DMA_Init(&DMA2_STREAM1) != HAL_OK) {
+        on_error();
+    }
+
+    // init uart
     __HAL_RCC_USART6_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
 
@@ -402,24 +429,48 @@ void init_uarts(std::vector<UART_HandleTypeDef*>& uarts) {
     gpio_config.Alternate = GPIO_AF8_USART6;
     HAL_GPIO_Init(GPIOC, &gpio_config);
 
-    // the handle is leaked and never freed, which is fine since we need
-    // for the whole program runtime anyway
-    UART_HandleTypeDef* handle = new UART_HandleTypeDef;
-    handle->Instance = USART6;
-    handle->Init.BaudRate = UART_BAUDRATE;
-    handle->Init.WordLength = UART_WORDLENGTH_9B;
-    handle->Init.StopBits = UART_STOPBITS_1;
-    handle->Init.Parity = UART_PARITY_NONE;
-    handle->Init.Mode = UART_MODE_RX;
-    handle->Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    handle->Init.OverSampling = UART_OVERSAMPLING_8;
-    handle->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+    static UART_HandleTypeDef uart;
+    uart.Instance = USART6;
+    uart.Init.BaudRate = UART_BAUDRATE;
+    uart.Init.WordLength = UART_WORDLENGTH_9B;
+    uart.Init.StopBits = UART_STOPBITS_1;
+    uart.Init.Parity = UART_PARITY_NONE;
+    uart.Init.Mode = UART_MODE_RX;
+    uart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    uart.Init.OverSampling = UART_OVERSAMPLING_8;
+    uart.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+    uart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 
-    if (HAL_UART_Init(handle) != HAL_OK) {
+    uart.hdmarx = &DMA2_STREAM1;
+    DMA2_STREAM1.Parent = &uart;
+
+    if (HAL_UART_Init(&uart) != HAL_OK) {
         on_error();
     }
 
-    uarts.push_back(handle);
+    // setup buffer/callbacks and start transfer
+    static ReceiveBuf buf;
+
+    HAL_DMA_RegisterCallback(&DMA2_STREAM1, HAL_DMA_XFER_HALFCPLT_CB_ID, [](auto) {
+        buf.is_front_ready = true;
+        buf.is_back_ready = false;
+    });
+
+    HAL_DMA_RegisterCallback(&DMA2_STREAM1, HAL_DMA_XFER_CPLT_CB_ID, [](auto) {
+        buf.is_front_ready = false;
+        buf.is_back_ready = true;
+    });
+
+    HAL_DMA_RegisterCallback(&DMA2_STREAM1, HAL_DMA_XFER_ERROR_CB_ID, [](auto) { on_error(); });
+
+    auto src_addr = (uint32_t) &uart.Instance->RDR;
+    auto dst_addr = (uint32_t) buf.bytes;
+
+    if (HAL_DMA_Start_IT(&DMA2_STREAM1, src_addr, dst_addr, ReceiveBuf::LEN) != HAL_OK) {
+        on_error();
+    }
+
+    bufs.push_back(&buf);
 }
 
 void init_gui() {

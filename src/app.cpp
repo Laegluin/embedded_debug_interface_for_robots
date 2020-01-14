@@ -1,7 +1,6 @@
 #include "app.h"
 #include "buffer.h"
 #include "control_table.h"
-#include "option.h"
 #include "parser.h"
 #include <GUI.h>
 #include <memory>
@@ -17,11 +16,10 @@ enum class CommResult {
 
 class Connection {
   public:
-    Connection(UART_HandleTypeDef* uart) :
-        uart(uart),
-        buf(Cursor(nullptr, 0)),
+    Connection(ReceiveBuf* buf) :
+        buf(buf),
         parser(Parser()),
-        last_instruction_packet(Option<InstructionPacket>()),
+        is_last_instruction_packet_known(false),
         last_packet(Packet{
             DeviceId(0),
             Instruction::Ping,
@@ -29,69 +27,87 @@ class Connection {
             FixedByteVector<PACKET_BUF_LEN>(),
         }) {}
 
-    UART_HandleTypeDef* uart;
-    Cursor buf;
+    ReceiveBuf* buf;
     Parser parser;
-    Option<InstructionPacket> last_instruction_packet;
+    InstructionPacket last_instruction_packet;
+    bool is_last_instruction_packet_known;
     Packet last_packet;
 };
 
 void handle_incoming_packets(Connection&, ControlTableMap&);
 CommResult handle_status_packet(const InstructionPacket&, const Packet&, const ControlTableMap&);
 
-void run(const std::vector<UART_HandleTypeDef*>& uarts) {
+void run(const std::vector<ReceiveBuf*>& bufs) {
     ControlTableMap control_tables;
     std::vector<Connection> connections;
 
-    connections.reserve(uarts.size());
+    connections.reserve(bufs.size());
 
-    for (auto uart : uarts) {
-        connections.push_back(Connection(uart));
+    for (auto buf : bufs) {
+        connections.push_back(Connection(buf));
     }
 
     GUI_SetColor(GUI_GREEN);
     GUI_DispString("Hello world");
 
-    while (true) {
-        GUI_Exec();
+    uint32_t last_ui_update = 0;
 
+    while (true) {
         for (auto& connection : connections) {
+            auto now = HAL_GetTick();
+
+            // render every 16ms (roughly 60 fps)
+            if (now - last_ui_update > 16) {
+                GUI_Exec();
+                last_ui_update = now;
+            }
+
             handle_incoming_packets(connection, control_tables);
         }
     }
 }
 
 void handle_incoming_packets(Connection& connection, ControlTableMap& control_tables) {
-    if (connection.buf.remaining_bytes() == 0) {
-        // TODO: read from uart
+    Cursor* cursor;
+
+    if (connection.buf->is_front_ready) {
+        connection.buf->back.reset();
+        cursor = &connection.buf->front;
+    } else if (connection.buf->is_back_ready) {
+        connection.buf->front.reset();
+        cursor = &connection.buf->back;
+    } else {
+        return;
     }
 
-    auto result = connection.parser.parse(connection.buf, connection.last_packet);
-    if (result != ParseResult::packet_available()) {
-        // TODO: err handling
-    }
+    while (cursor->remaining_bytes() > 0) {
+        auto result = connection.parser.parse(*cursor, connection.last_packet);
+        if (result != ParseResult::packet_available()) {
+            // TODO: err handling
+            continue;
+        }
 
-    if (connection.last_packet.instruction == Instruction::Status) {
-        if (connection.last_instruction_packet.is_some()) {
+        if (connection.last_packet.instruction == Instruction::Status) {
+            if (!connection.is_last_instruction_packet_known) {
+                continue;
+            }
+
             auto result = handle_status_packet(
-                connection.last_instruction_packet.unwrap(),
-                connection.last_packet,
-                control_tables);
+                connection.last_instruction_packet, connection.last_packet, control_tables);
 
             if (result != CommResult::Ok) {
                 // TODO: err handling
             }
-        }
-    } else {
-        if (connection.last_instruction_packet.is_none()) {
-            connection.last_instruction_packet = Option<InstructionPacket>(InstructionPacket());
-        }
+        } else {
+            auto result = parse_instruction_packet(
+                connection.last_packet, &connection.last_instruction_packet);
 
-        auto result = parse_instruction_packet(
-            connection.last_packet, connection.last_instruction_packet.unwrap());
+            connection.is_last_instruction_packet_known = result == InstrPacketParseResult::Ok;
 
-        if (result != InstrPacketParseResult::Ok) {
-            // TODO: err handling
+            if (result != InstrPacketParseResult::Ok) {
+                // TODO: err handling
+                continue;
+            }
         }
     }
 }

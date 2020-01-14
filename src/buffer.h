@@ -134,6 +134,10 @@ class Cursor {
     /// and consecutive reads will yield no more data.
     size_t read(uint8_t* dst, size_t num_bytes);
 
+    void reset() {
+        this->current_pos = 0;
+    }
+
     size_t remaining_bytes() const {
         return this->buf_len - this->current_pos;
     }

@@ -17,6 +17,8 @@ const uintptr_t FRAME_BUF_2_ADDR = 0xc0200000;
 
 const uintptr_t QSPI_START_ADDR = 0x90000000;
 
+extern DMA_HandleTypeDef DMA2_STREAM1;
+
 void init_lcd_controller(LTDC_HandleTypeDef* handle);
 
 void on_error();

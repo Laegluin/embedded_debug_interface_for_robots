@@ -4,7 +4,6 @@
 /// See <http://emanual.robotis.com/docs/en/dxl/protocol2/>
 
 #include "buffer.h"
-#include "option.h"
 #include <array>
 #include <stddef.h>
 #include <stdint.h>
@@ -274,6 +273,6 @@ enum class InstrPacketParseResult {
 };
 
 InstrPacketParseResult
-    parse_instruction_packet(const Packet& packet, InstructionPacket& instr_packet);
+    parse_instruction_packet(const Packet& packet, InstructionPacket* instr_packet);
 
 #endif

@@ -130,30 +130,6 @@ void Receiver::update_crc(uint8_t byte) {
     this->crc = (this->crc << 8) ^ CRC_TABLE[index];
 }
 
-Option<Instruction> try_instruction_from_byte(uint8_t instr) {
-    auto maybe_instr = Instruction(instr);
-
-    switch (maybe_instr) {
-        case Instruction::Ping:
-        case Instruction::Read:
-        case Instruction::Write:
-        case Instruction::RegWrite:
-        case Instruction::Action:
-        case Instruction::FactoryReset:
-        case Instruction::Reboot:
-        case Instruction::Clear:
-        case Instruction::Status:
-        case Instruction::SyncRead:
-        case Instruction::SyncWrite:
-        case Instruction::BulkRead:
-        case Instruction::BulkWrite:
-            return Option<Instruction>(maybe_instr);
-
-        default:
-            return Option<Instruction>();
-    }
-}
-
 ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
     // fallthrough is intended here; we only need the switch to resume when we reenter after getting
     // new data
@@ -427,7 +403,7 @@ InstructionPacket& InstructionPacket::operator=(const InstructionPacket& rhs) {
 }
 
 InstrPacketParseResult
-    parse_instruction_packet(const Packet& packet, InstructionPacket& instr_packet) {
+    parse_instruction_packet(const Packet& packet, InstructionPacket* instr_packet) {
     // TODO: parse packet
     return InstrPacketParseResult::Ok;
 }
