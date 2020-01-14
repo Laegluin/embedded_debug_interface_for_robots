@@ -5,11 +5,12 @@
 #include <stm32f7xx_hal_rcc_ex.h>
 #include <vector>
 
+LTDC_HandleTypeDef LCD_CONTROLLER;
 DMA_HandleTypeDef DMA2_STREAM1;
 
 void init_mpu();
-void init_lcd_controller(LTDC_HandleTypeDef*);
-void reset_lcd_controller(LTDC_HandleTypeDef*);
+void init_lcd_controller();
+void reset_lcd_controller();
 void init_sdram();
 void init_uarts(std::vector<ReceiveBuf*>&);
 void init_gui();
@@ -27,6 +28,7 @@ int main() {
 
     init_sdram();
     init_uarts(uarts);
+    init_lcd_controller();
     init_gui();
 
     try {
@@ -122,10 +124,7 @@ void init_mpu() {
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 
-/// Initializes the LCD controller. On success, `handle` is initialized.
-///
-/// _Note:_ Is called from `LCDConf.c`.
-void init_lcd_controller(LTDC_HandleTypeDef* handle) {
+void init_lcd_controller() {
     // GPIO and clock init
     __HAL_RCC_LTDC_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -174,31 +173,31 @@ void init_lcd_controller(LTDC_HandleTypeDef* handle) {
     HAL_GPIO_Init(LCD_BACKLIGHT_ENABLE_PORT, &gpio_config);
 
     // lcd controller init
-    handle->Instance = LTDC;
+    LCD_CONTROLLER.Instance = LTDC;
 
     // make sure the controller is reset
-    auto result = HAL_LTDC_DeInit(handle);
+    auto result = HAL_LTDC_DeInit(&LCD_CONTROLLER);
     if (result != HAL_OK) {
         on_error();
     }
 
-    handle->Init.HSPolarity = LTDC_HSPOLARITY_AL;
-    handle->Init.VSPolarity = LTDC_VSPOLARITY_AL;
-    handle->Init.DEPolarity = LTDC_DEPOLARITY_AL;
-    handle->Init.PCPolarity = LTDC_PCPOLARITY_IPC;
-    handle->Init.HorizontalSync = 40;
-    handle->Init.VerticalSync = 9;
-    handle->Init.AccumulatedHBP = 53;
-    handle->Init.AccumulatedVBP = 11;
-    handle->Init.AccumulatedActiveW = 533;
-    handle->Init.AccumulatedActiveH = 283;
-    handle->Init.TotalWidth = 565;
-    handle->Init.TotalHeigh = 285;
-    handle->Init.Backcolor.Blue = 0;
-    handle->Init.Backcolor.Green = 0;
-    handle->Init.Backcolor.Red = 0;
+    LCD_CONTROLLER.Init.HSPolarity = LTDC_HSPOLARITY_AL;
+    LCD_CONTROLLER.Init.VSPolarity = LTDC_VSPOLARITY_AL;
+    LCD_CONTROLLER.Init.DEPolarity = LTDC_DEPOLARITY_AL;
+    LCD_CONTROLLER.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
+    LCD_CONTROLLER.Init.HorizontalSync = 40;
+    LCD_CONTROLLER.Init.VerticalSync = 9;
+    LCD_CONTROLLER.Init.AccumulatedHBP = 53;
+    LCD_CONTROLLER.Init.AccumulatedVBP = 11;
+    LCD_CONTROLLER.Init.AccumulatedActiveW = 533;
+    LCD_CONTROLLER.Init.AccumulatedActiveH = 283;
+    LCD_CONTROLLER.Init.TotalWidth = 565;
+    LCD_CONTROLLER.Init.TotalHeigh = 285;
+    LCD_CONTROLLER.Init.Backcolor.Blue = 0;
+    LCD_CONTROLLER.Init.Backcolor.Green = 0;
+    LCD_CONTROLLER.Init.Backcolor.Red = 0;
 
-    result = HAL_LTDC_Init(handle);
+    result = HAL_LTDC_Init(&LCD_CONTROLLER);
     if (result != HAL_OK) {
         on_error();
     }
@@ -224,14 +223,14 @@ void init_lcd_controller(LTDC_HandleTypeDef* handle) {
     layer_config.Backcolor.Green = 0;
     layer_config.Backcolor.Red = 0;
 
-    result = HAL_LTDC_ConfigLayer(handle, &layer_config, 0);
+    result = HAL_LTDC_ConfigLayer(&LCD_CONTROLLER, &layer_config, 0);
     if (result != HAL_OK) {
         on_error();
     }
 }
 
-void reset_lcd_controller(LTDC_HandleTypeDef* handle) {
-    HAL_LTDC_DeInit(handle);
+void reset_lcd_controller() {
+    HAL_LTDC_DeInit(&LCD_CONTROLLER);
     __HAL_RCC_LTDC_CLK_DISABLE();
 
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_4);
@@ -484,7 +483,7 @@ void init_gui() {
 
 __attribute__((noinline)) void on_error() {
     GUI_Exit();
-    reset_lcd_controller(&LCD_CONTROLLER);
+    reset_lcd_controller();
 
     while (1) {
         // spin

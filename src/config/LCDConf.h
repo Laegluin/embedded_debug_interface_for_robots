@@ -51,8 +51,6 @@ Purpose     : Display driver configuration file
 
 #include <stm32f7xx_hal_ltdc.h>
 
-extern LTDC_HandleTypeDef LCD_CONTROLLER;
-
 #endif /* LCDCONF_H */
 
 /*************************** End of file ****************************/

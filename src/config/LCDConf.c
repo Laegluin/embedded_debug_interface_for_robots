@@ -187,7 +187,6 @@ void LCD_X_Config(void) {
 *     -1 - Command not handled
 *      0 - Ok
 */
-LTDC_HandleTypeDef LCD_CONTROLLER;
 
 int LCD_X_DisplayDriver(unsigned LayerIndex, unsigned Cmd, void * pData) {
   GUI_USE_PARA(LayerIndex);
@@ -201,7 +200,8 @@ int LCD_X_DisplayDriver(unsigned LayerIndex, unsigned Cmd, void * pData) {
     // controller is not initialized by any external routine this needs
     // to be adapted by the customer...
     //
-    init_lcd_controller(&LCD_CONTROLLER);
+
+    // init handled in main
     return 0;
   }
   case LCD_X_SETVRAMADDR: {
