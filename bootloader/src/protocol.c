@@ -175,6 +175,9 @@ void exec_start_command(void) {
     HAL_NVIC_ClearPendingIRQ(OTG_FS_IRQn);
     HAL_NVIC_ClearPendingIRQ(SysTick_IRQn);
 
+    // disable button (so it cannot raise an interrupt)
+    HAL_GPIO_DeInit(GPIOI, GPIO_PIN_11);
+
     // enable mmap mode for running the user code
     if (BSP_QSPI_EnableMemoryMappedMode() != QSPI_OK) {
         on_error();

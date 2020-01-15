@@ -1,16 +1,19 @@
 #include "main.h"
-#include "LCDConf.h"
 #include "app.h"
 #include <GUI.h>
+#include <stm32f7508_discovery_ts.h>
 #include <stm32f7xx_hal_rcc_ex.h>
 #include <vector>
 
 LTDC_HandleTypeDef LCD_CONTROLLER;
+I2C_HandleTypeDef I2C_BUS3;
 DMA_HandleTypeDef DMA2_STREAM1;
+TIM_HandleTypeDef TIMER2;
 
 void init_mpu();
 void init_lcd_controller();
 void reset_lcd_controller();
+void init_touch_controller();
 void init_sdram();
 void init_uarts(std::vector<ReceiveBuf*>&);
 void init_gui();
@@ -29,6 +32,7 @@ int main() {
     init_sdram();
     init_uarts(uarts);
     init_lcd_controller();
+    init_touch_controller();
     init_gui();
 
     try {
@@ -249,6 +253,66 @@ void reset_lcd_controller() {
 
     HAL_GPIO_DeInit(LCD_DISPLAY_ENABLE_PORT, LCD_DISPLAY_ENABLE_PIN);
     HAL_GPIO_DeInit(LCD_BACKLIGHT_ENABLE_PORT, LCD_BACKLIGHT_ENABLE_PIN);
+}
+
+void init_touch_controller() {
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+
+    GPIO_InitTypeDef gpio_config;
+    gpio_config.Pin = GPIO_PIN_7 | GPIO_PIN_8;
+    gpio_config.Mode = GPIO_MODE_AF_OD;
+    gpio_config.Pull = GPIO_NOPULL;
+    gpio_config.Speed = GPIO_SPEED_FAST;
+    gpio_config.Alternate = GPIO_AF4_I2C3;
+    HAL_GPIO_Init(GPIOH, &gpio_config);
+
+    __HAL_RCC_I2C3_CLK_ENABLE();
+    __HAL_RCC_I2C3_FORCE_RESET();
+    __HAL_RCC_I2C3_RELEASE_RESET();
+
+    // enable interrupts
+    HAL_NVIC_SetPriority(I2C3_EV_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(I2C3_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C3_ER_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(I2C3_ER_IRQn);
+
+    I2C_BUS3.Instance = I2C3;
+    I2C_BUS3.Init.Timing = DISCOVERY_I2Cx_TIMING;
+    I2C_BUS3.Init.OwnAddress1 = 0;
+    I2C_BUS3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    I2C_BUS3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    I2C_BUS3.Init.OwnAddress2 = 0;
+    I2C_BUS3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    I2C_BUS3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+
+    if (HAL_I2C_Init(&I2C_BUS3) != HAL_OK) {
+        on_error();
+    }
+
+    if (BSP_TS_Init(480, 272) != TS_OK) {
+        on_error();
+    }
+
+    // configure timer for polling the touch controller (ca. 250 Hz)
+    // equation: freq = (Clock / (Prescaler + 1)) / (Period + 1)
+    __TIM2_CLK_ENABLE();
+    TIMER2.Instance = TIM2;
+    TIMER2.Init.Prescaler = 33200;
+    TIMER2.Init.CounterMode = TIM_COUNTERMODE_UP;
+    TIMER2.Init.Period = 25;
+    TIMER2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    TIMER2.Init.RepetitionCounter = 0;
+
+    if (HAL_TIM_Base_Init(&TIMER2) != HAL_OK) {
+        on_error();
+    }
+
+    if (HAL_TIM_Base_Start_IT(&TIMER2) != HAL_OK) {
+        on_error();
+    }
+
+    HAL_NVIC_SetPriority(TIM2_IRQn, 10, 0);
+    HAL_NVIC_EnableIRQ(TIM2_IRQn);
 }
 
 void init_sdram() {
@@ -479,6 +543,23 @@ void init_gui() {
     if (GUI_Init() != 0) {
         on_error();
     }
+}
+
+void poll_touch_state() {
+    TS_StateTypeDef src_state;
+    BSP_TS_ResetTouchData(&src_state);
+
+    if (BSP_TS_GetState(&src_state) != TS_OK) {
+        return;
+    }
+
+    GUI_PID_STATE dst_state;
+    dst_state.x = src_state.touchX[0];
+    dst_state.y = src_state.touchY[0];
+    dst_state.Pressed = src_state.touchDetected > 0;
+    dst_state.Layer = 0;
+
+    GUI_PID_StoreState(&dst_state);
 }
 
 __attribute__((noinline)) void on_error() {

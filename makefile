@@ -2,7 +2,9 @@ SERIAL ?= /dev/ttyS4
 
 STM_CUBE_DIR := vendor/stm32_cube_f7_1.15.0
 
+CC := arm-none-eabi-gcc
 CXX := arm-none-eabi-g++
+TEST_CXX := g++
 SIZE := arm-none-eabi-size
 OBJCOPY := arm-none-eabi-objcopy
 
@@ -11,15 +13,17 @@ INCLUDE_FLAGS := \
 	-Isrc/config \
 	-Iinclude \
 	-I$(STM_CUBE_DIR)/Middlewares/ST/STemWin/inc \
+	-I$(STM_CUBE_DIR)/Drivers/BSP/STM32F7508-Discovery \
 	-I$(STM_CUBE_DIR)/Drivers/STM32F7xx_HAL_Driver/Inc \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Device/ST/STM32F7xx/Include \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Core/Include
 
 # TODO: enable opt and lto
+OPT_FLAGS := -O0
 ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
-CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c++14 -g -Wall -Wextra -O0
+CFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) $(OPT_FLAGS) -std=c99 -g -Wall -Wextra
+CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) $(OPT_FLAGS) -std=c++14 -g -Wall -Wextra
 LDFLAGS := $(ARCH_FLAGS)
-TEST_CXX := g++
 TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra
 TEST_LDFLAGS :=
 
@@ -30,7 +34,7 @@ test_dep_dir := $(dep_dir)/test
 test_object_dir := $(object_dir)/test
 
 
-objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.cpp src/config/*.c)))))
+objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.cpp src/config/*.c src/config/*.cpp)))))
 
 test_objects := $(addprefix $(test_object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/test/*.cpp)))))
 test_objects += $(addprefix $(test_object_dir)/,$(filter-out main.o app.o interrupt_handlers.o,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.cpp)))))) 
@@ -47,6 +51,11 @@ vendor_objects := $(addprefix $(object_dir)/,\
 	stm32f7xx_ll_fmc.o \
 	stm32f7xx_hal_pwr.o \
 	stm32f7xx_hal_rcc_ex.o \
+	stm32f7xx_hal_tim.o \
+	stm32f7xx_hal_tim_ex.o \
+	stm32f7xx_hal_i2c.o \
+	stm32f7508_discovery_ts.o \
+	ft5336.o \
 )
 
 archives := $(STM_CUBE_DIR)/Middlewares/ST/STemWin/Lib/STemWin_CM7_wc32_ot_ARGB.a
@@ -90,12 +99,21 @@ $(object_dir)/%.o: src/%.s | $(object_dir)
 $(object_dir)/%.o: src/%.cpp | $(object_dir) $(dep_dir)
 	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
-$(object_dir)/%.o: src/config/%.c | $(object_dir) $(dep_dir)
+$(object_dir)/%.o: src/config/%.cpp | $(object_dir) $(dep_dir)
 	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: src/config/%.c | $(object_dir) $(dep_dir)
+	@$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # vendor objects
 $(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/STM32F7xx_HAL_Driver/Src/%.c | $(object_dir) $(dep_dir)
-	@$(CXX) $(CXXFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/BSP/STM32F7508-Discovery/%.c | $(object_dir) $(dep_dir)
+	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/BSP/Components/ft5336/%.c | $(object_dir) $(dep_dir)
+	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # actual binary for mcu
 $(TARGET_DIR)/firmware.elf: $(objects) $(vendor_objects) $(archives) src/linker.ld | $(TARGET_DIR)

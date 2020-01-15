@@ -18,7 +18,11 @@ const uintptr_t FRAME_BUF_2_ADDR = 0xc0200000;
 const uintptr_t QSPI_START_ADDR = 0x90000000;
 
 extern LTDC_HandleTypeDef LCD_CONTROLLER;
+extern I2C_HandleTypeDef I2C_BUS3;
 extern DMA_HandleTypeDef DMA2_STREAM1;
+extern TIM_HandleTypeDef TIMER2;
+
+void poll_touch_state();
 
 void on_error();
 

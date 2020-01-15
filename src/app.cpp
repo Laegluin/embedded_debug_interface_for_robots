@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include "control_table.h"
 #include "parser.h"
+#include <BUTTON.h>
 #include <GUI.h>
 #include <memory>
 #include <stm32f7xx.h>
@@ -47,8 +48,8 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
         connections.push_back(Connection(buf));
     }
 
-    GUI_SetColor(GUI_GREEN);
-    GUI_DispString("Hello world");
+    BUTTON_Handle button = BUTTON_CreateEx(100, 0, 80, 40, 0, WM_CF_SHOW, 0, GUI_ID_BUTTON0);
+    BUTTON_SetText(button, "Hello world!");
 
     uint32_t last_ui_update = 0;
 

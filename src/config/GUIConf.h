@@ -74,6 +74,8 @@ Purpose     : Configures emWins abilities, fonts etc.
   #define GUI_SUPPORT_TOUCH       (1)  // Support touchscreen
 #endif
 
+#define GUI_PID_BUFFER_SIZE       50
+
 /*********************************************************************
 *
 *       Default font
@@ -85,7 +87,7 @@ Purpose     : Configures emWins abilities, fonts etc.
 *         Configuration of available packages
 */
 #define GUI_SUPPORT_MOUSE             (0)    /* Support a mouse */
-#define GUI_WINSUPPORT                (0)    /* Use window manager */
+#define GUI_WINSUPPORT                (1)    /* Use window manager */
 #define GUI_SUPPORT_MEMDEV            (0)    /* Memory device package available */
 #define GUI_SUPPORT_DEVICES           (1)    /* Enable use of device pointers */
 
