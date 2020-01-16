@@ -204,38 +204,38 @@ int LCD_X_DisplayDriver(unsigned LayerIndex, unsigned Cmd, void * pData) {
     // init handled in main
     return 0;
   }
-  case LCD_X_SETVRAMADDR: {
-    //
-    // Required for setting the address of the video RAM for drivers
-    // with memory mapped video RAM which is passed in the 'pVRAM' element of p
-    //
-    LCD_X_SETVRAMADDR_INFO* info = (LCD_X_SETVRAMADDR_INFO*)pData;
-
-    if (HAL_LTDC_SetAddress_NoReload(&LCD_CONTROLLER, (uint32_t)info->pVRAM, 0) != HAL_OK) {
-      return -2;
-    }
-
-    if (HAL_LTDC_Reload(&LCD_CONTROLLER, LTDC_RELOAD_VERTICAL_BLANKING) != HAL_OK) {
-      return -2;
-    }
-
-    return 0;
-  }
   case LCD_X_SHOWBUFFER: {
     //
     // Required if multiple buffers are used. The 'Index' element of p contains the buffer index.
     //
     LCD_X_SHOWBUFFER_INFO* info = (LCD_X_SHOWBUFFER_INFO*)pData;
-    intptr_t addr = info->Index == 0 ? FRAME_BUF_1_ADDR : FRAME_BUF_2_ADDR;
+    intptr_t addr;
+    
+    if (info->Index == 0) {
+      addr = FRAME_BUF_1_ADDR;
+
+      // emWin assumes that all buffers are laid out consecutively;
+      // it is more efficient to separate them though, so every frame buffer
+      // uses a different memory bank. We work around this problem by changing
+      // the VRAM address. Since emWin automatically applies the offset for the
+      // first buffer, we have to subtract it when setting the address for the
+      // second one.
+      uintptr_t offset_addr = FRAME_BUF_2_ADDR - DISPLAY_WIDTH * DISPLAY_HEIGHT * 3;
+      LCD_SetVRAMAddrEx(0, (void*)offset_addr);
+    } else {
+      addr = FRAME_BUF_2_ADDR;
+      LCD_SetVRAMAddrEx(0, (void*)FRAME_BUF_1_ADDR);
+    }
 
     if (HAL_LTDC_SetAddress_NoReload(&LCD_CONTROLLER, addr, 0) != HAL_OK) {
       return -2;
     }
 
-    if (HAL_LTDC_Reload(&LCD_CONTROLLER, LTDC_RELOAD_VERTICAL_BLANKING) != HAL_OK) {
+    if (HAL_LTDC_Reload(&LCD_CONTROLLER, LTDC_RELOAD_IMMEDIATE) != HAL_OK) {
       return -2;
     }
 
+    GUI_MULTIBUF_Confirm(info->Index);
     return 0;
   }
   case LCD_X_ON: {
