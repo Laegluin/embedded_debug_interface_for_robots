@@ -131,17 +131,6 @@ static Widgets create_ui() {
     auto unselected_background_color = SWIPELIST_GetBkColor(list, SWIPELIST_CI_BK_ITEM_UNSEL);
     SWIPELIST_SetBkColor(list, SWIPELIST_CI_BK_ITEM_SEL, unselected_background_color);
 
-    int item_idx = SWIPELIST_GetNumItems(list);
-    SWIPELIST_AddItem(list, "Some Device (0)", 0);
-
-    for (size_t i = 0; i < 30; i++) {
-        if (i != 10) {
-            SWIPELIST_AddItemText(list, item_idx, "hello there");
-        } else {
-            SWIPELIST_AddItemText(list, item_idx, "general kenobi");
-        }
-    }
-
     return Widgets{
         .list = list,
     };
