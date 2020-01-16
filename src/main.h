@@ -3,6 +3,8 @@
 
 #include <stm32f7xx.h>
 
+const uint32_t DISPLAY_WIDTH = 480;
+const uint32_t DISPLAY_HEIGHT = 272;
 #define LCD_DISPLAY_ENABLE_PORT GPIOI
 const uint16_t LCD_DISPLAY_ENABLE_PIN = GPIO_PIN_12;
 #define LCD_BACKLIGHT_ENABLE_PORT GPIOK

@@ -27,6 +27,8 @@ class DeviceId {
 
     friend class std::hash<DeviceId>;
 
+    friend std::ostream& operator<<(std::ostream& out, const DeviceId& device_id);
+
   private:
     uint8_t id;
 };
@@ -46,6 +48,11 @@ namespace std {
             return std::hash<uint8_t>()(device_id.id);
         }
     };
+}
+
+inline std::ostream& operator<<(std::ostream& out, const DeviceId& device_id) {
+    out << device_id.id;
+    return out;
 }
 
 enum class Instruction : uint8_t {

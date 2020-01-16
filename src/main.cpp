@@ -1,6 +1,7 @@
 #include "main.h"
 #include "app.h"
 #include <GUI.h>
+#include <WM.h>
 #include <stm32f7508_discovery_ts.h>
 #include <stm32f7xx_hal_rcc_ex.h>
 #include <vector>
@@ -213,15 +214,15 @@ void init_lcd_controller() {
     LTDC_LayerCfgTypeDef layer_config;
     layer_config.WindowX0 = 0;
     layer_config.WindowY0 = 0;
-    layer_config.WindowX1 = 480;
-    layer_config.WindowY1 = 272;
+    layer_config.WindowX1 = DISPLAY_WIDTH;
+    layer_config.WindowY1 = DISPLAY_HEIGHT;
     layer_config.PixelFormat = LTDC_PIXEL_FORMAT_RGB888;
     layer_config.Alpha = 255;
     layer_config.BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
     layer_config.BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
     layer_config.FBStartAdress = FRAME_BUF_1_ADDR;
-    layer_config.ImageWidth = 480;
-    layer_config.ImageHeight = 272;
+    layer_config.ImageWidth = DISPLAY_WIDTH;
+    layer_config.ImageHeight = DISPLAY_HEIGHT;
     layer_config.Alpha0 = 0;
     layer_config.Backcolor.Blue = 0;
     layer_config.Backcolor.Green = 0;
@@ -289,7 +290,7 @@ void init_touch_controller() {
         on_error();
     }
 
-    if (BSP_TS_Init(480, 272) != TS_OK) {
+    if (BSP_TS_Init(DISPLAY_WIDTH, DISPLAY_HEIGHT) != TS_OK) {
         on_error();
     }
 
@@ -543,6 +544,8 @@ void init_gui() {
     if (GUI_Init() != 0) {
         on_error();
     }
+
+    WM_MOTION_Enable(true);
 }
 
 void poll_touch_state() {
@@ -559,7 +562,7 @@ void poll_touch_state() {
     dst_state.Pressed = src_state.touchDetected > 0;
     dst_state.Layer = 0;
 
-    GUI_PID_StoreState(&dst_state);
+    GUI_TOUCH_StoreStateEx(&dst_state);
 }
 
 __attribute__((noinline)) void on_error() {

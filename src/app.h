@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <vector>
 
-class ReceiveBuf {
+struct ReceiveBuf {
   public:
     static const size_t LEN = 8192;
     static_assert(LEN % 2 == 0);
