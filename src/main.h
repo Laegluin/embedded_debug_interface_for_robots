@@ -15,7 +15,7 @@ const uint32_t UART_BAUDRATE = 4000000;
 const uint32_t SDRAM_TIMEOUT = 0xffff;
 const uintptr_t SDRAM_START_ADDR = 0xc0000000;
 const uintptr_t FRAME_BUF_1_ADDR = 0xc0000000;
-const uintptr_t FRAME_BUF_2_ADDR = 0xc0200000;
+const uintptr_t FRAME_BUF_2_ADDR = 0xc005fa00;
 
 const uintptr_t QSPI_START_ADDR = 0x90000000;
 
