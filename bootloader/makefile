@@ -14,7 +14,7 @@ INCLUDE_FLAGS := \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Device/ST/STM32F7xx/Include \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Core/Include
 
-ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
+ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard
 CFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) -std=c99 -g -Wall -Wextra -O3
 LDFLAGS := $(ARCH_FLAGS) -flto
 
