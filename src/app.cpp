@@ -4,8 +4,7 @@
 #include "main.h"
 #include "parser.h"
 #include <GUI.h>
-#include <SWIPELIST.h>
-#include <TEXT.h>
+#include <MULTIEDIT.h>
 #include <memory>
 #include <sstream>
 #include <stm32f7xx.h>
@@ -42,7 +41,7 @@ struct Connection {
 };
 
 struct Widgets {
-    SWIPELIST_Handle list;
+    MULTIEDIT_HANDLE text;
 };
 
 static void handle_incoming_packets(Connection&, ControlTableMap&);
@@ -60,18 +59,28 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
         connections.push_back(Connection(buf));
     }
 
+    control_tables.emplace(DeviceId(0), std::make_unique<Mx64ControlTable>());
+    control_tables.emplace(DeviceId(1), std::make_unique<Mx106ControlTable>());
+
     Widgets widgets = create_ui();
+
+    uint32_t last_render = 0;
     uint32_t last_ui_update = 0;
 
     while (true) {
         for (auto& connection : connections) {
             auto now = HAL_GetTick();
 
-            // render every 16ms (roughly 60 fps)
-            if (now - last_ui_update > 16) {
+            // only update UI every 500 ms
+            if (now - last_ui_update > 500) {
                 update_ui(widgets, control_tables);
-                GUI_Exec();
                 last_ui_update = now;
+            }
+
+            // render every 16ms (roughly 60 fps)
+            if (now - last_render > 16) {
+                GUI_Exec();
+                last_render = now;
             }
 
             handle_incoming_packets(connection, control_tables);
@@ -125,45 +134,58 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
 }
 
 static Widgets create_ui() {
-    SWIPELIST_Handle list = SWIPELIST_CreateEx(
-        0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, 0, WM_CF_SHOW, 0, GUI_ID_SWIPELIST0);
+    // WM_CF_MOTION_Y
 
-    auto unselected_background_color = SWIPELIST_GetBkColor(list, SWIPELIST_CI_BK_ITEM_UNSEL);
-    SWIPELIST_SetBkColor(list, SWIPELIST_CI_BK_ITEM_SEL, unselected_background_color);
+    auto text = MULTIEDIT_CreateEx(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        MULTIEDIT_CF_READONLY | MULTIEDIT_CF_AUTOSCROLLBAR_V,
+        GUI_ID_MULTIEDIT0,
+        1000,
+        "<loading>");
+
+    // MULTIEDIT_ShowCursor(text, false);
+    // MULTIEDIT_SetFocusable(text, false);
+    auto background_color = MULTIEDIT_GetBkColor(text, MULTIEDIT_CI_EDIT);
+    MULTIEDIT_SetBkColor(text, MULTIEDIT_CI_READONLY, background_color);
+    auto text_color = MULTIEDIT_GetTextColor(text, MULTIEDIT_CI_EDIT);
+    MULTIEDIT_SetTextColor(text, MULTIEDIT_CI_READONLY, text_color);
 
     return Widgets{
-        .list = list,
+        .text = text,
     };
 }
 
 static void update_ui(const Widgets& widgets, const ControlTableMap& control_tables) {
-    return;
+    auto cursor_pos = MULTIEDIT_GetCursorCharPos(widgets.text);
+    std::stringstream stream;
 
     for (auto& id_and_table : control_tables) {
         auto device_id = id_and_table.first;
         auto& control_table = id_and_table.second;
 
+        stream << control_table->device_name() << " (" << device_id << ")\n\n";
+
         std::unordered_map<const char*, std::string> name_to_value;
         control_table->entries(name_to_value);
-
-        std::stringstream stream;
-        stream << control_table->device_name() << "(" << device_id << ")";
-        auto header = stream.str();
-        stream.str("");
-
-        int item_idx = SWIPELIST_GetNumItems(widgets.list);
-        SWIPELIST_AddItem(widgets.list, header.c_str(), 0);
 
         for (auto& name_and_value : name_to_value) {
             auto name = name_and_value.first;
             auto& value = name_and_value.second;
 
-            stream << name << ": " << value;
-            auto fmt_string = stream.str();
-            stream.str("");
-            SWIPELIST_AddItemText(widgets.list, item_idx, fmt_string.c_str());
+            stream << name << ": " << value << "\n";
         }
+
+        stream << "\n";
     }
+
+    auto fmt_string = stream.str();
+    MULTIEDIT_SetText(widgets.text, fmt_string.c_str());
+    MULTIEDIT_SetCursorOffset(widgets.text, cursor_pos);
 }
 
 CommResult handle_status_packet(

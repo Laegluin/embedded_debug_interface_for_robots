@@ -19,6 +19,7 @@ void init_sdram();
 void init_uarts(std::vector<ReceiveBuf*>&);
 void init_gui();
 
+// TODO: hardware accel for UI
 int main() {
     std::vector<ReceiveBuf*> uarts;
 

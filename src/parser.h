@@ -51,7 +51,7 @@ namespace std {
 }
 
 inline std::ostream& operator<<(std::ostream& out, const DeviceId& device_id) {
-    out << device_id.id;
+    out << std::to_string(device_id.id);
     return out;
 }
 
