@@ -7,7 +7,13 @@
 class Mx64ControlTable : public ControlTable {
   public:
     Mx64ControlTable();
-  
+
+    static const uint32_t MODEL_NUMBER = 311;
+
+    uint32_t model_number() const final {
+        return MODEL_NUMBER;
+    }
+
     const char* device_name() const final {
         return "MX-64";
     }

@@ -3,7 +3,7 @@
 // See <http://emanual.robotis.com/docs/en/dxl/mx/mx-64-2/>
 
 Mx64ControlTable::Mx64ControlTable() {
-    this->data.write_uint16(0, 311);
+    this->data.write_uint16(0, MODEL_NUMBER);
     this->data.write_uint8(7, 1);
     this->data.write_uint8(8, 1);
     this->data.write_uint8(9, 250);

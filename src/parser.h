@@ -208,6 +208,10 @@ class Parser {
     size_t raw_remaining_data_len;
 };
 
+struct PingArgs {
+    DeviceId device_id;
+};
+
 struct ReadArgs {
     DeviceId device_id;
     uint16_t start_addr;
@@ -253,7 +257,9 @@ struct BulkWriteArgs {
 };
 
 struct InstructionPacket {
-    InstructionPacket() : instruction(Instruction::Ping) {}
+    InstructionPacket() :
+        instruction(Instruction::Ping),
+        ping(PingArgs{DeviceId(0)}) {}
 
     InstructionPacket(const InstructionPacket& src);
 
@@ -263,6 +269,7 @@ struct InstructionPacket {
 
     Instruction instruction;
     union {
+        PingArgs ping;
         ReadArgs read;
         WriteArgs write;
         WriteArgs reg_write;

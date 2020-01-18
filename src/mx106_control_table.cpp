@@ -3,7 +3,7 @@
 // See <http://emanual.robotis.com/docs/en/dxl/mx/mx-106-2/>
 
 Mx106ControlTable::Mx106ControlTable() {
-    this->data.write_uint16(0, 321);
+    this->data.write_uint16(0, MODEL_NUMBER);
     this->data.write_uint8(7, 1);
     this->data.write_uint8(8, 1);
     this->data.write_uint8(9, 250);

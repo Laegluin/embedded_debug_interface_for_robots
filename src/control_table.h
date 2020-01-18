@@ -2,6 +2,9 @@
 #define CONTROL_TABLE_H
 
 #include "endian_convert.h"
+#include "parser.h"
+#include <limits>
+#include <memory>
 #include <stdint.h>
 #include <string.h>
 #include <string>
@@ -9,36 +12,38 @@
 
 class ControlTable {
   public:
+    /// Returns the model number of the device. Any model number greater than
+    /// `std::numeric_limits<uint16_t>::max()` does not refer to an actual device.
+    virtual uint32_t model_number() const = 0;
+
     virtual const char* device_name() const = 0;
 
     virtual bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) = 0;
 
+    // TODO: simply return map
     virtual void entries(std::unordered_map<const char*, std::string>& name_to_value) const = 0;
 };
 
 class UnknownControlTable : public ControlTable {
+  public:
+    static const uint32_t MODEL_NUMBER = std::numeric_limits<uint32_t>::max();
+
+    uint32_t model_number() const final {
+        return MODEL_NUMBER;
+    }
+
     const char* device_name() const final {
         return "<unknown>";
     }
 
     bool write(uint16_t, const uint8_t*, uint16_t) final {
-        return false;
+        return true;
     }
 
     void entries(std::unordered_map<const char*, std::string>&) const final {}
 };
 
-class DisconnectedControlTable : public ControlTable {
-    const char* device_name() const final {
-        return "<disconnected>";
-    }
-
-    bool write(uint16_t, const uint8_t*, uint16_t) final {
-        return false;
-    }
-
-    void entries(std::unordered_map<const char*, std::string>&) const final {}
-};
+using ControlTableMap = std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>;
 
 template <uint16_t MAP_START, uint16_t DATA_START, uint16_t LEN>
 class AddressMap {
@@ -137,5 +142,23 @@ class DataSegment {
   private:
     uint8_t data[LEN];
 };
+
+enum class CommResult {
+    Ok,
+    StatusIsInstruction,
+    StatusHasError,
+    InstructionIsStatus,
+    UnknownInstruction,
+    InvalidPacketLen,
+    InvalidDeviceId,
+    InvalidWrite,
+};
+
+/// Updates the `control_tables` with the values received in `status_packet`. The status
+/// packet is interpreted using the `instruction_packet` received last.
+CommResult update_control_table_map(
+    const InstructionPacket& instruction_packet,
+    const Packet& status_packet,
+    ControlTableMap& control_tables);
 
 #endif

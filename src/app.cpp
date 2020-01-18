@@ -13,13 +13,6 @@
 #include "mx106_control_table.h"
 #include "mx64_control_table.h"
 
-using ControlTableMap = std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>;
-
-enum class CommResult {
-    Ok,
-    Error,
-};
-
 struct Connection {
   public:
     Connection(ReceiveBuf* buf) :
@@ -113,7 +106,7 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
                 continue;
             }
 
-            auto result = handle_status_packet(
+            auto result = update_control_table_map(
                 connection.last_instruction_packet, connection.last_packet, control_tables);
 
             if (result != CommResult::Ok) {
@@ -186,12 +179,4 @@ static void update_ui(const Widgets& widgets, const ControlTableMap& control_tab
     auto fmt_string = stream.str();
     MULTIEDIT_SetText(widgets.text, fmt_string.c_str());
     MULTIEDIT_SetCursorOffset(widgets.text, cursor_pos);
-}
-
-CommResult handle_status_packet(
-    const InstructionPacket& instruction_packet,
-    const Packet& status_packet,
-    const ControlTableMap& control_tables) {
-    // TODO: process packet
-    return CommResult::Ok;
 }

@@ -8,6 +8,12 @@ class Mx106ControlTable : public ControlTable {
   public:
     Mx106ControlTable();
 
+    static const uint32_t MODEL_NUMBER = 321;
+
+    uint32_t model_number() const final {
+        return MODEL_NUMBER;
+    }
+
     const char* device_name() const final {
         return "MX-106";
     }

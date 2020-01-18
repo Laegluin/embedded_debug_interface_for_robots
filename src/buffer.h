@@ -59,6 +59,10 @@ class FixedByteVector {
         return this->buf;
     }
 
+    const uint8_t* data() const {
+        return this->buf;
+    }
+
     void shrink_by(size_t num_removed_bytes) {
         this->size_ -= std::min(this->size_, num_removed_bytes);
     }
