@@ -257,15 +257,11 @@ struct BulkWriteArgs {
 };
 
 struct InstructionPacket {
-    InstructionPacket() :
-        instruction(Instruction::Ping),
-        ping(PingArgs{DeviceId(0)}) {}
+    InstructionPacket() : instruction(Instruction::Ping), ping(PingArgs{DeviceId(0)}) {}
 
     InstructionPacket(const InstructionPacket& src);
 
     ~InstructionPacket();
-
-    InstructionPacket& operator=(const InstructionPacket& rhs);
 
     Instruction instruction;
     union {
@@ -281,12 +277,15 @@ struct InstructionPacket {
     };
 };
 
-enum class InstrPacketParseResult {
+enum class InstructionParseResult {
     Ok,
-    Error,
+    InvalidPacketLen,
+    InvalidDeviceId,
+    InstructionIsStatus,
+    UnknownInstruction,
 };
 
-InstrPacketParseResult
-    parse_instruction_packet(const Packet& packet, InstructionPacket* instr_packet);
+InstructionParseResult
+    parse_instruction_packet(const Packet& packet, InstructionPacket* instruction_packet);
 
 #endif

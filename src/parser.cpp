@@ -250,22 +250,22 @@ InstructionPacket::InstructionPacket(const InstructionPacket& src) : instruction
             break;
         }
         case Instruction::Read: {
-            this->read = src.read;
+            new (&this->read) ReadArgs(src.read);
             break;
         }
         case Instruction::Write: {
-            this->write = src.write;
+            new (&this->write) WriteArgs(src.write);
             break;
         }
         case Instruction::RegWrite: {
-            this->reg_write = src.reg_write;
+            new (&this->reg_write) WriteArgs(src.reg_write);
             break;
         }
         case Instruction::Action: {
             break;
         }
         case Instruction::FactoryReset: {
-            this->factory_reset = src.factory_reset;
+            new (&this->factory_reset) FactoryResetArgs(src.factory_reset);
             break;
         }
         case Instruction::Reboot: {
@@ -278,19 +278,19 @@ InstructionPacket::InstructionPacket(const InstructionPacket& src) : instruction
             break;
         }
         case Instruction::SyncRead: {
-            this->sync_read = src.sync_read;
+            new (&this->sync_read) SyncReadArgs(src.sync_read);
             break;
         }
         case Instruction::SyncWrite: {
-            this->sync_write = src.sync_write;
+            new (&this->sync_write) SyncWriteArgs(src.sync_write);
             break;
         }
         case Instruction::BulkRead: {
-            this->bulk_read = src.bulk_read;
+            new (&this->bulk_read) BulkReadArgs(src.bulk_read);
             break;
         }
         case Instruction::BulkWrite: {
-            this->bulk_write = src.bulk_write;
+            new (&this->bulk_write) BulkWriteArgs(src.bulk_write);
             break;
         }
     }
@@ -299,6 +299,7 @@ InstructionPacket::InstructionPacket(const InstructionPacket& src) : instruction
 InstructionPacket::~InstructionPacket() {
     switch (this->instruction) {
         case Instruction::Ping: {
+            this->ping.~PingArgs();
             break;
         }
         case Instruction::Read: {
@@ -348,62 +349,270 @@ InstructionPacket::~InstructionPacket() {
     }
 }
 
-InstructionPacket& InstructionPacket::operator=(const InstructionPacket& rhs) {
-    switch (rhs.instruction) {
+// TODO: use move assignment to avoid manual destructor calls
+InstructionParseResult
+    parse_instruction_packet(const Packet& packet, InstructionPacket* instruction_packet) {
+    switch (packet.instruction) {
         case Instruction::Ping: {
+            if (packet.data.size() != 0) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::Ping;
+            new (&instruction_packet->ping.device_id) DeviceId(packet.device_id);
             break;
         }
         case Instruction::Read: {
-            this->read = rhs.read;
+            if (packet.data.size() != 4) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::Read;
+            new (&instruction_packet->read.device_id) DeviceId(packet.device_id);
+            instruction_packet->read.start_addr = uint16_from_le(packet.data.data());
+            instruction_packet->read.len = uint16_from_le(packet.data.data() + 2);
             break;
         }
         case Instruction::Write: {
-            this->write = rhs.write;
+            if (packet.data.size() < 2) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::Write;
+            new (&instruction_packet->write.device_id) DeviceId(packet.device_id);
+            instruction_packet->write.start_addr = uint16_from_le(packet.data.data());
+
+            auto dst_data = new (&instruction_packet->write.data) std::vector<uint8_t>;
+            dst_data->reserve(packet.data.size() - 2);
+
+            std::copy(
+                packet.data.data() + 2,
+                packet.data.data() + packet.data.size(),
+                std::back_inserter(*dst_data));
+
             break;
         }
         case Instruction::RegWrite: {
-            this->reg_write = rhs.reg_write;
+            if (packet.data.size() < 2) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::RegWrite;
+            new (&instruction_packet->reg_write.device_id) DeviceId(packet.device_id);
+            instruction_packet->reg_write.start_addr = uint16_from_le(packet.data.data());
+
+            auto dst_data = new (&instruction_packet->reg_write.data) std::vector<uint8_t>;
+            dst_data->reserve(packet.data.size() - 2);
+
+            std::copy(
+                packet.data.data() + 2,
+                packet.data.data() + packet.data.size(),
+                std::back_inserter(*dst_data));
+
             break;
         }
         case Instruction::Action: {
+            if (packet.data.size() != 0) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::Action;
             break;
         }
         case Instruction::FactoryReset: {
-            this->factory_reset = rhs.factory_reset;
+            if (packet.data.size() != 1) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::FactoryReset;
+            new (&instruction_packet->factory_reset.device_id) DeviceId(packet.device_id);
+            instruction_packet->factory_reset.reset = FactoryReset(packet.data[0]);
             break;
         }
         case Instruction::Reboot: {
+            if (packet.data.size() != 0) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::Reboot;
             break;
         }
         case Instruction::Clear: {
-            break;
-        }
-        case Instruction::Status: {
+            if (packet.data.size() != 5) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::Clear;
             break;
         }
         case Instruction::SyncRead: {
-            this->sync_read = rhs.sync_read;
+            if (packet.data.size() < 4) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            if (!packet.device_id.is_broadcast()) {
+                return InstructionParseResult::InvalidDeviceId;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::SyncRead;
+            instruction_packet->sync_read.start_addr = uint16_from_le(packet.data.data());
+            instruction_packet->sync_read.len = uint16_from_le(packet.data.data() + 2);
+
+            auto devices = new (&instruction_packet->sync_read.devices) std::vector<DeviceId>;
+            devices->reserve(packet.data.size() - 4);
+
+            for (size_t i = 4; i < packet.data.size(); i++) {
+                DeviceId device_id(packet.data[i]);
+
+                if (device_id.is_broadcast()) {
+                    return InstructionParseResult::InvalidDeviceId;
+                }
+
+                devices->push_back(device_id);
+            }
+
             break;
         }
         case Instruction::SyncWrite: {
-            this->sync_write = rhs.sync_write;
+            if (packet.data.size() < 4) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            if (!packet.device_id.is_broadcast()) {
+                return InstructionParseResult::InvalidDeviceId;
+            }
+
+            auto start_addr = uint16_from_le(packet.data.data());
+            auto len = uint16_from_le(packet.data.data() + 2);
+
+            // make sure every entry has full size (id + data)
+            if ((packet.data.size() - 4) % (len + 1) != 0) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::SyncWrite;
+            auto devices = new (&instruction_packet->sync_write.devices) std::vector<DeviceId>;
+            instruction_packet->sync_write.start_addr = start_addr;
+            instruction_packet->sync_write.len = len;
+            auto dst_data = new (&instruction_packet->sync_write.data) std::vector<uint8_t>;
+
+            auto num_devices = (packet.data.size() - 4) / (len + 1);
+            devices->reserve(num_devices);
+            dst_data->reserve(num_devices * len);
+
+            for (size_t i = 4; i < packet.data.size(); i += len + 1) {
+                DeviceId device_id(packet.data[i]);
+
+                if (device_id.is_broadcast()) {
+                    return InstructionParseResult::InvalidDeviceId;
+                }
+
+                devices->push_back(device_id);
+
+                std::copy(
+                    packet.data.data() + i + 1,
+                    packet.data.data() + i + len + 1,
+                    std::back_inserter(*dst_data));
+            }
+
             break;
         }
         case Instruction::BulkRead: {
-            this->bulk_read = rhs.bulk_read;
+            if (packet.data.size() % 5 != 0) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
+            if (!packet.device_id.is_broadcast()) {
+                return InstructionParseResult::InvalidDeviceId;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::BulkRead;
+            auto reads = new (&instruction_packet->bulk_read.reads) std::vector<ReadArgs>;
+
+            reads->reserve(packet.data.size() / 5);
+
+            for (size_t i = 0; i < packet.data.size(); i += 5) {
+                DeviceId device_id(packet.data[i]);
+
+                if (device_id.is_broadcast()) {
+                    return InstructionParseResult::InvalidDeviceId;
+                }
+
+                auto start_addr = uint16_from_le(packet.data.data() + 1);
+                auto len = uint16_from_le(packet.data.data() + 3);
+
+                reads->push_back(ReadArgs{
+                    device_id,
+                    start_addr,
+                    len,
+                });
+            }
+
             break;
         }
         case Instruction::BulkWrite: {
-            this->bulk_write = rhs.bulk_write;
+            if (!packet.device_id.is_broadcast()) {
+                return InstructionParseResult::InvalidDeviceId;
+            }
+
+            instruction_packet->~InstructionPacket();
+            instruction_packet->instruction = Instruction::BulkWrite;
+            auto writes = new (&instruction_packet->bulk_write.writes) std::vector<WriteArgs>;
+
+            size_t i = 0;
+            while (i + 5 <= packet.data.size()) {
+                DeviceId device_id(packet.data[i]);
+
+                if (device_id.is_broadcast()) {
+                    return InstructionParseResult::InvalidDeviceId;
+                }
+
+                auto start_addr = uint16_from_le(packet.data.data() + 1);
+                auto len = uint16_from_le(packet.data.data() + 3);
+
+                if (i + 5 + len > packet.data.size()) {
+                    return InstructionParseResult::InvalidPacketLen;
+                }
+
+                std::vector<uint8_t> data;
+                data.reserve(len);
+
+                std::copy(
+                    packet.data.data() + i + 5,
+                    packet.data.data() + i + 5 + len,
+                    std::back_inserter(data));
+
+                writes->push_back(WriteArgs{
+                    device_id,
+                    start_addr,
+                    data,
+                });
+
+                i += 5 + len;
+            }
+
+            if (i < packet.data.size()) {
+                return InstructionParseResult::InvalidPacketLen;
+            }
+
             break;
         }
+        case Instruction::Status: {
+            return InstructionParseResult::InstructionIsStatus;
+        }
+        default: { return InstructionParseResult::UnknownInstruction; }
     }
 
-    return *this;
-}
-
-InstrPacketParseResult
-    parse_instruction_packet(const Packet& packet, InstructionPacket* instr_packet) {
-    // TODO: parse packet
-    return InstrPacketParseResult::Ok;
+    return InstructionParseResult::Ok;
 }

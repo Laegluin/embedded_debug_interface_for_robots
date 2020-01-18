@@ -116,9 +116,9 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
             auto result = parse_instruction_packet(
                 connection.last_packet, &connection.last_instruction_packet);
 
-            connection.is_last_instruction_packet_known = result == InstrPacketParseResult::Ok;
+            connection.is_last_instruction_packet_known = result == InstructionParseResult::Ok;
 
-            if (result != InstrPacketParseResult::Ok) {
+            if (result != InstructionParseResult::Ok) {
                 // TODO: err handling
                 continue;
             }
