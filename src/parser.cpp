@@ -549,8 +549,8 @@ InstructionParseResult
                     return InstructionParseResult::InvalidDeviceId;
                 }
 
-                auto start_addr = uint16_from_le(packet.data.data() + 1);
-                auto len = uint16_from_le(packet.data.data() + 3);
+                auto start_addr = uint16_from_le(packet.data.data() + i + 1);
+                auto len = uint16_from_le(packet.data.data() + i + 3);
 
                 reads->push_back(ReadArgs{
                     device_id,
@@ -578,10 +578,10 @@ InstructionParseResult
                     return InstructionParseResult::InvalidDeviceId;
                 }
 
-                auto start_addr = uint16_from_le(packet.data.data() + 1);
-                auto len = uint16_from_le(packet.data.data() + 3);
+                auto start_addr = uint16_from_le(packet.data.data() + i + 1);
+                auto len = uint16_from_le(packet.data.data() + i + 3);
 
-                if (i + 5 + len > packet.data.size()) {
+                if (i + 5 + len > packet.data.size() + 1) {
                     return InstructionParseResult::InvalidPacketLen;
                 }
 
