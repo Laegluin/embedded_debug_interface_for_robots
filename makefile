@@ -127,7 +127,7 @@ $(TARGET_DIR)/firmware.bin: $(TARGET_DIR)/firmware.elf
 $(TARGET_DIR)/test: $(test_objects) | $(TARGET_DIR)
 	@$(TEST_CXX) $(TEST_LDFLAGS) -o $@ $^
 
-$(TARGET_DIR)/send_command: send_command.c
+$(TARGET_DIR)/send_command: send_command.c | $(TARGET_DIR)
 	@gcc -std=c99 -Wall -Wextra -O3 $< -o $@
 
 .PHONY: build flash start run test format clean
