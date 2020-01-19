@@ -4,7 +4,7 @@
 #include "main.h"
 #include "parser.h"
 #include <GUI.h>
-#include <MULTIEDIT.h>
+#include <LISTVIEW.h>
 #include <memory>
 #include <sstream>
 #include <stm32f7xx.h>
@@ -34,7 +34,7 @@ struct Connection {
 };
 
 struct Widgets {
-    MULTIEDIT_HANDLE text;
+    LISTVIEW_Handle list;
 };
 
 static void handle_incoming_packets(Connection&, ControlTableMap&);
@@ -127,56 +127,59 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
 }
 
 static Widgets create_ui() {
-    // WM_CF_MOTION_Y
+    auto list =
+        LISTVIEW_CreateEx(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, 0, WM_CF_SHOW, 0, GUI_ID_LISTVIEW0);
 
-    auto text = MULTIEDIT_CreateEx(
-        0,
-        0,
-        DISPLAY_WIDTH,
-        DISPLAY_HEIGHT,
-        0,
-        WM_CF_SHOW,
-        MULTIEDIT_CF_READONLY | MULTIEDIT_CF_AUTOSCROLLBAR_V,
-        GUI_ID_MULTIEDIT0,
-        1000,
-        "<loading>");
+    LISTVIEW_SetAutoScrollV(list, true);
+    LISTVIEW_AddColumn(list, 150, "Field", GUI_TA_LEFT | GUI_TA_VCENTER);
+    LISTVIEW_AddColumn(list, DISPLAY_WIDTH - 150, "Value", GUI_TA_LEFT | GUI_TA_VCENTER);
 
-    // MULTIEDIT_ShowCursor(text, false);
-    // MULTIEDIT_SetFocusable(text, false);
-    auto background_color = MULTIEDIT_GetBkColor(text, MULTIEDIT_CI_EDIT);
-    MULTIEDIT_SetBkColor(text, MULTIEDIT_CI_READONLY, background_color);
-    auto text_color = MULTIEDIT_GetTextColor(text, MULTIEDIT_CI_EDIT);
-    MULTIEDIT_SetTextColor(text, MULTIEDIT_CI_READONLY, text_color);
-
-    return Widgets{
-        .text = text,
-    };
+    return Widgets{list};
 }
 
 static void update_ui(const Widgets& widgets, const ControlTableMap& control_tables) {
-    auto cursor_pos = MULTIEDIT_GetCursorCharPos(widgets.text);
-    std::stringstream stream;
+    size_t row_idx = 0;
+    auto num_rows = LISTVIEW_GetNumRows(widgets.list);
 
     for (auto& id_and_table : control_tables) {
         auto device_id = id_and_table.first;
         auto& control_table = id_and_table.second;
 
-        stream << control_table->device_name() << " (" << device_id << ")\n\n";
+        std::stringstream stream;
+        stream << control_table->device_name() << " (" << device_id << ")";
+        auto device_name_str = stream.str();
+        if (row_idx >= num_rows) {
+            const char* cells[] = {device_name_str.c_str(), "<-------------"};
+            LISTVIEW_AddRow(widgets.list, cells);
+            num_rows++;
+        } else {
+            LISTVIEW_SetItemText(widgets.list, 0, row_idx, device_name_str.c_str());
+            LISTVIEW_SetItemText(widgets.list, 1, row_idx, "<-------------");
+        }
+        row_idx++;
 
         std::unordered_map<const char*, std::string> name_to_value;
         control_table->entries(name_to_value);
 
         for (auto& name_and_value : name_to_value) {
             auto name = name_and_value.first;
-            auto& value = name_and_value.second;
+            auto value = name_and_value.second.c_str();
 
-            stream << name << ": " << value << "\n";
+            if (row_idx >= num_rows) {
+                const char* cells[] = {name, value};
+                LISTVIEW_AddRow(widgets.list, cells);
+                num_rows++;
+            } else {
+                LISTVIEW_SetItemText(widgets.list, 0, row_idx, name);
+                LISTVIEW_SetItemText(widgets.list, 1, row_idx, value);
+            }
+
+            row_idx++;
         }
-
-        stream << "\n";
     }
 
-    auto fmt_string = stream.str();
-    MULTIEDIT_SetText(widgets.text, fmt_string.c_str());
-    MULTIEDIT_SetCursorOffset(widgets.text, cursor_pos);
+    // delete no longer used rows
+    for (size_t i = row_idx; i < num_rows; i++) {
+        LISTVIEW_DeleteRow(widgets.list, i);
+    }
 }

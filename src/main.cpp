@@ -295,13 +295,13 @@ void init_touch_controller() {
         on_error();
     }
 
-    // configure timer for polling the touch controller (ca. 250 Hz)
+    // configure timer for polling the touch controller (ca. 60 Hz)
     // equation: freq = (Clock / (Prescaler + 1)) / (Period + 1)
     __TIM2_CLK_ENABLE();
     TIMER2.Instance = TIM2;
-    TIMER2.Init.Prescaler = 33200;
+    TIMER2.Init.Prescaler = 36000;
     TIMER2.Init.CounterMode = TIM_COUNTERMODE_UP;
-    TIMER2.Init.Period = 25;
+    TIMER2.Init.Period = 100;
     TIMER2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     TIMER2.Init.RepetitionCounter = 0;
 
