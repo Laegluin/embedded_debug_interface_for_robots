@@ -1,0 +1,7 @@
+SUBSYSTEM=="tty", \
+	SUBSYSTEMS=="usb", \
+	DRIVERS=="usb", \
+	ATTRS{idVendor}=="0483", \
+	ATTRS{idProduct}=="5740", \
+	MODE="0666", \
+	SYMLINK+="stm32_virtual_com_port"

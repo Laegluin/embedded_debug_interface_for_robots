@@ -1,4 +1,4 @@
-SERIAL ?= /dev/ttyS4
+SERIAL ?= /dev/stm32_virtual_com_port
 
 STM_CUBE_DIR := vendor/stm32_cube_f7_1.15.0
 
