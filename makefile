@@ -34,10 +34,10 @@ test_dep_dir := $(dep_dir)/test
 test_object_dir := $(object_dir)/test
 
 
-objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.cpp src/config/*.c src/config/*.cpp)))))
+objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.cpp src/config/*.c src/config/*.cpp src/device/*.cpp)))))
 
 test_objects := $(addprefix $(test_object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/test/*.cpp)))))
-test_objects += $(addprefix $(test_object_dir)/,$(filter-out main.o app.o interrupt_handlers.o,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.cpp)))))) 
+test_objects += $(addprefix $(test_object_dir)/,$(filter-out main.o app.o interrupt_handlers.o,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.cpp src/device/*.cpp)))))) 
 
 vendor_objects := $(addprefix $(object_dir)/,\
 	stm32f7xx_hal.o \
@@ -89,6 +89,9 @@ $(TARGET_DIR) $(object_dir) $(test_object_dir) $(dep_dir) $(test_dep_dir):
 $(test_object_dir)/%.o: src/%.cpp | $(test_object_dir) $(test_dep_dir)
 	@$(TEST_CXX) $(TEST_CXXFLAGS) -MT $@ -MD -MP -MF $(test_dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
+$(test_object_dir)/%.o: src/device/%.cpp | $(test_object_dir) $(test_dep_dir)
+	@$(TEST_CXX) $(TEST_CXXFLAGS) -MT $@ -MD -MP -MF $(test_dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
 $(test_object_dir)/%.o: src/test/%.cpp | $(test_object_dir) $(test_dep_dir)
 	@$(TEST_CXX) $(TEST_CXXFLAGS) -MT $@ -MD -MP -MF $(test_dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
@@ -97,6 +100,9 @@ $(object_dir)/%.o: src/%.s | $(object_dir)
 	@$(CXX) -g -c $< -o $@
 
 $(object_dir)/%.o: src/%.cpp | $(object_dir) $(dep_dir)
+	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: src/device/%.cpp | $(object_dir) $(dep_dir)
 	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 $(object_dir)/%.o: src/config/%.cpp | $(object_dir) $(dep_dir)

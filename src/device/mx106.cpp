@@ -1,4 +1,4 @@
-#include "mx106_control_table.h"
+#include "device/mx106.h"
 
 // See <http://emanual.robotis.com/docs/en/dxl/mx/mx-106-2/>
 

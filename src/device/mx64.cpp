@@ -1,4 +1,4 @@
-#include "mx64_control_table.h"
+#include "device/mx64.h"
 
 // See <http://emanual.robotis.com/docs/en/dxl/mx/mx-64-2/>
 

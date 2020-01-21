@@ -1,6 +1,6 @@
 #include "control_table.h"
-#include "mx106_control_table.h"
-#include "mx64_control_table.h"
+#include "device/mx106.h"
+#include "device/mx64.h"
 #include <algorithm>
 
 static std::unique_ptr<ControlTable>&

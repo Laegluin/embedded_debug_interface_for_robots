@@ -1,21 +1,21 @@
-#ifndef MX64_CONTROL_TABLE_H
-#define MX64_CONTROL_TABLE_H
+#ifndef MX106_H
+#define MX106_H
 
 #include "control_table.h"
 #include <stdint.h>
 
-class Mx64ControlTable : public ControlTable {
+class Mx106ControlTable : public ControlTable {
   public:
-    Mx64ControlTable();
+    Mx106ControlTable();
 
-    static const uint32_t MODEL_NUMBER = 311;
+    static const uint32_t MODEL_NUMBER = 321;
 
     uint32_t model_number() const final {
         return MODEL_NUMBER;
     }
 
     const char* device_name() const final {
-        return "MX-64";
+        return "MX-106";
     }
 
     bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) final {

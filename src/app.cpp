@@ -10,8 +10,8 @@
 #include <stm32f7xx.h>
 #include <unordered_map>
 
-#include "mx106_control_table.h"
-#include "mx64_control_table.h"
+#include "device/mx106.h"
+#include "device/mx64.h"
 
 struct Connection {
   public:
