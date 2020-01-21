@@ -53,7 +53,7 @@ class AddressMap {
     }
 
     bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) {
-        if (this->is_valid_map_addr(start_addr) && this->is_valid_map_addr(start_addr + len)) {
+        if (this->is_valid_map_addr(start_addr) && this->is_valid_map_addr(start_addr + len - 1)) {
             auto idx = start_addr - MAP_START;
             memcpy(this->map + idx, bytes, len);
             return true;
@@ -78,6 +78,7 @@ class AddressMap {
         }
     }
 
+  private:
     bool is_valid_map_addr(uint16_t addr) const {
         return addr >= MAP_START && addr < MAP_START + LEN * 2;
     }
@@ -86,7 +87,6 @@ class AddressMap {
         return addr >= DATA_START && addr < DATA_START + LEN;
     }
 
-  private:
     uint8_t map[LEN * 2];
 };
 
@@ -98,7 +98,7 @@ class DataSegment {
     }
 
     bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) {
-        if (this->is_valid_addr(start_addr) && this->is_valid_addr(start_addr + len)) {
+        if (this->is_valid_addr(start_addr) && this->is_valid_addr(start_addr + len - 1)) {
             auto idx = start_addr - START;
             memcpy(this->data + idx, bytes, len);
             return true;
@@ -135,11 +135,11 @@ class DataSegment {
         return uint32_from_le(this->data + (addr - START));
     }
 
+  private:
     bool is_valid_addr(uint16_t addr) const {
         return addr >= START && addr < START + LEN;
     }
 
-  private:
     uint8_t data[LEN];
 };
 
