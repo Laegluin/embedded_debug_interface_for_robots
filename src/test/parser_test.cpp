@@ -530,6 +530,20 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
             == std::vector<uint8_t>{0x96, 0x00, 0x00, 0x00, 0xaa, 0x00, 0x00, 0x00});
     }
 
+    SECTION("sync write with missing data") {
+        uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0xfe, 0x10, 0x00, 0x83, 0x74, 0x00, 0x04, 0x00,
+                             0x01, 0x96, 0x00, 0x00, 0x00, 0x02, 0xaa, 0x00, 0x00, 0x82, 0xb9};
+
+        Cursor cursor(raw_packet, sizeof(raw_packet));
+        auto parse_result = parser.parse(cursor, packet);
+
+        REQUIRE(cursor.remaining_bytes() == 0);
+        REQUIRE(parse_result == ParseResult::packet_available());
+
+        auto result = parse_instruction_packet(packet, &instruction_packet);
+        REQUIRE(result == InstructionParseResult::InvalidPacketLen);
+    }
+
     SECTION("bulk read") {
         uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0xfe, 0x0d, 0x00, 0x92, 0x01, 0x90,
                              0x00, 0x02, 0x00, 0x02, 0x92, 0x00, 0x01, 0x00, 0x1a, 0x05};
@@ -553,6 +567,36 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         REQUIRE(instruction_packet.bulk_read.reads[1].device_id == DeviceId(2));
         REQUIRE(instruction_packet.bulk_read.reads[1].start_addr == 0x0092);
         REQUIRE(instruction_packet.bulk_read.reads[1].len == 1);
+    }
+
+    SECTION("bulk read with missing len") {
+        uint8_t raw_packet[]{0xff,
+                             0xff,
+                             0xfd,
+                             0x00,
+                             0xfe,
+                             0x0b,
+                             0x00,
+                             0x92,
+                             0x01,
+                             0x90,
+                             0x00,
+                             0x02,
+                             0x00,
+                             0x02,
+                             0x92,
+                             0x00,
+                             0xfa,
+                             0x00};
+
+        Cursor cursor(raw_packet, sizeof(raw_packet));
+        auto parse_result = parser.parse(cursor, packet);
+
+        REQUIRE(cursor.remaining_bytes() == 0);
+        REQUIRE(parse_result == ParseResult::packet_available());
+
+        auto result = parse_instruction_packet(packet, &instruction_packet);
+        REQUIRE(result == InstructionParseResult::InvalidPacketLen);
     }
 
     SECTION("bulk write") {
@@ -580,5 +624,33 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         REQUIRE(instruction_packet.bulk_write.writes[1].start_addr == 0x001f);
         REQUIRE(instruction_packet.bulk_write.writes[1].data.size() == 1);
         REQUIRE(instruction_packet.bulk_write.writes[1].data == std::vector<uint8_t>{0x50});
+    }
+
+    SECTION("bulk write with missing data") {
+        uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0xfe, 0x10, 0x00, 0x93, 0x01, 0x20, 0x00, 0x02,
+                             0x00, 0xa0, 0x00, 0x02, 0x1f, 0x00, 0x0f, 0x00, 0x50, 0x6c, 0xe8};
+
+        Cursor cursor(raw_packet, sizeof(raw_packet));
+        auto parse_result = parser.parse(cursor, packet);
+
+        REQUIRE(cursor.remaining_bytes() == 0);
+        REQUIRE(parse_result == ParseResult::packet_available());
+
+        auto result = parse_instruction_packet(packet, &instruction_packet);
+        REQUIRE(result == InstructionParseResult::InvalidPacketLen);
+    }
+
+    SECTION("bulk write with missing len") {
+        uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0xfe, 0x0d, 0x00, 0x93, 0x01, 0x20,
+                             0x00, 0x02, 0x00, 0xa0, 0x00, 0x02, 0x1f, 0x00, 0xb2, 0x95};
+
+        Cursor cursor(raw_packet, sizeof(raw_packet));
+        auto parse_result = parser.parse(cursor, packet);
+
+        REQUIRE(cursor.remaining_bytes() == 0);
+        REQUIRE(parse_result == ParseResult::packet_available());
+
+        auto result = parse_instruction_packet(packet, &instruction_packet);
+        REQUIRE(result == InstructionParseResult::InvalidPacketLen);
     }
 }

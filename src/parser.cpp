@@ -349,7 +349,6 @@ InstructionPacket::~InstructionPacket() {
     }
 }
 
-// TODO: use move assignment to avoid manual destructor calls
 InstructionParseResult
     parse_instruction_packet(const Packet& packet, InstructionPacket* instruction_packet) {
     switch (packet.instruction) {
@@ -581,7 +580,7 @@ InstructionParseResult
                 auto start_addr = uint16_from_le(packet.data.data() + i + 1);
                 auto len = uint16_from_le(packet.data.data() + i + 3);
 
-                if (i + 5 + len > packet.data.size() + 1) {
+                if (i + 5 + len > packet.data.size()) {
                     return InstructionParseResult::InvalidPacketLen;
                 }
 
