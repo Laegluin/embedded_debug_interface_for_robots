@@ -96,7 +96,7 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
 
     while (cursor->remaining_bytes() > 0) {
         auto result = connection.parser.parse(*cursor, connection.last_packet);
-        if (result != ParseResult::packet_available()) {
+        if (result != ParseResult::PacketAvailable) {
             // TODO: err handling
             continue;
         }

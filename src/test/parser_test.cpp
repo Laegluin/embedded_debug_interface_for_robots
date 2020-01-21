@@ -16,7 +16,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Ping);
         REQUIRE(packet.error == Error());
@@ -30,7 +30,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -58,7 +58,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Status);
         REQUIRE(packet.error == Error());
@@ -90,7 +90,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -107,7 +107,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 5);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -115,7 +115,7 @@ TEST_CASE("parse packets", "[Parser]") {
 
         result = parser.parse(cursor, packet);
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::need_more_data());
+        REQUIRE(result == ParseResult::NeedMoreData);
     }
 
     SECTION("packet with stuffing bytes") {
@@ -125,7 +125,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(3));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -140,13 +140,13 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::need_more_data());
+        REQUIRE(result == ParseResult::NeedMoreData);
 
         cursor = Cursor(part2, sizeof(part2));
         result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -162,7 +162,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 16);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(3));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -171,7 +171,7 @@ TEST_CASE("parse packets", "[Parser]") {
         result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Write);
         REQUIRE(packet.error == Error());
@@ -187,7 +187,7 @@ TEST_CASE("parse packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 19);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(3));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -196,7 +196,7 @@ TEST_CASE("parse packets", "[Parser]") {
         result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Write);
         REQUIRE(packet.error == Error());
@@ -220,7 +220,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 6);
-        REQUIRE(result == ParseResult(ParseError::BufferOverflow));
+        REQUIRE(result == ParseResult::BufferOverflow);
     }
 
     SECTION("invalid checksum") {
@@ -230,7 +230,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult(ParseError::MismatchedChecksum));
+        REQUIRE(result == ParseResult::MismatchedChecksum);
     }
 
     SECTION("successful parse after error") {
@@ -242,12 +242,12 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 20);
-        REQUIRE(result == ParseResult(ParseError::BufferOverflow));
+        REQUIRE(result == ParseResult::BufferOverflow);
 
         result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -262,7 +262,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -278,7 +278,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         auto result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(result == ParseResult::packet_available());
+        REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
@@ -304,7 +304,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -320,7 +320,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -353,7 +353,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -386,7 +386,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -403,7 +403,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -417,7 +417,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -433,7 +433,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -462,7 +462,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -492,7 +492,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -514,7 +514,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -538,7 +538,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
         REQUIRE(result == InstructionParseResult::InvalidPacketLen);
@@ -552,7 +552,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -593,7 +593,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
         REQUIRE(result == InstructionParseResult::InvalidPacketLen);
@@ -607,7 +607,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
 
@@ -634,7 +634,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
         REQUIRE(result == InstructionParseResult::InvalidPacketLen);
@@ -648,7 +648,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         auto parse_result = parser.parse(cursor, packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
-        REQUIRE(parse_result == ParseResult::packet_available());
+        REQUIRE(parse_result == ParseResult::PacketAvailable);
 
         auto result = parse_instruction_packet(packet, &instruction_packet);
         REQUIRE(result == InstructionParseResult::InvalidPacketLen);

@@ -141,7 +141,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             packet.data.clear();
 
             if (!this->receiver.wait_for_header(cursor)) {
-                return ParseResult::need_more_data();
+                return ParseResult::NeedMoreData;
             }
 
             this->buf.clear();
@@ -158,7 +158,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             this->buf.shrink_by(needed_bytes - bytes_read);
 
             if (this->buf.size() < COMMON_FIELDS_LEN) {
-                return ParseResult::need_more_data();
+                return ParseResult::NeedMoreData;
             }
 
             packet.device_id = DeviceId(this->buf[0]);
@@ -183,7 +183,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             if (packet.instruction == Instruction::Status) {
                 uint8_t error;
                 if (this->receiver.read(cursor, &error, 1) == 0) {
-                    return ParseResult::need_more_data();
+                    return ParseResult::NeedMoreData;
                 }
 
                 packet.error = Error(error);
@@ -199,7 +199,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             // number of bytes; it should be close enough though
             if (!packet.data.try_extend_by(this->raw_remaining_data_len)) {
                 this->current_state = ParserState::Header;
-                return ParseResult(ParseError::BufferOverflow);
+                return ParseResult::BufferOverflow;
             }
 
             size_t bytes_read;
@@ -210,7 +210,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             this->raw_remaining_data_len -= raw_bytes_read;
 
             if (this->raw_remaining_data_len > 0) {
-                return ParseResult::need_more_data();
+                return ParseResult::NeedMoreData;
             }
 
             this->buf.clear();
@@ -226,7 +226,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             this->buf.shrink_by(needed_bytes - bytes_read);
 
             if (this->buf.size() < 2) {
-                return ParseResult::need_more_data();
+                return ParseResult::NeedMoreData;
             }
 
             auto checksum = uint16_from_le(this->buf.data());
@@ -234,9 +234,9 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             this->current_state = ParserState::Header;
 
             if (checksum == this->receiver.current_crc()) {
-                return ParseResult::packet_available();
+                return ParseResult::PacketAvailable;
             } else {
-                return ParseResult(ParseError::MismatchedChecksum);
+                return ParseResult::MismatchedChecksum;
             }
         }
         default:

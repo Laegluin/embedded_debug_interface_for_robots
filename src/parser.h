@@ -137,53 +137,12 @@ class Receiver {
     uint16_t crc;
 };
 
-enum class ParseError {
+enum class ParseResult {
+    PacketAvailable,
+    NeedMoreData,
     BufferOverflow,
     MismatchedChecksum,
 };
-
-class ParseResult {
-  public:
-    enum class Result {
-        PacketAvailable,
-        NeedMoreData,
-        Error,
-    };
-
-    ParseResult(ParseError error) : result(Result::Error), error(error) {}
-
-    static ParseResult packet_available() {
-        return ParseResult(Result::PacketAvailable);
-    }
-
-    static ParseResult need_more_data() {
-        return ParseResult(Result::NeedMoreData);
-    }
-
-    friend bool operator==(const ParseResult& lhs, const ParseResult& rhs);
-
-  private:
-    ParseResult(Result result) : result(result) {}
-
-    Result result;
-    ParseError error;
-};
-
-inline bool operator==(const ParseResult& lhs, const ParseResult& rhs) {
-    if (lhs.result != rhs.result) {
-        return false;
-    }
-
-    if (lhs.result == ParseResult::Result::Error) {
-        return lhs.error == rhs.error;
-    } else {
-        return true;
-    }
-}
-
-inline bool operator!=(const ParseResult& lhs, const ParseResult& rhs) {
-    return !(lhs == rhs);
-}
 
 enum class ParserState {
     Header,
