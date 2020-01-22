@@ -9,15 +9,11 @@
 #include <stm32f7xx.h>
 #include <unordered_map>
 
-#include "device/mx106.h"
-#include "device/mx64.h"
-
 struct Connection {
   public:
     Connection(ReceiveBuf* buf) :
         buf(buf),
         parser(Parser()),
-        is_last_instruction_packet_known(false),
         last_packet(Packet{
             DeviceId(0),
             Instruction::Ping,
@@ -27,8 +23,6 @@ struct Connection {
 
     ReceiveBuf* buf;
     Parser parser;
-    InstructionPacket last_instruction_packet;
-    bool is_last_instruction_packet_known;
     Packet last_packet;
 };
 
@@ -39,10 +33,11 @@ struct Widgets {
 static void handle_incoming_packets(Connection&, ControlTableMap&);
 static Widgets create_ui();
 static void update_ui(const Widgets& widgets, const ControlTableMap& control_tables);
-CommResult handle_status_packet(const InstructionPacket&, const Packet&, const ControlTableMap&);
+ProtocolResult
+    handle_status_packet(const InstructionPacket&, const Packet&, const ControlTableMap&);
 
 void run(const std::vector<ReceiveBuf*>& bufs) {
-    ControlTableMap control_tables;
+    ControlTableMap control_table_map;
     std::vector<Connection> connections;
 
     connections.reserve(bufs.size());
@@ -50,9 +45,6 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
     for (auto buf : bufs) {
         connections.push_back(Connection(buf));
     }
-
-    control_tables.emplace(DeviceId(0), std::make_unique<Mx64ControlTable>());
-    control_tables.emplace(DeviceId(1), std::make_unique<Mx106ControlTable>());
 
     Widgets widgets = create_ui();
 
@@ -65,7 +57,7 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
 
             // only update UI every 500 ms
             if (now - last_ui_update > 500) {
-                update_ui(widgets, control_tables);
+                update_ui(widgets, control_table_map);
                 last_ui_update = now;
             }
 
@@ -75,12 +67,12 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
                 last_render = now;
             }
 
-            handle_incoming_packets(connection, control_tables);
+            handle_incoming_packets(connection, control_table_map);
         }
     }
 }
 
-static void handle_incoming_packets(Connection& connection, ControlTableMap& control_tables) {
+static void handle_incoming_packets(Connection& connection, ControlTableMap& control_table_map) {
     Cursor* cursor;
 
     if (connection.buf->is_front_ready) {
@@ -94,33 +86,20 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
     }
 
     while (cursor->remaining_bytes() > 0) {
-        auto result = connection.parser.parse(*cursor, connection.last_packet);
-        if (result != ParseResult::PacketAvailable) {
+        auto parse_result = connection.parser.parse(*cursor, connection.last_packet);
+
+        if (parse_result != ParseResult::PacketAvailable) {
+            if (parse_result == ParseResult::NeedMoreData) {
+                return;
+            }
+
             // TODO: err handling
             continue;
         }
 
-        if (connection.last_packet.instruction == Instruction::Status) {
-            if (!connection.is_last_instruction_packet_known) {
-                continue;
-            }
-
-            auto result = update_control_table_map(
-                connection.last_instruction_packet, connection.last_packet, control_tables);
-
-            if (result != CommResult::Ok) {
-                // TODO: err handling
-            }
-        } else {
-            auto result = parse_instruction_packet(
-                connection.last_packet, &connection.last_instruction_packet);
-
-            connection.is_last_instruction_packet_known = result == InstructionParseResult::Ok;
-
-            if (result != InstructionParseResult::Ok) {
-                // TODO: err handling
-                continue;
-            }
+        auto result = control_table_map.receive(connection.last_packet);
+        if (result != ProtocolResult::Ok) {
+            // TODO: err handling
         }
     }
 }
@@ -136,11 +115,11 @@ static Widgets create_ui() {
     return Widgets{list};
 }
 
-static void update_ui(const Widgets& widgets, const ControlTableMap& control_tables) {
+static void update_ui(const Widgets& widgets, const ControlTableMap& control_table_map) {
     size_t row_idx = 0;
     auto num_rows = LISTVIEW_GetNumRows(widgets.list);
 
-    for (auto& id_and_table : control_tables) {
+    for (auto& id_and_table : control_table_map) {
         auto device_id = id_and_table.first;
         auto& control_table = id_and_table.second;
 

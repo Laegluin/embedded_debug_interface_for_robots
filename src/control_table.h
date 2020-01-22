@@ -44,8 +44,6 @@ class UnknownControlTable : public ControlTable {
     }
 };
 
-using ControlTableMap = std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>;
-
 template <uint16_t MAP_START, uint16_t DATA_START, uint16_t LEN>
 class AddressMap {
   public:
@@ -267,7 +265,7 @@ std::vector<std::pair<const char*, std::string>> fmt_control_table_fields(
     return formatted_fields;
 }
 
-enum class CommResult {
+enum class ProtocolResult {
     Ok,
     StatusIsInstruction,
     StatusHasError,
@@ -276,13 +274,37 @@ enum class CommResult {
     InvalidPacketLen,
     InvalidDeviceId,
     InvalidWrite,
+    InvalidInstructionPacket,
 };
 
-/// Updates the `control_tables` with the values received in `status_packet`. The status
-/// packet is interpreted using the `instruction_packet` received last.
-CommResult update_control_table_map(
-    const InstructionPacket& instruction_packet,
-    const Packet& status_packet,
-    ControlTableMap& control_tables);
+class ControlTableMap {
+  public:
+    ControlTableMap();
+
+    ProtocolResult receive(const Packet& packet);
+
+    std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>::const_iterator begin() const
+        noexcept {
+        return this->control_tables.begin();
+    }
+
+    std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>::const_iterator end() const
+        noexcept {
+        return this->control_tables.end();
+    }
+
+  private:
+    ProtocolResult receive_instruction_packet(const Packet& instruction_packet);
+
+    ProtocolResult receive_status_packet(const Packet& status_packet);
+
+    void register_control_table(DeviceId device_id, uint32_t model_number);
+
+    std::unique_ptr<ControlTable>& get_control_table(DeviceId device_id);
+
+    std::unordered_map<DeviceId, std::unique_ptr<ControlTable>> control_tables;
+    InstructionPacket last_instruction_packet;
+    bool is_last_instruction_packet_known;
+};
 
 #endif
