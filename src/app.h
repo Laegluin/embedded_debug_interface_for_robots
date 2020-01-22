@@ -1,7 +1,7 @@
 #ifndef APP_H
 #define APP_H
 
-#include "buffer.h"
+#include "cursor.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <vector>

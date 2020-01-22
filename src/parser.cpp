@@ -135,29 +135,22 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
     // new data
     switch (this->current_state) {
         case ParserState::Header: {
-            // clear the data so we can overwrite it later;
-            // this is fine since the state of the packet is undefined until
-            // we return a result indicating that it is ready
-            packet.data.clear();
-
             if (!this->receiver.wait_for_header(cursor)) {
                 return ParseResult::NeedMoreData;
             }
 
-            this->buf.clear();
+            this->buf_len = 0;
             this->current_state = ParserState::CommonFields;
         }
         // fallthrough
         case ParserState::CommonFields: {
-            const size_t COMMON_FIELDS_LEN = 4;
-            auto needed_bytes = COMMON_FIELDS_LEN - this->buf.size();
+            auto needed_bytes = 4 - this->buf_len;
 
-            uint8_t* dst = this->buf.data() + this->buf.size();
-            this->buf.extend_by(needed_bytes);
+            uint8_t* dst = this->buf + this->buf_len;
             auto bytes_read = this->receiver.read(cursor, dst, needed_bytes);
-            this->buf.shrink_by(needed_bytes - bytes_read);
+            this->buf_len += bytes_read;
 
-            if (this->buf.size() < COMMON_FIELDS_LEN) {
+            if (this->buf_len < 4) {
                 return ParseResult::NeedMoreData;
             }
 
@@ -169,13 +162,13 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             // no stuffing can happen for it or the (possibly) following error
 
             // clang-format off
-            this->raw_remaining_data_len = uint16_from_le(buf.data() + 1) 
+            this->raw_remaining_data_len = uint16_from_le(buf + 1) 
                 - 1                                                     // instruction field
                 - (packet.instruction == Instruction::Status)           // error field (only present on status packets)
                 - 2;                                                    // crc checksum
             // clang-format on
 
-            this->buf.clear();
+            this->buf_len = 0;
             this->current_state = ParserState::ErrorField;
         }
         // fallthrough
@@ -189,48 +182,50 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
                 packet.error = Error(error);
             }
 
+            packet.data.clear();
             this->current_state = ParserState::Data;
         }
         // fallthrough
         case ParserState::Data: {
-            uint8_t* dst = packet.data.data() + packet.data.size();
+            auto prev_size = packet.data.size();
 
             // since there may be stuffing, this length is actually only an upper bound on the
             // number of bytes; it should be close enough though
-            if (!packet.data.try_extend_by(this->raw_remaining_data_len)) {
+            if (prev_size + this->raw_remaining_data_len > MAX_PACKET_DATA_LEN) {
                 this->current_state = ParserState::Header;
                 return ParseResult::BufferOverflow;
             }
+
+            packet.data.resize(prev_size + this->raw_remaining_data_len);
+            uint8_t* dst = packet.data.data() + prev_size;
 
             size_t bytes_read;
             auto raw_bytes_read = this->receiver.read_raw_num_bytes(
                 cursor, dst, &bytes_read, this->raw_remaining_data_len);
 
-            packet.data.shrink_by(this->raw_remaining_data_len - bytes_read);
+            packet.data.resize(prev_size + bytes_read);
             this->raw_remaining_data_len -= raw_bytes_read;
 
             if (this->raw_remaining_data_len > 0) {
                 return ParseResult::NeedMoreData;
             }
 
-            this->buf.clear();
             this->current_state = ParserState::Checksum;
         }
         // fallthrough
         case ParserState::Checksum: {
-            auto needed_bytes = 2 - this->buf.size();
+            auto needed_bytes = 2 - this->buf_len;
 
-            uint8_t* dst = this->buf.data() + this->buf.size();
-            this->buf.extend_by(needed_bytes);
+            uint8_t* dst = this->buf + buf_len;
             auto bytes_read = this->receiver.read_raw(cursor, dst, needed_bytes);
-            this->buf.shrink_by(needed_bytes - bytes_read);
+            this->buf_len += bytes_read;
 
-            if (this->buf.size() < 2) {
+            if (this->buf_len < 2) {
                 return ParseResult::NeedMoreData;
             }
 
-            auto checksum = uint16_from_le(this->buf.data());
-            this->buf.clear();
+            auto checksum = uint16_from_le(this->buf);
+            this->buf_len = 0;
             this->current_state = ParserState::Header;
 
             if (checksum == this->receiver.current_crc()) {

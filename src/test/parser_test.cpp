@@ -7,7 +7,7 @@ TEST_CASE("parse packets", "[Parser]") {
         DeviceId(0),
         Instruction::Ping,
         Error(),
-        FixedByteVector<PACKET_BUF_LEN>(),
+        std::vector<uint8_t>(),
     };
 
     SECTION("ping packet") {
@@ -20,7 +20,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Ping);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<0>());
+        REQUIRE(packet.data == std::vector<uint8_t>());
     }
 
     SECTION("read packet") {
@@ -34,7 +34,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0x84, 0x00, 0x04, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
     }
 
     SECTION("status packet") {
@@ -62,7 +62,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Status);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0xa6, 0x00, 0x00, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0xa6, 0x00, 0x00, 0x00});
     }
 
     SECTION("packet with preceding garbage") {
@@ -94,7 +94,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0x84, 0x00, 0x04, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
     }
 
     SECTION("packet with trailing garbage") {
@@ -111,7 +111,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0x84, 0x00, 0x04, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
 
         result = parser.parse(cursor, packet);
         REQUIRE(cursor.remaining_bytes() == 0);
@@ -129,7 +129,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(3));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<3>{0xff, 0xff, 0xfd});
+        REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd});
     }
 
     SECTION("packet split over two buffers") {
@@ -150,7 +150,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0x84, 0x00, 0x04, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
     }
 
     SECTION("two consecutive packets") {
@@ -166,7 +166,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(3));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<3>{0xff, 0xff, 0xfd});
+        REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd});
 
         result = parser.parse(cursor, packet);
 
@@ -175,7 +175,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Write);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<6>{0x74, 0x00, 0x00, 0x02, 0x00, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x74, 0x00, 0x00, 0x02, 0x00, 0x00});
     }
 
     SECTION("two packets with garbage inbetween") {
@@ -191,7 +191,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(3));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<3>{0xff, 0xff, 0xfd});
+        REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd});
 
         result = parser.parse(cursor, packet);
 
@@ -200,7 +200,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Write);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<6>{0x74, 0x00, 0x00, 0x02, 0x00, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x74, 0x00, 0x00, 0x02, 0x00, 0x00});
     }
 };
 
@@ -210,7 +210,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         DeviceId(0),
         Instruction::Ping,
         Error(),
-        FixedByteVector<PACKET_BUF_LEN>(),
+        std::vector<uint8_t>(),
     };
 
     SECTION("buffer overflow") {
@@ -251,7 +251,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0x84, 0x00, 0x04, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
     }
 
     // TODO: detect header and start parsing a new packet instead
@@ -266,7 +266,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0xff, 0xff, 0xfd, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd, 0x00});
     }
 
     // this is technically not allowed by the spec but since it would not be the start of a packet
@@ -282,7 +282,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == FixedByteVector<4>{0xff, 0xff, 0xfd, 0x30});
+        REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd, 0x30});
     }
 }
 
@@ -293,7 +293,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         DeviceId(0),
         Instruction::Ping,
         Error(),
-        FixedByteVector<PACKET_BUF_LEN>(),
+        std::vector<uint8_t>(),
     };
 
     InstructionPacket instruction_packet;

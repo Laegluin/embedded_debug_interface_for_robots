@@ -3,13 +3,13 @@
 
 /// See <http://emanual.robotis.com/docs/en/dxl/protocol2/>
 
-#include "buffer.h"
+#include "cursor.h"
 #include <array>
 #include <stddef.h>
 #include <stdint.h>
 #include <vector>
 
-const uint32_t PACKET_BUF_LEN = 256;
+const uint32_t MAX_PACKET_DATA_LEN = 256;
 
 class DeviceId {
   public:
@@ -99,7 +99,7 @@ struct Packet {
     DeviceId device_id;
     Instruction instruction;
     Error error;
-    FixedByteVector<PACKET_BUF_LEN> data;
+    std::vector<uint8_t> data;
 };
 
 class Receiver {
@@ -154,14 +154,15 @@ enum class ParserState {
 
 class Parser {
   public:
-    Parser() : current_state(ParserState::Header), raw_remaining_data_len(0) {}
+    Parser() : buf_len(0), current_state(ParserState::Header), raw_remaining_data_len(0) {}
 
     ParseResult parse(Cursor& cursor, Packet& packet);
 
   private:
     // only need this for storing partial reads that are not data (data is
     // stored in the packet directly)
-    FixedByteVector<4> buf;
+    uint8_t buf[4];
+    size_t buf_len;
     Receiver receiver;
     ParserState current_state;
     size_t raw_remaining_data_len;

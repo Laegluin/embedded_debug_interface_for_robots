@@ -1,5 +1,4 @@
 #include "app.h"
-#include "buffer.h"
 #include "control_table.h"
 #include "main.h"
 #include "parser.h"
@@ -23,7 +22,7 @@ struct Connection {
             DeviceId(0),
             Instruction::Ping,
             Error(),
-            FixedByteVector<PACKET_BUF_LEN>(),
+            std::vector<uint8_t>(),
         }) {}
 
     ReceiveBuf* buf;
