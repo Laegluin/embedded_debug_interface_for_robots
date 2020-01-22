@@ -157,10 +157,9 @@ static void update_ui(const Widgets& widgets, const ControlTableMap& control_tab
         }
         row_idx++;
 
-        std::unordered_map<const char*, std::string> name_to_value;
-        control_table->entries(name_to_value);
+        auto formatted_fields = control_table->fmt_fields();
 
-        for (auto& name_and_value : name_to_value) {
+        for (auto& name_and_value : formatted_fields) {
             auto name = name_and_value.first;
             auto value = name_and_value.second.c_str();
 

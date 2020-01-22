@@ -27,7 +27,7 @@ class Mx106ControlTable : public ControlTable {
             || this->addr_map_2.write(resolved_addr, bytes, len);
     }
 
-    void entries(std::unordered_map<const char*, std::string>& name_to_value) const final;
+    std::vector<std::pair<const char*, std::string>> fmt_fields() const final;
 
   private:
     DataSegment<0, 147> data;

@@ -16,12 +16,12 @@ inline uint32_t uint32_from_le(const uint8_t bytes[4]) {
     return val;
 }
 
-inline void uint16_to_le(uint8_t bytes[2], uint16_t val) {
-    memcpy(bytes, &val, 2);
+inline void uint16_to_le(uint8_t dst[2], uint16_t val) {
+    memcpy(dst, &val, 2);
 }
 
-inline void uint32_to_le(uint8_t bytes[4], uint32_t val) {
-    memcpy(bytes, &val, 4);
+inline void uint32_to_le(uint8_t dst[4], uint32_t val) {
+    memcpy(dst, &val, 4);
 }
 
 #endif

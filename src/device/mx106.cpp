@@ -1,45 +1,65 @@
 #include "device/mx106.h"
+#include "device/fmt.h"
 
 // See <http://emanual.robotis.com/docs/en/dxl/mx/mx-106-2/>
 
+static std::array<ControlTableField, 52> FIELDS{
+    ControlTableField::new_uint16(0, "Model Number", Mx106ControlTable::MODEL_NUMBER, to_string),
+    ControlTableField::new_uint32(2, "Model Information", 0, to_string),
+    ControlTableField::new_uint8(6, "Firmware Version", 0, to_string),
+    ControlTableField::new_uint8(7, "Id", 1, to_string),
+    ControlTableField::new_uint8(8, "Baud Rate", 1, to_string),
+    ControlTableField::new_uint8(9, "Return Delay Time", 250, to_string),
+    ControlTableField::new_uint8(10, "Drive Mode", 0, to_string),
+    ControlTableField::new_uint8(11, "Operating Mode", 3, to_string),
+    ControlTableField::new_uint8(12, "Secondary Id", 255, to_string),
+    ControlTableField::new_uint8(13, "Protocol Type", 2, to_string),
+    ControlTableField::new_uint32(20, "Homing Offset", 0, to_string),
+    ControlTableField::new_uint32(24, "Moving Threshold", 10, to_string),
+    ControlTableField::new_uint8(31, "Temperature Limit", 80, to_string),
+    ControlTableField::new_uint16(32, "Max Voltage Limit", 160, to_string),
+    ControlTableField::new_uint16(34, "Min Voltage Limit", 95, to_string),
+    ControlTableField::new_uint16(36, "PWM Limit", 885, to_string),
+    ControlTableField::new_uint16(38, "Current Limit", 2047, to_string),
+    ControlTableField::new_uint32(40, "Acceleration Limit", 32767, to_string),
+    ControlTableField::new_uint32(44, "Velocity Limit", 210, to_string),
+    ControlTableField::new_uint32(48, "Max Position Limit", 4095, to_string),
+    ControlTableField::new_uint32(52, "Min Position Limit", 0, to_string),
+    ControlTableField::new_uint8(63, "Shutdown", 52, to_string),
+    ControlTableField::new_uint8(64, "Torque Enable", 0, to_string),
+    ControlTableField::new_uint8(65, "LED", 0, to_string),
+    ControlTableField::new_uint8(68, "Status Return Level", 2, to_string),
+    ControlTableField::new_uint8(69, "Registered Instruction", 0, to_string),
+    ControlTableField::new_uint8(70, "Hardware Error Status", 0, to_string),
+    ControlTableField::new_uint16(76, "Velocity I-Gain", 1920, to_string),
+    ControlTableField::new_uint16(78, "Velocity P-Gain", 100, to_string),
+    ControlTableField::new_uint16(80, "Position D-Gain", 0, to_string),
+    ControlTableField::new_uint16(82, "Position I-Gain", 0, to_string),
+    ControlTableField::new_uint16(84, "Position P-Gain", 850, to_string),
+    ControlTableField::new_uint16(88, "Feedforward 2nd Gain", 0, to_string),
+    ControlTableField::new_uint16(90, "Feedforward 1st Gain", 0, to_string),
+    ControlTableField::new_uint8(98, "Bus Watchdog", 0, to_string),
+    ControlTableField::new_uint16(100, "Goal PWM", 0, to_string),
+    ControlTableField::new_uint16(102, "Goal Current", 0, to_string),
+    ControlTableField::new_uint32(104, "Goal Velocity", 0, to_string),
+    ControlTableField::new_uint32(108, "Profile Acceleration", 0, to_string),
+    ControlTableField::new_uint32(112, "Profile Velocity", 0, to_string),
+    ControlTableField::new_uint32(116, "Goal Position", 0, to_string),
+    ControlTableField::new_uint16(120, "Realtime Tick", 0, to_string),
+    ControlTableField::new_uint8(122, "Moving", 0, to_string),
+    ControlTableField::new_uint8(123, "Moving Status", 0, to_string),
+    ControlTableField::new_uint16(124, "Present PWM", 0, to_string),
+    ControlTableField::new_uint16(126, "Present Current", 0, to_string),
+    ControlTableField::new_uint32(128, "Present Velocity", 0, to_string),
+    ControlTableField::new_uint32(132, "Present Position", 0, to_string),
+    ControlTableField::new_uint32(136, "Velocity Trajectory", 0, to_string),
+    ControlTableField::new_uint32(140, "Position Trajectory", 0, to_string),
+    ControlTableField::new_uint16(144, "Present Input Voltage", 0, to_string),
+    ControlTableField::new_uint8(146, "Present Temperature", 0, to_string),
+};
+
 Mx106ControlTable::Mx106ControlTable() {
-    this->data.write_uint16(0, MODEL_NUMBER);
-    this->data.write_uint8(7, 1);
-    this->data.write_uint8(8, 1);
-    this->data.write_uint8(9, 250);
-    this->data.write_uint8(10, 0);
-    this->data.write_uint8(11, 3);
-    this->data.write_uint8(12, 255);
-    this->data.write_uint8(13, 2);
-    this->data.write_uint32(20, 0);
-    this->data.write_uint32(24, 10);
-    this->data.write_uint8(31, 80);
-    this->data.write_uint16(32, 160);
-    this->data.write_uint16(34, 95);
-    this->data.write_uint16(36, 885);
-    this->data.write_uint16(38, 2047);
-    this->data.write_uint32(40, 32767);
-    this->data.write_uint32(44, 210);
-    this->data.write_uint32(48, 4095);
-    this->data.write_uint32(52, 0);
-    this->data.write_uint8(63, 52);
-    this->data.write_uint8(64, 0);
-    this->data.write_uint8(65, 0);
-    this->data.write_uint8(68, 2);
-    this->data.write_uint8(69, 0);
-    this->data.write_uint8(70, 0);
-    this->data.write_uint16(76, 1920);
-    this->data.write_uint16(78, 100);
-    this->data.write_uint16(80, 0);
-    this->data.write_uint16(82, 0);
-    this->data.write_uint16(84, 850);
-    this->data.write_uint16(88, 0);
-    this->data.write_uint16(90, 0);
-    this->data.write_uint8(98, 0);
-    this->data.write_uint32(108, 0);
-    this->data.write_uint32(112, 0);
-    this->data.write_uint8(122, 0);
-    this->data.write_uint8(123, 0);
+    default_init_control_table(this->data, FIELDS);
 
     this->addr_map_1.write_uint16(168, 224);
     this->addr_map_1.write_uint16(170, 225);
@@ -100,57 +120,6 @@ Mx106ControlTable::Mx106ControlTable() {
     this->addr_map_2.write_uint16(632, 661);
 }
 
-void Mx106ControlTable::entries(std::unordered_map<const char*, std::string>& name_to_value) const {
-    name_to_value.emplace("Model Number", std::to_string(this->data.uint16_at(0)));
-    name_to_value.emplace("Model Information", std::to_string(this->data.uint32_at(2)));
-    name_to_value.emplace("Firmware Version", std::to_string(this->data.uint8_at(6)));
-    name_to_value.emplace("Id", std::to_string(this->data.uint8_at(7)));
-    name_to_value.emplace("Baud Rate", std::to_string(this->data.uint8_at(8)));
-    name_to_value.emplace("Return Delay Time", std::to_string(this->data.uint8_at(9)));
-    name_to_value.emplace("Drive Mode", std::to_string(this->data.uint8_at(10)));
-    name_to_value.emplace("Operating Mode", std::to_string(this->data.uint8_at(11)));
-    name_to_value.emplace("Secondary Id", std::to_string(this->data.uint8_at(12)));
-    name_to_value.emplace("Protocol Type", std::to_string(this->data.uint8_at(13)));
-    name_to_value.emplace("Homing Offset", std::to_string(this->data.uint32_at(20)));
-    name_to_value.emplace("Moving Threshold", std::to_string(this->data.uint32_at(24)));
-    name_to_value.emplace("Temperature Limit", std::to_string(this->data.uint8_at(31)));
-    name_to_value.emplace("Max Voltage Limit", std::to_string(this->data.uint16_at(32)));
-    name_to_value.emplace("Min Voltage Limit", std::to_string(this->data.uint16_at(34)));
-    name_to_value.emplace("PWM Limit", std::to_string(this->data.uint16_at(36)));
-    name_to_value.emplace("Current Limit", std::to_string(this->data.uint16_at(38)));
-    name_to_value.emplace("Acceleration Limit", std::to_string(this->data.uint32_at(40)));
-    name_to_value.emplace("Velocity Limit", std::to_string(this->data.uint32_at(44)));
-    name_to_value.emplace("Max Position Limit", std::to_string(this->data.uint32_at(48)));
-    name_to_value.emplace("Min Position Limit", std::to_string(this->data.uint32_at(52)));
-    name_to_value.emplace("Shutdown", std::to_string(this->data.uint8_at(63)));
-    name_to_value.emplace("Torque Enable", std::to_string(this->data.uint8_at(64)));
-    name_to_value.emplace("LED", std::to_string(this->data.uint8_at(65)));
-    name_to_value.emplace("Status Return Level", std::to_string(this->data.uint8_at(68)));
-    name_to_value.emplace("Registered Instruction", std::to_string(this->data.uint8_at(69)));
-    name_to_value.emplace("Hardware Error Status", std::to_string(this->data.uint8_at(70)));
-    name_to_value.emplace("Velocity I-Gain", std::to_string(this->data.uint16_at(76)));
-    name_to_value.emplace("Velocity P-Gain", std::to_string(this->data.uint16_at(78)));
-    name_to_value.emplace("Position D-Gain", std::to_string(this->data.uint16_at(80)));
-    name_to_value.emplace("Position I-Gain", std::to_string(this->data.uint16_at(82)));
-    name_to_value.emplace("Position P-Gain", std::to_string(this->data.uint16_at(84)));
-    name_to_value.emplace("Feedforward 2nd Gain", std::to_string(this->data.uint16_at(88)));
-    name_to_value.emplace("Feedforward 1st Gain", std::to_string(this->data.uint16_at(90)));
-    name_to_value.emplace("Bus Watchdog", std::to_string(this->data.uint8_at(98)));
-    name_to_value.emplace("Goal PWM", std::to_string(this->data.uint16_at(100)));
-    name_to_value.emplace("Goal Current", std::to_string(this->data.uint16_at(102)));
-    name_to_value.emplace("Goal Velocity", std::to_string(this->data.uint32_at(104)));
-    name_to_value.emplace("Profile Acceleration", std::to_string(this->data.uint32_at(108)));
-    name_to_value.emplace("Profile Velocity", std::to_string(this->data.uint32_at(112)));
-    name_to_value.emplace("Goal Position", std::to_string(this->data.uint32_at(116)));
-    name_to_value.emplace("Realtime Tick", std::to_string(this->data.uint16_at(120)));
-    name_to_value.emplace("Moving", std::to_string(this->data.uint8_at(122)));
-    name_to_value.emplace("Moving Status", std::to_string(this->data.uint8_at(123)));
-    name_to_value.emplace("Present PWM", std::to_string(this->data.uint16_at(124)));
-    name_to_value.emplace("Present Current", std::to_string(this->data.uint16_at(126)));
-    name_to_value.emplace("Present Velocity", std::to_string(this->data.uint32_at(128)));
-    name_to_value.emplace("Present Position", std::to_string(this->data.uint32_at(132)));
-    name_to_value.emplace("Velocity Trajectory", std::to_string(this->data.uint32_at(136)));
-    name_to_value.emplace("Position Trajectory", std::to_string(this->data.uint32_at(140)));
-    name_to_value.emplace("Present Input Voltage", std::to_string(this->data.uint16_at(144)));
-    name_to_value.emplace("Present Temperature", std::to_string(this->data.uint8_at(146)));
+std::vector<std::pair<const char*, std::string>> Mx106ControlTable::fmt_fields() const {
+    return fmt_control_table_fields(this->data, FIELDS);
 }

@@ -20,8 +20,7 @@ class ControlTable {
 
     virtual bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) = 0;
 
-    // TODO: simply return map
-    virtual void entries(std::unordered_map<const char*, std::string>& name_to_value) const = 0;
+    virtual std::vector<std::pair<const char*, std::string>> fmt_fields() const = 0;
 };
 
 class UnknownControlTable : public ControlTable {
@@ -40,7 +39,9 @@ class UnknownControlTable : public ControlTable {
         return true;
     }
 
-    void entries(std::unordered_map<const char*, std::string>&) const final {}
+    std::vector<std::pair<const char*, std::string>> fmt_fields() const final {
+        return std::vector<std::pair<const char*, std::string>>();
+    }
 };
 
 using ControlTableMap = std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>;
@@ -142,6 +143,129 @@ class DataSegment {
 
     uint8_t data[LEN];
 };
+
+struct ControlTableField {
+    enum class FieldType {
+        UInt8,
+        UInt16,
+        UInt32,
+    };
+
+    static ControlTableField new_uint8(
+        uint16_t addr,
+        const char* name,
+        uint8_t default_value,
+        std::string (*fmt)(uint8_t)) {
+        ControlTableField field;
+        field.addr = addr;
+        field.type = FieldType::UInt8;
+        field.name = name;
+        field.uint8.default_value = default_value;
+        field.uint8.fmt = fmt;
+        return field;
+    }
+
+    static ControlTableField new_uint16(
+        uint16_t addr,
+        const char* name,
+        uint16_t default_value,
+        std::string (*fmt)(uint16_t)) {
+        ControlTableField field;
+        field.addr = addr;
+        field.type = FieldType::UInt16;
+        field.name = name;
+        field.uint16.default_value = default_value;
+        field.uint16.fmt = fmt;
+        return field;
+    }
+
+    static ControlTableField new_uint32(
+        uint16_t addr,
+        const char* name,
+        uint32_t default_value,
+        std::string (*fmt)(uint32_t)) {
+        ControlTableField field;
+        field.addr = addr;
+        field.type = FieldType::UInt32;
+        field.name = name;
+        field.uint32.default_value = default_value;
+        field.uint32.fmt = fmt;
+        return field;
+    }
+
+    uint16_t addr;
+    FieldType type;
+    const char* name;
+    union {
+        struct {
+            uint8_t default_value;
+            std::string (*fmt)(uint8_t);
+        } uint8;
+        struct {
+            uint16_t default_value;
+            std::string (*fmt)(uint16_t);
+        } uint16;
+        struct {
+            uint32_t default_value;
+            std::string (*fmt)(uint32_t);
+        } uint32;
+    };
+};
+
+template <typename Data, size_t NUM_FIELDS>
+void default_init_control_table(
+    Data& data,
+    const std::array<ControlTableField, NUM_FIELDS>& fields) {
+    for (auto& field : fields) {
+        switch (field.type) {
+            case ControlTableField::FieldType::UInt8: {
+                data.write_uint8(field.addr, field.uint8.default_value);
+                break;
+            }
+            case ControlTableField::FieldType::UInt16: {
+                data.write_uint16(field.addr, field.uint16.default_value);
+                break;
+            }
+            case ControlTableField::FieldType::UInt32: {
+                data.write_uint32(field.addr, field.uint32.default_value);
+                break;
+            }
+        }
+    }
+}
+
+template <typename Data, size_t NUM_FIELDS>
+std::vector<std::pair<const char*, std::string>> fmt_control_table_fields(
+    const Data& data,
+    const std::array<ControlTableField, NUM_FIELDS>& fields) {
+    std::vector<std::pair<const char*, std::string>> formatted_fields;
+    formatted_fields.reserve(NUM_FIELDS);
+
+    for (auto& field : fields) {
+        switch (field.type) {
+            case ControlTableField::FieldType::UInt8: {
+                auto value = data.uint8_at(field.addr);
+                auto formatted_value = field.uint8.fmt(value);
+                formatted_fields.emplace_back(field.name, std::move(formatted_value));
+                break;
+            }
+            case ControlTableField::FieldType::UInt16: {
+                auto value = data.uint16_at(field.addr);
+                auto formatted_value = field.uint16.fmt(value);
+                formatted_fields.emplace_back(field.name, std::move(formatted_value));
+                break;
+            }
+            case ControlTableField::FieldType::UInt32: {
+                auto value = data.uint32_at(field.addr);
+                auto formatted_value = field.uint32.fmt(value);
+                formatted_fields.emplace_back(field.name, std::move(formatted_value));
+                break;
+            }
+        }
+    }
+
+    return formatted_fields;
+}
 
 enum class CommResult {
     Ok,
