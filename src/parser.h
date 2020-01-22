@@ -156,7 +156,7 @@ class Parser {
   public:
     Parser() : buf_len(0), current_state(ParserState::Header), raw_remaining_data_len(0) {}
 
-    ParseResult parse(Cursor& cursor, Packet& packet);
+    ParseResult parse(Cursor& cursor, Packet* packet);
 
   private:
     // only need this for storing partial reads that are not data (data is

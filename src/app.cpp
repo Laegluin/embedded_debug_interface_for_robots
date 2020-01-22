@@ -86,7 +86,7 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
     }
 
     while (cursor->remaining_bytes() > 0) {
-        auto parse_result = connection.parser.parse(*cursor, connection.last_packet);
+        auto parse_result = connection.parser.parse(*cursor, &connection.last_packet);
 
         if (parse_result != ParseResult::PacketAvailable) {
             if (parse_result == ParseResult::NeedMoreData) {

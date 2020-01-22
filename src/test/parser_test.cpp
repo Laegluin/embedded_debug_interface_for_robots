@@ -13,7 +13,7 @@ TEST_CASE("parse packets", "[Parser]") {
     SECTION("ping packet") {
         uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0x03, 0x00, 0x01, 0x19, 0x4e};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -27,7 +27,7 @@ TEST_CASE("parse packets", "[Parser]") {
         uint8_t raw_packet[]{
             0xff, 0xff, 0xfd, 0x00, 0x01, 0x07, 0x00, 0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -55,7 +55,7 @@ TEST_CASE("parse packets", "[Parser]") {
                              0xc0};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -87,7 +87,7 @@ TEST_CASE("parse packets", "[Parser]") {
                              0x15};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -104,7 +104,7 @@ TEST_CASE("parse packets", "[Parser]") {
         };
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 5);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -113,7 +113,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.error == Error());
         REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
 
-        result = parser.parse(cursor, packet);
+        result = parser.parse(cursor, &packet);
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::NeedMoreData);
     }
@@ -122,7 +122,7 @@ TEST_CASE("parse packets", "[Parser]") {
         uint8_t raw_packet[]{
             0xff, 0xff, 0xfd, 0x00, 0x03, 0x07, 0x00, 0x02, 0xff, 0xff, 0xfd, 0xfd, 0x0b, 0x71};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -137,13 +137,13 @@ TEST_CASE("parse packets", "[Parser]") {
         uint8_t part2[]{0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
 
         Cursor cursor(part1, sizeof(part1));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::NeedMoreData);
 
         cursor = Cursor(part2, sizeof(part2));
-        result = parser.parse(cursor, packet);
+        result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -159,7 +159,7 @@ TEST_CASE("parse packets", "[Parser]") {
                              0x00, 0x03, 0x74, 0x00, 0x00, 0x02, 0x00, 0x00, 0xca, 0x89};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 16);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -168,7 +168,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.error == Error());
         REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd});
 
-        result = parser.parse(cursor, packet);
+        result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -184,7 +184,7 @@ TEST_CASE("parse packets", "[Parser]") {
                              0x09, 0x00, 0x03, 0x74, 0x00, 0x00, 0x02, 0x00, 0x00, 0xca, 0x89};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 19);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -193,7 +193,7 @@ TEST_CASE("parse packets", "[Parser]") {
         REQUIRE(packet.error == Error());
         REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd});
 
-        result = parser.parse(cursor, packet);
+        result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -217,7 +217,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         uint8_t raw_packet[]{
             0xff, 0xff, 0xfd, 0x00, 0x01, 0xff, 0xff, 0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 6);
         REQUIRE(result == ParseResult::BufferOverflow);
@@ -227,7 +227,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         uint8_t raw_packet[]{
             0xff, 0xff, 0xfd, 0x00, 0x01, 0x07, 0x00, 0x02, 0x84, 0x00, 0x04, 0x00, 0x11, 0x15};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::MismatchedChecksum);
@@ -239,12 +239,12 @@ TEST_CASE("parse invalid packets", "[Parser]") {
                              0x00, 0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 20);
         REQUIRE(result == ParseResult::BufferOverflow);
 
-        result = parser.parse(cursor, packet);
+        result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -259,7 +259,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         uint8_t raw_packet[]{
             0xff, 0xff, 0xfd, 0x00, 0x01, 0x07, 0x00, 0x02, 0xff, 0xff, 0xfd, 0x00, 0x0a, 0xd3};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -275,7 +275,7 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         uint8_t raw_packet[]{
             0xff, 0xff, 0xfd, 0x00, 0x01, 0x07, 0x00, 0x02, 0xff, 0xff, 0xfd, 0x30, 0xaa, 0xd3};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto result = parser.parse(cursor, packet);
+        auto result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
@@ -301,7 +301,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
     SECTION("ping packet") {
         uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0x03, 0x00, 0x01, 0x19, 0x4e};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -317,7 +317,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
         uint8_t raw_packet[]{
             0xff, 0xff, 0xfd, 0x00, 0x01, 0x07, 0x00, 0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -350,7 +350,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x89};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -383,7 +383,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x8e};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -400,7 +400,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
     SECTION("action packet") {
         uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0x03, 0x00, 0x05, 0x02, 0xce};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -414,7 +414,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
     SECTION("factory reset packet") {
         uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0x04, 0x00, 0x06, 0x01, 0xa1, 0xe6};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -430,7 +430,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
     SECTION("reboot packet") {
         uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0x03, 0x00, 0x08, 0x2f, 0x4e};
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -459,7 +459,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0xdc};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -489,7 +489,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0xfa};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -511,7 +511,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x00, 0x02, 0xaa, 0x00, 0x00, 0x00, 0x82, 0x87};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -535,7 +535,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x01, 0x96, 0x00, 0x00, 0x00, 0x02, 0xaa, 0x00, 0x00, 0x82, 0xb9};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -549,7 +549,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x00, 0x02, 0x00, 0x02, 0x92, 0x00, 0x01, 0x00, 0x1a, 0x05};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -590,7 +590,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x00};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -604,7 +604,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x00, 0xa0, 0x00, 0x02, 0x1f, 0x00, 0x01, 0x00, 0x50, 0xb7, 0x68};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -631,7 +631,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x00, 0xa0, 0x00, 0x02, 0x1f, 0x00, 0x0f, 0x00, 0x50, 0x6c, 0xe8};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);
@@ -645,7 +645,7 @@ TEST_CASE("parse instruction packet from generic packet", "[parse_instruction_pa
                              0x00, 0x02, 0x00, 0xa0, 0x00, 0x02, 0x1f, 0x00, 0xb2, 0x95};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
-        auto parse_result = parser.parse(cursor, packet);
+        auto parse_result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(parse_result == ParseResult::PacketAvailable);

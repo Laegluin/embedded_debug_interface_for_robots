@@ -130,7 +130,7 @@ void Receiver::update_crc(uint8_t byte) {
     this->crc = (this->crc << 8) ^ CRC_TABLE[index];
 }
 
-ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
+ParseResult Parser::parse(Cursor& cursor, Packet* packet) {
     // fallthrough is intended here; we only need the switch to resume when we reenter after getting
     // new data
     switch (this->current_state) {
@@ -154,8 +154,8 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
                 return ParseResult::NeedMoreData;
             }
 
-            packet.device_id = DeviceId(this->buf[0]);
-            packet.instruction = Instruction(this->buf[3]);
+            packet->device_id = DeviceId(this->buf[0]);
+            packet->instruction = Instruction(this->buf[3]);
 
             // byte stuffing can be ignored for the subtractions: the checksum is explicitly not
             // part of the stuffing range and the allowed values for the instruction guarantee that
@@ -164,7 +164,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
             // clang-format off
             this->raw_remaining_data_len = uint16_from_le(buf + 1) 
                 - 1                                                     // instruction field
-                - (packet.instruction == Instruction::Status)           // error field (only present on status packets)
+                - (packet->instruction == Instruction::Status)           // error field (only present on status packets)
                 - 2;                                                    // crc checksum
             // clang-format on
 
@@ -173,21 +173,21 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
         }
         // fallthrough
         case ParserState::ErrorField: {
-            if (packet.instruction == Instruction::Status) {
+            if (packet->instruction == Instruction::Status) {
                 uint8_t error;
                 if (this->receiver.read(cursor, &error, 1) == 0) {
                     return ParseResult::NeedMoreData;
                 }
 
-                packet.error = Error(error);
+                packet->error = Error(error);
             }
 
-            packet.data.clear();
+            packet->data.clear();
             this->current_state = ParserState::Data;
         }
         // fallthrough
         case ParserState::Data: {
-            auto prev_size = packet.data.size();
+            auto prev_size = packet->data.size();
 
             // since there may be stuffing, this length is actually only an upper bound on the
             // number of bytes; it should be close enough though
@@ -196,14 +196,14 @@ ParseResult Parser::parse(Cursor& cursor, Packet& packet) {
                 return ParseResult::BufferOverflow;
             }
 
-            packet.data.resize(prev_size + this->raw_remaining_data_len);
-            uint8_t* dst = packet.data.data() + prev_size;
+            packet->data.resize(prev_size + this->raw_remaining_data_len);
+            uint8_t* dst = packet->data.data() + prev_size;
 
             size_t bytes_read;
             auto raw_bytes_read = this->receiver.read_raw_num_bytes(
                 cursor, dst, &bytes_read, this->raw_remaining_data_len);
 
-            packet.data.resize(prev_size + bytes_read);
+            packet->data.resize(prev_size + bytes_read);
             this->raw_remaining_data_len -= raw_bytes_read;
 
             if (this->raw_remaining_data_len > 0) {
