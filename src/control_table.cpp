@@ -26,6 +26,116 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
         return ProtocolResult::InvalidInstructionPacket;
     }
 
+    switch (this->last_instruction_packet.instruction) {
+        case Instruction::Ping:
+        case Instruction::Read: {
+            break;
+        }
+        // writes have status packet responses disabled, so we handle them here
+        case Instruction::Write: {
+            auto write = [&](DeviceId device_id) -> bool {
+                auto& control_table = this->get_control_table(device_id);
+
+                return control_table->write(
+                    this->last_instruction_packet.write.start_addr,
+                    this->last_instruction_packet.write.data.data(),
+                    this->last_instruction_packet.write.data.size());
+            };
+
+            auto result = ProtocolResult::Ok;
+
+            if (!this->last_instruction_packet.write.device_id.is_broadcast()) {
+                auto is_write_ok = write(this->last_instruction_packet.write.device_id);
+                if (!is_write_ok) {
+                    result = ProtocolResult::InvalidWrite;
+                }
+            } else {
+                // since this is a broadcast, we write to all devices we know of
+                for (auto& pair : this->control_tables) {
+                    auto device_id = pair.first;
+
+                    auto is_write_ok = write(device_id);
+                    if (!is_write_ok) {
+                        result = ProtocolResult::InvalidWrite;
+                    }
+                }
+            }
+
+            if (result != ProtocolResult::Ok) {
+                return result;
+            }
+
+            break;
+        }
+        case Instruction::RegWrite:
+        case Instruction::Action:
+        case Instruction::FactoryReset:
+        case Instruction::Reboot:
+        case Instruction::Clear:
+        case Instruction::SyncRead: {
+            break;
+        }
+        // sync writes have status packet responses disabled, so we handle them here
+        case Instruction::SyncWrite: {
+            auto result = ProtocolResult::Ok;
+
+            for (auto iter = this->last_instruction_packet.sync_write.devices.begin();
+                 iter != this->last_instruction_packet.sync_write.devices.end();
+                 ++iter) {
+                auto device_id = *iter;
+                auto& control_table = this->get_control_table(device_id);
+
+                auto idx =
+                    std::distance(this->last_instruction_packet.sync_write.devices.begin(), iter);
+                auto data_start = this->last_instruction_packet.sync_write.data.data()
+                    + (idx * this->last_instruction_packet.sync_write.len);
+
+                auto is_write_ok = control_table->write(
+                    this->last_instruction_packet.sync_write.start_addr,
+                    data_start,
+                    this->last_instruction_packet.sync_write.len);
+
+                if (!is_write_ok) {
+                    result = ProtocolResult::InvalidWrite;
+                }
+            }
+
+            if (result != ProtocolResult::Ok) {
+                return result;
+            }
+
+            break;
+        }
+        case Instruction::BulkRead: {
+            break;
+        }
+        // bulk writes have status packet responses disabled, so we handle them here
+        case Instruction::BulkWrite: {
+            auto result = ProtocolResult::Ok;
+
+            for (auto& write_args : this->last_instruction_packet.bulk_write.writes) {
+                auto& control_table = this->get_control_table(write_args.device_id);
+
+                auto is_write_ok = control_table->write(
+                    write_args.start_addr, write_args.data.data(), write_args.data.size());
+
+                if (!is_write_ok) {
+                    result = ProtocolResult::InvalidWrite;
+                }
+            }
+
+            if (result != ProtocolResult::Ok) {
+                return result;
+            }
+
+            break;
+        }
+        case Instruction::Status: {
+            return ProtocolResult::InstructionIsStatus;
+        }
+        default: { return ProtocolResult::UnknownInstruction; }
+    }
+
     return ProtocolResult::Ok;
 }
 
@@ -85,27 +195,7 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
             break;
         }
         case Instruction::Write: {
-            if (status_packet.device_id.is_broadcast()
-                || (this->last_instruction_packet.write.device_id != status_packet.device_id
-                    && !this->last_instruction_packet.write.device_id.is_broadcast())) {
-                return ProtocolResult::InvalidDeviceId;
-            }
-
-            if (status_packet.data.size() != 0) {
-                return ProtocolResult::InvalidPacketLen;
-            }
-
-            auto& control_table = this->get_control_table(status_packet.device_id);
-
-            auto is_write_ok = control_table->write(
-                this->last_instruction_packet.write.start_addr,
-                this->last_instruction_packet.write.data.data(),
-                this->last_instruction_packet.write.data.size());
-
-            if (!is_write_ok) {
-                return ProtocolResult::InvalidWrite;
-            }
-
+            // see `receive_instruction_packet`
             break;
         }
         case Instruction::RegWrite:
@@ -145,35 +235,7 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
             break;
         }
         case Instruction::SyncWrite: {
-            auto iter = std::find(
-                this->last_instruction_packet.sync_write.devices.begin(),
-                this->last_instruction_packet.sync_write.devices.end(),
-                status_packet.device_id);
-
-            if (iter == this->last_instruction_packet.sync_write.devices.end()) {
-                return ProtocolResult::InvalidDeviceId;
-            }
-
-            if (status_packet.data.size() != 0) {
-                return ProtocolResult::InvalidPacketLen;
-            }
-
-            auto& control_table = this->get_control_table(status_packet.device_id);
-
-            auto idx =
-                std::distance(this->last_instruction_packet.sync_write.devices.begin(), iter);
-            auto data_start = this->last_instruction_packet.sync_write.data.data()
-                + (idx * this->last_instruction_packet.sync_write.len);
-
-            auto is_write_ok = control_table->write(
-                this->last_instruction_packet.sync_write.start_addr,
-                data_start,
-                this->last_instruction_packet.sync_write.len);
-
-            if (!is_write_ok) {
-                return ProtocolResult::InvalidWrite;
-            }
-
+            // see `receive_instruction_packet`
             break;
         }
         case Instruction::BulkRead: {
@@ -206,32 +268,7 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
             break;
         }
         case Instruction::BulkWrite: {
-            auto iter = std::find_if(
-                this->last_instruction_packet.bulk_write.writes.begin(),
-                this->last_instruction_packet.bulk_write.writes.end(),
-                [&](const WriteArgs& read_args) {
-                    return read_args.device_id == status_packet.device_id;
-                });
-
-            if (iter == this->last_instruction_packet.bulk_write.writes.end()) {
-                return ProtocolResult::InvalidDeviceId;
-            }
-
-            auto& write_args = *iter;
-
-            if (status_packet.data.size() != 0) {
-                return ProtocolResult::InvalidPacketLen;
-            }
-
-            auto& control_table = this->get_control_table(status_packet.device_id);
-
-            auto is_write_ok = control_table->write(
-                write_args.start_addr, write_args.data.data(), write_args.data.size());
-
-            if (!is_write_ok) {
-                return ProtocolResult::InvalidWrite;
-            }
-
+            // see `receive_instruction_packet`
             break;
         }
         case Instruction::Status: {
