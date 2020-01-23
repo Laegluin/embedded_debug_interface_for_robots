@@ -9,6 +9,15 @@ ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {
     this->control_tables.emplace(DeviceId(1), std::make_unique<Mx106ControlTable>());
 }
 
+bool ControlTableMap::is_disconnected(DeviceId device_id) const {
+    auto iter = this->num_missed_packets.find(device_id);
+    if (iter == this->num_missed_packets.end()) {
+        return false;
+    }
+
+    return iter->second > MAX_ALLOWED_MISSED_PACKETS;
+}
+
 ProtocolResult ControlTableMap::receive(const Packet& packet) {
     if (packet.instruction == Instruction::Status) {
         return this->receive_status_packet(packet);
@@ -26,26 +35,47 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
         return ProtocolResult::InvalidInstructionPacket;
     }
 
+    // check if there are any devices that did not respond to the last instruction
+    for (auto device_id : this->pending_responses) {
+        this->num_missed_packets[device_id]++;
+    }
+
+    this->pending_responses.clear();
+
+    // writes have status packet responses disabled, so we handle them here;
+    // in addition, we can set the pending responses for reads
     switch (this->last_instruction_packet.instruction) {
-        case Instruction::Ping:
-        case Instruction::Read: {
+        case Instruction::Ping: {
+            // we don't know what devices are supposed to answer (that's the whole point of a ping)
             break;
         }
-        // writes have status packet responses disabled, so we handle them here
+        case Instruction::Read: {
+            if (!this->last_instruction_packet.read.device_id.is_broadcast()) {
+                this->pending_responses =
+                    std::vector<DeviceId>{this->last_instruction_packet.read.device_id};
+            } else {
+                this->pending_responses.reserve(this->control_tables.size());
+
+                for (auto& pair : this->control_tables) {
+                    auto device_id = pair.first;
+                    this->pending_responses.push_back(device_id);
+                }
+            }
+
+            break;
+        }
         case Instruction::Write: {
-            auto write = [&](DeviceId device_id) -> bool {
-                auto& control_table = this->get_control_table(device_id);
-
-                return control_table->write(
-                    this->last_instruction_packet.write.start_addr,
-                    this->last_instruction_packet.write.data.data(),
-                    this->last_instruction_packet.write.data.size());
-            };
-
             auto result = ProtocolResult::Ok;
 
             if (!this->last_instruction_packet.write.device_id.is_broadcast()) {
-                auto is_write_ok = write(this->last_instruction_packet.write.device_id);
+                auto& control_table =
+                    this->get_control_table(this->last_instruction_packet.write.device_id);
+
+                auto is_write_ok = control_table->write(
+                    this->last_instruction_packet.write.start_addr,
+                    this->last_instruction_packet.write.data.data(),
+                    this->last_instruction_packet.write.data.size());
+
                 if (!is_write_ok) {
                     result = ProtocolResult::InvalidWrite;
                 }
@@ -53,8 +83,13 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
                 // since this is a broadcast, we write to all devices we know of
                 for (auto& pair : this->control_tables) {
                     auto device_id = pair.first;
+                    auto& control_table = this->get_control_table(device_id);
 
-                    auto is_write_ok = write(device_id);
+                    auto is_write_ok = control_table->write(
+                        this->last_instruction_packet.write.start_addr,
+                        this->last_instruction_packet.write.data.data(),
+                        this->last_instruction_packet.write.data.size());
+
                     if (!is_write_ok) {
                         result = ProtocolResult::InvalidWrite;
                     }
@@ -71,11 +106,14 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
         case Instruction::Action:
         case Instruction::FactoryReset:
         case Instruction::Reboot:
-        case Instruction::Clear:
-        case Instruction::SyncRead: {
+        case Instruction::Clear: {
+            // these instructions are ignored for simplicity
             break;
         }
-        // sync writes have status packet responses disabled, so we handle them here
+        case Instruction::SyncRead: {
+            this->pending_responses = this->last_instruction_packet.sync_read.devices;
+            break;
+        }
         case Instruction::SyncWrite: {
             auto result = ProtocolResult::Ok;
 
@@ -107,9 +145,14 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
             break;
         }
         case Instruction::BulkRead: {
+            this->pending_responses.reserve(this->last_instruction_packet.bulk_read.reads.size());
+
+            for (auto& read_arg : this->last_instruction_packet.bulk_read.reads) {
+                this->pending_responses.push_back(read_arg.device_id);
+            }
+
             break;
         }
-        // bulk writes have status packet responses disabled, so we handle them here
         case Instruction::BulkWrite: {
             auto result = ProtocolResult::Ok;
 
@@ -139,11 +182,27 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
     return ProtocolResult::Ok;
 }
 
-// TODO: handle disconnected devices
 ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packet) {
     if (status_packet.instruction != Instruction::Status) {
         return ProtocolResult::StatusIsInstruction;
     }
+
+    // Remove the device from the pending responses.
+    // This only removes the first match, both for performance and because it is
+    // not strictly specified whether instructions like `BulkRead` can address the same
+    // device more than once. In this case this would not remove all occurrences and thus
+    // make sure that the correct amount of status packets are counted.
+    for (size_t i = 0; i < this->pending_responses.size(); i++) {
+        if (this->pending_responses[i] == status_packet.device_id) {
+            this->pending_responses.erase(this->pending_responses.begin() + i);
+            break;
+        }
+    }
+
+    // All reset this counter for missed packets, since we just got one. Like above,
+    // an error in the packet does not matter. We only want to know if the device is
+    // actually connected to the bus, not if everything's working correctly.
+    this->num_missed_packets[status_packet.device_id] = 0;
 
     if (!status_packet.error.is_ok()) {
         return ProtocolResult::StatusHasError;
@@ -204,7 +263,7 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
         case Instruction::Reboot:
         case Instruction::Clear: {
             // We are only really interested in reads and writes, since those make up most of the
-            // traffic. So we simply ignore all other packet types.
+            // traffic, so these instructions are ignored for simplicity
             break;
         }
         case Instruction::SyncRead: {

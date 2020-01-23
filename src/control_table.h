@@ -279,7 +279,11 @@ enum class ProtocolResult {
 
 class ControlTableMap {
   public:
+    static const uint32_t MAX_ALLOWED_MISSED_PACKETS = 4;
+
     ControlTableMap();
+
+    bool is_disconnected(DeviceId device_id) const;
 
     ProtocolResult receive(const Packet& packet);
 
@@ -303,8 +307,10 @@ class ControlTableMap {
     std::unique_ptr<ControlTable>& get_control_table(DeviceId device_id);
 
     std::unordered_map<DeviceId, std::unique_ptr<ControlTable>> control_tables;
+    std::unordered_map<DeviceId, uint32_t> num_missed_packets;
     InstructionPacket last_instruction_packet;
     bool is_last_instruction_packet_known;
+    std::vector<DeviceId> pending_responses;
 };
 
 #endif
