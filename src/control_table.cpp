@@ -340,31 +340,33 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
 }
 
 void ControlTableMap::register_control_table(DeviceId device_id, uint32_t model_number) {
-    auto iter = this->control_tables.find(device_id);
+    auto pair = this->control_tables.emplace(device_id, nullptr);
+    auto& table = pair.first->second;
 
+    // for a `ControlTable` implementation simply add another case
     switch (model_number) {
         case Mx64ControlTable::MODEL_NUMBER: {
-            if (iter == this->control_tables.end()) {
-                this->control_tables.emplace(device_id, std::make_unique<Mx64ControlTable>());
-            } else if (iter->second->model_number() != Mx64ControlTable::MODEL_NUMBER) {
-                iter->second = std::make_unique<Mx64ControlTable>();
+            if (!table || table->model_number() != Mx64ControlTable::MODEL_NUMBER) {
+                table = std::make_unique<Mx64ControlTable>();
             }
+
             break;
         }
         case Mx106ControlTable::MODEL_NUMBER: {
-            if (iter == this->control_tables.end()) {
-                this->control_tables.emplace(device_id, std::make_unique<Mx106ControlTable>());
-            } else if (iter->second->model_number() != Mx106ControlTable::MODEL_NUMBER) {
-                iter->second = std::make_unique<Mx106ControlTable>();
+            if (!table || table->model_number() != Mx106ControlTable::MODEL_NUMBER) {
+                table = std::make_unique<Mx106ControlTable>();
             }
+
             break;
         }
         default: {
-            if (iter == this->control_tables.end()) {
-                this->control_tables.emplace(device_id, std::make_unique<UnknownControlTable>());
-            } else if (iter->second->model_number() != UnknownControlTable::MODEL_NUMBER) {
-                iter->second = std::make_unique<UnknownControlTable>();
+            // if there is no table the device is unknown, otherwise it is either already
+            // unknown or another table (should not happen but is most likely more correct than
+            // removing it)
+            if (!table) {
+                table = std::make_unique<UnknownControlTable>();
             }
+
             break;
         }
     }
