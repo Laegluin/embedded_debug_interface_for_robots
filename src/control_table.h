@@ -5,143 +5,89 @@
 #include "parser.h"
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <stdint.h>
 #include <string.h>
 #include <string>
 #include <unordered_map>
 
-class ControlTable {
+class Segment {
   public:
-    /// Returns the model number of the device. Any model number greater than
-    /// `std::numeric_limits<uint16_t>::max()` does not refer to an actual device.
-    virtual uint32_t model_number() const = 0;
+    struct DataSegment {
+        uint16_t start_addr;
+        uint16_t len;
+        uint8_t* data;
+    };
 
-    virtual const char* device_name() const = 0;
+    struct IndirectAddressSegment {
+        uint16_t data_start_addr;
+        uint16_t map_start_addr;
+        uint16_t len;
+        uint8_t* map;
+    };
 
-    virtual bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) = 0;
+    enum class Type {
+        DataSegment,
+        IndirectAddressSegment,
+    };
 
-    virtual std::vector<std::pair<const char*, std::string>> fmt_fields() const = 0;
-};
+    static Segment new_data(uint16_t start_addr, uint16_t len);
 
-class UnknownControlTable : public ControlTable {
-  public:
-    static const uint32_t MODEL_NUMBER = std::numeric_limits<uint32_t>::max();
+    static Segment
+        new_indirect_address(uint16_t data_start_addr, uint16_t map_start_addr, uint16_t len);
 
-    uint32_t model_number() const final {
-        return MODEL_NUMBER;
-    }
+    uint16_t start_addr() const;
 
-    const char* device_name() const final {
-        return "<unknown>";
-    }
+    uint16_t len() const;
 
-    bool write(uint16_t, const uint8_t*, uint16_t) final {
-        return true;
-    }
+    bool resolve_addr(uint16_t addr, uint16_t* resolved_addr) const;
 
-    std::vector<std::pair<const char*, std::string>> fmt_fields() const final {
-        return std::vector<std::pair<const char*, std::string>>();
-    }
-};
+    void set_backing_storage(uint8_t* buf);
 
-template <uint16_t MAP_START, uint16_t DATA_START, uint16_t LEN>
-class AddressMap {
-  public:
-    AddressMap() {
-        memset(this->map, 0, LEN * 2);
-    }
+    bool read(uint16_t addr, uint8_t* byte) const;
 
-    bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) {
-        if (this->is_valid_map_addr(start_addr) && this->is_valid_map_addr(start_addr + len - 1)) {
-            auto idx = start_addr - MAP_START;
-            memcpy(this->map + idx, bytes, len);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    bool write_uint16(uint16_t addr, uint16_t val) {
-        uint8_t bytes[2];
-        uint16_to_le(bytes, val);
-        return this->write(addr, bytes, 2);
-    }
-
-    uint16_t resolve_addr(uint16_t addr) const {
-        if (this->is_valid_data_addr(addr)) {
-            auto addr_idx = addr - DATA_START;
-            auto map_idx = addr_idx * 2;
-            return uint16_from_le(this->map + map_idx);
-        } else {
-            return addr;
-        }
-    }
+    bool write(uint16_t addr, uint8_t byte);
 
   private:
-    bool is_valid_map_addr(uint16_t addr) const {
-        return addr >= MAP_START && addr < MAP_START + LEN * 2;
-    }
-
-    bool is_valid_data_addr(uint16_t addr) const {
-        return addr >= DATA_START && addr < DATA_START + LEN;
-    }
-
-    uint8_t map[LEN * 2];
+    Type type;
+    union {
+        DataSegment data;
+        IndirectAddressSegment indirect_address;
+    };
 };
 
-template <uint16_t START, uint16_t LEN>
-class DataSegment {
+class ControlTableMemory {
   public:
-    DataSegment() {
-        memset(this->data, 0, LEN);
-    }
+    /// Creates a new `ControlTableMemory` consisting of the given `Segment`s.
+    /// Segments must not overlap.
+    ControlTableMemory(std::vector<Segment>&& segments);
 
-    bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) {
-        if (this->is_valid_addr(start_addr) && this->is_valid_addr(start_addr + len - 1)) {
-            auto idx = start_addr - START;
-            memcpy(this->data + idx, bytes, len);
-            return true;
-        } else {
-            return false;
-        }
-    }
+    bool read_uint8(uint16_t addr, uint8_t* dst) const;
 
-    bool write_uint8(uint16_t addr, uint8_t val) {
-        return this->write(addr, &val, 1);
-    }
+    bool read_uint16(uint16_t addr, uint16_t* dst) const;
 
-    bool write_uint16(uint16_t addr, uint16_t val) {
-        uint8_t bytes[2];
-        uint16_to_le(bytes, val);
-        return this->write(addr, bytes, 2);
-    }
+    bool read_uint32(uint16_t addr, uint32_t* dst) const;
 
-    bool write_uint32(uint16_t addr, uint32_t val) {
-        uint8_t bytes[4];
-        uint32_to_le(bytes, val);
-        return this->write(addr, bytes, 4);
-    }
+    bool read(uint16_t start_addr, uint8_t* dst, uint16_t len) const;
 
-    uint8_t uint8_at(uint16_t addr) const {
-        return this->data[addr - START];
-    }
+    bool write_uint8(uint16_t addr, uint8_t value);
 
-    uint16_t uint16_at(uint16_t addr) const {
-        return uint16_from_le(this->data + (addr - START));
-    }
+    bool write_uint16(uint16_t addr, uint16_t value);
 
-    uint32_t uint32_at(uint16_t addr) const {
-        return uint32_from_le(this->data + (addr - START));
-    }
+    bool write_uint32(uint16_t addr, uint32_t value);
+
+    bool write(uint16_t start_addr, const uint8_t* buf, uint16_t len);
+
+    uint16_t resolve_addr(uint16_t addr) const;
 
   private:
-    bool is_valid_addr(uint16_t addr) const {
-        return addr >= START && addr < START + LEN;
-    }
-
-    uint8_t data[LEN];
+    std::vector<Segment> segments;
+    std::vector<uint8_t> buf;
 };
 
+/// Represents a field in a control table. A field has an address and type, a name, a
+/// default value and an optional formatting function that can format the field value as
+/// a human readable string.
 struct ControlTableField {
     enum class FieldType {
         UInt8,
@@ -191,6 +137,24 @@ struct ControlTableField {
         return field;
     }
 
+    /// Initializes the field in `mem` with the configured default value.
+    void init_memory(ControlTableMemory& mem) const {
+        switch (this->type) {
+            case ControlTableField::FieldType::UInt8: {
+                mem.write_uint8(this->addr, this->uint8.default_value);
+                break;
+            }
+            case ControlTableField::FieldType::UInt16: {
+                mem.write_uint16(this->addr, this->uint16.default_value);
+                break;
+            }
+            case ControlTableField::FieldType::UInt32: {
+                mem.write_uint32(this->addr, this->uint32.default_value);
+                break;
+            }
+        }
+    }
+
     uint16_t addr;
     FieldType type;
     const char* name;
@@ -210,60 +174,55 @@ struct ControlTableField {
     };
 };
 
-template <typename Data, size_t NUM_FIELDS>
-void default_init_control_table(
-    Data& data,
-    const std::array<ControlTableField, NUM_FIELDS>& fields) {
-    for (auto& field : fields) {
-        switch (field.type) {
-            case ControlTableField::FieldType::UInt8: {
-                data.write_uint8(field.addr, field.uint8.default_value);
-                break;
-            }
-            case ControlTableField::FieldType::UInt16: {
-                data.write_uint16(field.addr, field.uint16.default_value);
-                break;
-            }
-            case ControlTableField::FieldType::UInt32: {
-                data.write_uint32(field.addr, field.uint32.default_value);
-                break;
-            }
-        }
-    }
-}
+class ControlTable {
+  public:
+    /// Returns the model number of the device. Any model number greater than
+    /// `std::numeric_limits<uint16_t>::max()` does not refer to an actual device.
+    virtual uint32_t model_number() const = 0;
 
-template <typename Data, size_t NUM_FIELDS>
-std::vector<std::pair<const char*, std::string>> fmt_control_table_fields(
-    const Data& data,
-    const std::array<ControlTableField, NUM_FIELDS>& fields) {
-    std::vector<std::pair<const char*, std::string>> formatted_fields;
-    formatted_fields.reserve(NUM_FIELDS);
+    virtual const char* device_name() const = 0;
 
-    for (auto& field : fields) {
-        switch (field.type) {
-            case ControlTableField::FieldType::UInt8: {
-                auto value = data.uint8_at(field.addr);
-                auto formatted_value = field.uint8.fmt(value);
-                formatted_fields.emplace_back(field.name, std::move(formatted_value));
-                break;
-            }
-            case ControlTableField::FieldType::UInt16: {
-                auto value = data.uint16_at(field.addr);
-                auto formatted_value = field.uint16.fmt(value);
-                formatted_fields.emplace_back(field.name, std::move(formatted_value));
-                break;
-            }
-            case ControlTableField::FieldType::UInt32: {
-                auto value = data.uint32_at(field.addr);
-                auto formatted_value = field.uint32.fmt(value);
-                formatted_fields.emplace_back(field.name, std::move(formatted_value));
-                break;
-            }
-        }
+    virtual ControlTableMemory& memory() = 0;
+
+    virtual const ControlTableMemory& memory() const = 0;
+
+    virtual const std::vector<ControlTableField>& fields() const = 0;
+
+    bool write(uint16_t start_addr, const uint8_t* buf, uint16_t len);
+
+    std::vector<std::pair<const char*, std::string>> fmt_fields();
+};
+
+class UnknownControlTable : public ControlTable {
+  public:
+    static const uint32_t MODEL_NUMBER = std::numeric_limits<uint32_t>::max();
+
+    UnknownControlTable() : mem(ControlTableMemory(std::vector<Segment>())) {}
+
+    uint32_t model_number() const final {
+        return MODEL_NUMBER;
     }
 
-    return formatted_fields;
-}
+    const char* device_name() const final {
+        return "<unknown>";
+    }
+
+    ControlTableMemory& memory() final {
+        return this->mem;
+    }
+
+    const ControlTableMemory& memory() const final {
+        return this->mem;
+    }
+
+    const std::vector<ControlTableField>& fields() const final {
+        static std::vector<ControlTableField> no_fields;
+        return no_fields;
+    }
+
+  private:
+    ControlTableMemory mem;
+};
 
 enum class ProtocolResult {
     Ok,
@@ -284,6 +243,12 @@ class ControlTableMap {
     ControlTableMap();
 
     bool is_disconnected(DeviceId device_id) const;
+
+    /// Gets the `ControlTable` for `device_id`. Throws a `std::out_of_range` exception
+    /// if the element device does not exist.
+    const ControlTable& get(DeviceId device_id) const {
+        return *this->control_tables.at(device_id);
+    }
 
     ProtocolResult receive(const Packet& packet);
 

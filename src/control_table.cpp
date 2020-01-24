@@ -3,6 +3,295 @@
 #include "device/mx64.h"
 #include <algorithm>
 
+Segment Segment::new_data(uint16_t start_addr, uint16_t len) {
+    Segment segment;
+    segment.type = Type::DataSegment;
+    segment.data.start_addr = start_addr;
+    segment.data.len = len;
+    segment.data.data = nullptr;
+
+    return segment;
+}
+
+Segment
+    Segment::new_indirect_address(uint16_t data_start_addr, uint16_t map_start_addr, uint16_t len) {
+    Segment segment;
+    segment.type = Type::IndirectAddressSegment;
+    segment.indirect_address.data_start_addr = data_start_addr;
+    segment.indirect_address.map_start_addr = map_start_addr;
+    segment.indirect_address.len = len;
+    segment.indirect_address.map = nullptr;
+
+    return segment;
+}
+
+uint16_t Segment::start_addr() const {
+    switch (this->type) {
+        case Type::DataSegment: {
+            return this->data.start_addr;
+        }
+        case Type::IndirectAddressSegment: {
+            return this->indirect_address.map_start_addr;
+        }
+        default: { return 0; }
+    }
+}
+
+uint16_t Segment::len() const {
+    switch (this->type) {
+        case Type::DataSegment: {
+            return this->data.len;
+        }
+        case Type::IndirectAddressSegment: {
+            return this->indirect_address.len;
+        }
+        default: { return 0; }
+    }
+}
+
+bool Segment::resolve_addr(uint16_t addr, uint16_t* resolved_addr) const {
+    if (this->type != Type::IndirectAddressSegment) {
+        return false;
+    }
+
+    // not part of mapped address space
+    if (addr < this->indirect_address.data_start_addr
+        || addr >= this->indirect_address.data_start_addr + this->indirect_address.len / 2) {
+        return false;
+    }
+
+    auto addr_idx = addr - this->indirect_address.data_start_addr;
+    auto map_idx = addr_idx * 2;
+    *resolved_addr = uint16_from_le(this->indirect_address.map + map_idx);
+    return true;
+}
+
+void Segment::set_backing_storage(uint8_t* buf) {
+    switch (this->type) {
+        case Type::DataSegment: {
+            this->data.data = buf;
+            break;
+        }
+        case Type::IndirectAddressSegment: {
+            this->indirect_address.map = buf;
+            break;
+        }
+    }
+}
+
+bool Segment::read(uint16_t addr, uint8_t* byte) const {
+    if (addr < this->start_addr() || addr >= this->start_addr() + this->len()) {
+        return false;
+    }
+
+    switch (this->type) {
+        case Type::DataSegment: {
+            *byte = this->data.data[addr - this->data.start_addr];
+            return true;
+        }
+        case Type::IndirectAddressSegment: {
+            *byte = this->indirect_address.map[addr - this->indirect_address.map_start_addr];
+            return true;
+        }
+        default: { return false; }
+    }
+}
+
+bool Segment::write(uint16_t addr, uint8_t byte) {
+    if (addr < this->start_addr() || addr >= this->start_addr() + this->len()) {
+        return false;
+    }
+
+    switch (this->type) {
+        case Type::DataSegment: {
+            this->data.data[addr - this->data.start_addr] = byte;
+            return true;
+        }
+        case Type::IndirectAddressSegment: {
+            this->indirect_address.map[addr - this->indirect_address.map_start_addr] = byte;
+            return true;
+        }
+        default: { return false; }
+    }
+}
+
+ControlTableMemory::ControlTableMemory(std::vector<Segment>&& segments) : segments(segments) {
+    std::sort(this->segments.begin(), this->segments.end(), [](auto& lhs, auto& rhs) {
+        return lhs.start_addr() < rhs.start_addr();
+    });
+
+    size_t buf_len = std::accumulate(
+        this->segments.begin(), this->segments.end(), 0, [](size_t acc, auto& segment) {
+            return acc + segment.len();
+        });
+
+    this->buf.resize(buf_len);
+
+    size_t offset = 0;
+
+    for (auto& segment : this->segments) {
+        segment.set_backing_storage(this->buf.data() + offset);
+        offset += segment.len();
+    }
+}
+
+bool ControlTableMemory::read_uint8(uint16_t addr, uint8_t* dst) const {
+    return this->read(addr, dst, 1);
+}
+
+bool ControlTableMemory::read_uint16(uint16_t addr, uint16_t* dst) const {
+    uint8_t buf[2];
+
+    if (this->read(addr, buf, 2)) {
+        *dst = uint16_from_le(buf);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ControlTableMemory::read_uint32(uint16_t addr, uint32_t* dst) const {
+    uint8_t buf[4];
+
+    if (this->read(addr, buf, 4)) {
+        *dst = uint32_from_le(buf);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ControlTableMemory::read(uint16_t start_addr, uint8_t* dst, uint16_t len) const {
+    for (uint16_t addr = start_addr; addr < start_addr + len; addr++) {
+        uint16_t resolved_addr = this->resolve_addr(addr);
+        bool is_read_ok = false;
+
+        for (auto& segment : this->segments) {
+            if (segment.read(resolved_addr, dst)) {
+                is_read_ok = true;
+                break;
+            }
+        }
+
+        if (!is_read_ok) {
+            return false;
+        }
+
+        dst++;
+    }
+
+    return true;
+}
+
+bool ControlTableMemory::write_uint8(uint16_t addr, uint8_t value) {
+    return this->write(addr, &value, 1);
+}
+
+bool ControlTableMemory::write_uint16(uint16_t addr, uint16_t value) {
+    uint8_t bytes[2];
+    uint16_to_le(bytes, value);
+    return this->write(addr, bytes, 2);
+}
+
+bool ControlTableMemory::write_uint32(uint16_t addr, uint32_t value) {
+    uint8_t bytes[4];
+    uint32_to_le(bytes, value);
+    return this->write(addr, bytes, 4);
+}
+
+bool ControlTableMemory::write(uint16_t start_addr, const uint8_t* buf, uint16_t len) {
+    for (uint16_t addr = start_addr; addr < start_addr + len; addr++) {
+        uint16_t resolved_addr = this->resolve_addr(addr);
+        bool is_write_ok = false;
+
+        for (auto& segment : this->segments) {
+            if (segment.write(resolved_addr, *buf)) {
+                is_write_ok = true;
+                break;
+            }
+        }
+
+        if (!is_write_ok) {
+            return false;
+        }
+
+        buf++;
+    }
+
+    return true;
+}
+
+uint16_t ControlTableMemory::resolve_addr(uint16_t addr) const {
+    // documentation is not really clear on whether addresses can be resolved multiple times;
+    // we simply assume it is not since that's faster (and the most likely case anyway)
+    for (auto& segment : this->segments) {
+        uint16_t resolved_addr;
+        if (segment.resolve_addr(addr, &resolved_addr)) {
+            return resolved_addr;
+        }
+    }
+
+    return addr;
+}
+
+bool ControlTable::write(uint16_t start_addr, const uint8_t* buf, uint16_t len) {
+    return this->memory().write(start_addr, buf, len);
+}
+
+std::vector<std::pair<const char*, std::string>> ControlTable::fmt_fields() {
+    auto& mem = this->memory();
+    auto& fields = this->fields();
+
+    std::vector<std::pair<const char*, std::string>> formatted_fields;
+    formatted_fields.reserve(fields.size());
+
+    for (auto& field : fields) {
+        switch (field.type) {
+            case ControlTableField::FieldType::UInt8: {
+                if (!field.uint8.fmt) {
+                    continue;
+                }
+
+                uint8_t value;
+                if (mem.read_uint8(field.addr, &value)) {
+                    auto formatted_value = field.uint8.fmt(value);
+                    formatted_fields.emplace_back(field.name, std::move(formatted_value));
+                }
+
+                break;
+            }
+            case ControlTableField::FieldType::UInt16: {
+                if (!field.uint16.fmt) {
+                    continue;
+                }
+
+                uint16_t value;
+                if (mem.read_uint16(field.addr, &value)) {
+                    auto formatted_value = field.uint16.fmt(value);
+                    formatted_fields.emplace_back(field.name, std::move(formatted_value));
+                }
+
+                break;
+            }
+            case ControlTableField::FieldType::UInt32: {
+                if (!field.uint32.fmt) {
+                    continue;
+                }
+
+                uint32_t value;
+                if (mem.read_uint32(field.addr, &value)) {
+                    auto formatted_value = field.uint32.fmt(value);
+                    formatted_fields.emplace_back(field.name, std::move(formatted_value));
+                }
+
+                break;
+            }
+        }
+    }
+
+    return formatted_fields;
+}
+
 ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {
     // TODO: remove after UI is done
     this->control_tables.emplace(DeviceId(0), std::make_unique<Mx64ControlTable>());

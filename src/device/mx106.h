@@ -10,6 +10,8 @@ class Mx106ControlTable : public ControlTable {
 
     static const uint32_t MODEL_NUMBER = 321;
 
+    static const std::vector<ControlTableField> FIELDS;
+
     uint32_t model_number() const final {
         return MODEL_NUMBER;
     }
@@ -18,21 +20,20 @@ class Mx106ControlTable : public ControlTable {
         return "MX-106";
     }
 
-    bool write(uint16_t start_addr, const uint8_t* bytes, uint16_t len) final {
-        auto resolved_addr =
-            this->addr_map_2.resolve_addr(this->addr_map_1.resolve_addr(start_addr));
-
-        return this->data.write(resolved_addr, bytes, len)
-            || this->addr_map_1.write(resolved_addr, bytes, len)
-            || this->addr_map_2.write(resolved_addr, bytes, len);
+    ControlTableMemory& memory() final {
+        return this->mem;
     }
 
-    std::vector<std::pair<const char*, std::string>> fmt_fields() const final;
+    const ControlTableMemory& memory() const final {
+        return this->mem;
+    }
+
+    const std::vector<ControlTableField>& fields() const final {
+        return FIELDS;
+    }
 
   private:
-    DataSegment<0, 147> data;
-    AddressMap<168, 224, 28> addr_map_1;
-    AddressMap<578, 634, 28> addr_map_2;
+    ControlTableMemory mem;
 };
 
 #endif

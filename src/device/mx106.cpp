@@ -3,7 +3,9 @@
 
 // See <http://emanual.robotis.com/docs/en/dxl/mx/mx-106-2/>
 
-static std::array<ControlTableField, 52> FIELDS{
+const uint32_t Mx106ControlTable::MODEL_NUMBER;
+
+const std::vector<ControlTableField> Mx106ControlTable::FIELDS{
     ControlTableField::new_uint16(0, "Model Number", Mx106ControlTable::MODEL_NUMBER, to_string),
     ControlTableField::new_uint32(2, "Model Information", 0, to_string),
     ControlTableField::new_uint8(6, "Firmware Version", 0, to_string),
@@ -56,70 +58,73 @@ static std::array<ControlTableField, 52> FIELDS{
     ControlTableField::new_uint32(140, "Position Trajectory", 0, to_string),
     ControlTableField::new_uint16(144, "Present Input Voltage", 0, to_string),
     ControlTableField::new_uint8(146, "Present Temperature", 0, to_string),
+
+    ControlTableField::new_uint16(168, "Indirect Address 1", 224, to_string),
+    ControlTableField::new_uint16(170, "Indirect Address 2", 225, to_string),
+    ControlTableField::new_uint16(172, "Indirect Address 3", 226, to_string),
+    ControlTableField::new_uint16(174, "Indirect Address 4", 227, to_string),
+    ControlTableField::new_uint16(176, "Indirect Address 5", 228, to_string),
+    ControlTableField::new_uint16(178, "Indirect Address 6", 229, to_string),
+    ControlTableField::new_uint16(180, "Indirect Address 7", 230, to_string),
+    ControlTableField::new_uint16(182, "Indirect Address 8", 231, to_string),
+    ControlTableField::new_uint16(184, "Indirect Address 9", 232, to_string),
+    ControlTableField::new_uint16(186, "Indirect Address 10", 233, to_string),
+    ControlTableField::new_uint16(188, "Indirect Address 11", 234, to_string),
+    ControlTableField::new_uint16(190, "Indirect Address 12", 235, to_string),
+    ControlTableField::new_uint16(192, "Indirect Address 13", 236, to_string),
+    ControlTableField::new_uint16(194, "Indirect Address 14", 237, to_string),
+    ControlTableField::new_uint16(196, "Indirect Address 15", 238, to_string),
+    ControlTableField::new_uint16(198, "Indirect Address 16", 239, to_string),
+    ControlTableField::new_uint16(200, "Indirect Address 17", 240, to_string),
+    ControlTableField::new_uint16(202, "Indirect Address 18", 241, to_string),
+    ControlTableField::new_uint16(204, "Indirect Address 19", 242, to_string),
+    ControlTableField::new_uint16(206, "Indirect Address 20", 243, to_string),
+    ControlTableField::new_uint16(208, "Indirect Address 21", 244, to_string),
+    ControlTableField::new_uint16(210, "Indirect Address 22", 245, to_string),
+    ControlTableField::new_uint16(212, "Indirect Address 23", 246, to_string),
+    ControlTableField::new_uint16(214, "Indirect Address 24", 247, to_string),
+    ControlTableField::new_uint16(216, "Indirect Address 25", 248, to_string),
+    ControlTableField::new_uint16(218, "Indirect Address 26", 249, to_string),
+    ControlTableField::new_uint16(220, "Indirect Address 27", 250, to_string),
+    ControlTableField::new_uint16(222, "Indirect Address 28", 251, to_string),
+
+    ControlTableField::new_uint16(578, "Indirect Address 29", 634, to_string),
+    ControlTableField::new_uint16(580, "Indirect Address 30", 635, to_string),
+    ControlTableField::new_uint16(582, "Indirect Address 31", 636, to_string),
+    ControlTableField::new_uint16(584, "Indirect Address 32", 637, to_string),
+    ControlTableField::new_uint16(586, "Indirect Address 33", 638, to_string),
+    ControlTableField::new_uint16(588, "Indirect Address 34", 639, to_string),
+    ControlTableField::new_uint16(590, "Indirect Address 35", 640, to_string),
+    ControlTableField::new_uint16(592, "Indirect Address 36", 641, to_string),
+    ControlTableField::new_uint16(594, "Indirect Address 37", 642, to_string),
+    ControlTableField::new_uint16(596, "Indirect Address 38", 643, to_string),
+    ControlTableField::new_uint16(598, "Indirect Address 39", 644, to_string),
+    ControlTableField::new_uint16(600, "Indirect Address 40", 645, to_string),
+    ControlTableField::new_uint16(602, "Indirect Address 41", 646, to_string),
+    ControlTableField::new_uint16(604, "Indirect Address 42", 647, to_string),
+    ControlTableField::new_uint16(606, "Indirect Address 43", 648, to_string),
+    ControlTableField::new_uint16(608, "Indirect Address 44", 649, to_string),
+    ControlTableField::new_uint16(610, "Indirect Address 45", 650, to_string),
+    ControlTableField::new_uint16(612, "Indirect Address 46", 651, to_string),
+    ControlTableField::new_uint16(614, "Indirect Address 47", 652, to_string),
+    ControlTableField::new_uint16(616, "Indirect Address 48", 653, to_string),
+    ControlTableField::new_uint16(618, "Indirect Address 49", 654, to_string),
+    ControlTableField::new_uint16(620, "Indirect Address 50", 655, to_string),
+    ControlTableField::new_uint16(622, "Indirect Address 51", 656, to_string),
+    ControlTableField::new_uint16(624, "Indirect Address 52", 657, to_string),
+    ControlTableField::new_uint16(626, "Indirect Address 53", 658, to_string),
+    ControlTableField::new_uint16(628, "Indirect Address 54", 659, to_string),
+    ControlTableField::new_uint16(630, "Indirect Address 55", 660, to_string),
+    ControlTableField::new_uint16(632, "Indirect Address 56", 661, to_string),
 };
 
-Mx106ControlTable::Mx106ControlTable() {
-    default_init_control_table(this->data, FIELDS);
-
-    this->addr_map_1.write_uint16(168, 224);
-    this->addr_map_1.write_uint16(170, 225);
-    this->addr_map_1.write_uint16(172, 226);
-    this->addr_map_1.write_uint16(174, 227);
-    this->addr_map_1.write_uint16(176, 228);
-    this->addr_map_1.write_uint16(178, 229);
-    this->addr_map_1.write_uint16(180, 230);
-    this->addr_map_1.write_uint16(182, 231);
-    this->addr_map_1.write_uint16(184, 232);
-    this->addr_map_1.write_uint16(186, 233);
-    this->addr_map_1.write_uint16(188, 234);
-    this->addr_map_1.write_uint16(190, 235);
-    this->addr_map_1.write_uint16(192, 236);
-    this->addr_map_1.write_uint16(194, 237);
-    this->addr_map_1.write_uint16(196, 238);
-    this->addr_map_1.write_uint16(198, 239);
-    this->addr_map_1.write_uint16(200, 240);
-    this->addr_map_1.write_uint16(202, 241);
-    this->addr_map_1.write_uint16(204, 242);
-    this->addr_map_1.write_uint16(206, 243);
-    this->addr_map_1.write_uint16(208, 244);
-    this->addr_map_1.write_uint16(210, 245);
-    this->addr_map_1.write_uint16(212, 246);
-    this->addr_map_1.write_uint16(214, 247);
-    this->addr_map_1.write_uint16(216, 248);
-    this->addr_map_1.write_uint16(218, 249);
-    this->addr_map_1.write_uint16(220, 250);
-    this->addr_map_1.write_uint16(222, 251);
-
-    this->addr_map_2.write_uint16(578, 634);
-    this->addr_map_2.write_uint16(580, 635);
-    this->addr_map_2.write_uint16(582, 636);
-    this->addr_map_2.write_uint16(584, 637);
-    this->addr_map_2.write_uint16(586, 638);
-    this->addr_map_2.write_uint16(588, 639);
-    this->addr_map_2.write_uint16(590, 640);
-    this->addr_map_2.write_uint16(592, 641);
-    this->addr_map_2.write_uint16(594, 642);
-    this->addr_map_2.write_uint16(596, 643);
-    this->addr_map_2.write_uint16(598, 644);
-    this->addr_map_2.write_uint16(600, 645);
-    this->addr_map_2.write_uint16(602, 646);
-    this->addr_map_2.write_uint16(604, 647);
-    this->addr_map_2.write_uint16(606, 648);
-    this->addr_map_2.write_uint16(608, 649);
-    this->addr_map_2.write_uint16(610, 650);
-    this->addr_map_2.write_uint16(612, 651);
-    this->addr_map_2.write_uint16(614, 652);
-    this->addr_map_2.write_uint16(616, 653);
-    this->addr_map_2.write_uint16(618, 654);
-    this->addr_map_2.write_uint16(620, 655);
-    this->addr_map_2.write_uint16(622, 656);
-    this->addr_map_2.write_uint16(624, 657);
-    this->addr_map_2.write_uint16(626, 658);
-    this->addr_map_2.write_uint16(628, 659);
-    this->addr_map_2.write_uint16(630, 660);
-    this->addr_map_2.write_uint16(632, 661);
-}
-
-std::vector<std::pair<const char*, std::string>> Mx106ControlTable::fmt_fields() const {
-    return fmt_control_table_fields(this->data, FIELDS);
+Mx106ControlTable::Mx106ControlTable() :
+    mem(ControlTableMemory(std::vector<Segment>{
+        Segment::new_data(0, 147),
+        Segment::new_indirect_address(224, 168, 56),
+        Segment::new_indirect_address(634, 578, 56),
+    })) {
+    for (auto& field : FIELDS) {
+        field.init_memory(this->mem);
+    }
 }
