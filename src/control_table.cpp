@@ -69,9 +69,9 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
 
             if (!this->last_instruction_packet.write.device_id.is_broadcast()) {
                 auto& control_table =
-                    this->get_control_table(this->last_instruction_packet.write.device_id);
+                    this->get_or_insert(this->last_instruction_packet.write.device_id);
 
-                auto is_write_ok = control_table->write(
+                auto is_write_ok = control_table.write(
                     this->last_instruction_packet.write.start_addr,
                     this->last_instruction_packet.write.data.data(),
                     this->last_instruction_packet.write.data.size());
@@ -83,9 +83,9 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
                 // since this is a broadcast, we write to all devices we know of
                 for (auto& pair : this->control_tables) {
                     auto device_id = pair.first;
-                    auto& control_table = this->get_control_table(device_id);
+                    auto& control_table = this->get_or_insert(device_id);
 
-                    auto is_write_ok = control_table->write(
+                    auto is_write_ok = control_table.write(
                         this->last_instruction_packet.write.start_addr,
                         this->last_instruction_packet.write.data.data(),
                         this->last_instruction_packet.write.data.size());
@@ -121,14 +121,14 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
                  iter != this->last_instruction_packet.sync_write.devices.end();
                  ++iter) {
                 auto device_id = *iter;
-                auto& control_table = this->get_control_table(device_id);
+                auto& control_table = this->get_or_insert(device_id);
 
                 auto idx =
                     std::distance(this->last_instruction_packet.sync_write.devices.begin(), iter);
                 auto data_start = this->last_instruction_packet.sync_write.data.data()
                     + (idx * this->last_instruction_packet.sync_write.len);
 
-                auto is_write_ok = control_table->write(
+                auto is_write_ok = control_table.write(
                     this->last_instruction_packet.sync_write.start_addr,
                     data_start,
                     this->last_instruction_packet.sync_write.len);
@@ -157,9 +157,9 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
             auto result = ProtocolResult::Ok;
 
             for (auto& write_args : this->last_instruction_packet.bulk_write.writes) {
-                auto& control_table = this->get_control_table(write_args.device_id);
+                auto& control_table = this->get_or_insert(write_args.device_id);
 
-                auto is_write_ok = control_table->write(
+                auto is_write_ok = control_table.write(
                     write_args.start_addr, write_args.data.data(), write_args.data.size());
 
                 if (!is_write_ok) {
@@ -240,9 +240,9 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
                 return ProtocolResult::InvalidPacketLen;
             }
 
-            auto& control_table = this->get_control_table(status_packet.device_id);
+            auto& control_table = this->get_or_insert(status_packet.device_id);
 
-            auto is_write_ok = control_table->write(
+            auto is_write_ok = control_table.write(
                 this->last_instruction_packet.read.start_addr,
                 status_packet.data.data(),
                 this->last_instruction_packet.read.len);
@@ -280,9 +280,9 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
                 return ProtocolResult::InvalidPacketLen;
             }
 
-            auto& control_table = this->get_control_table(status_packet.device_id);
+            auto& control_table = this->get_or_insert(status_packet.device_id);
 
-            auto is_write_ok = control_table->write(
+            auto is_write_ok = control_table.write(
                 this->last_instruction_packet.sync_read.start_addr,
                 status_packet.data.data(),
                 this->last_instruction_packet.sync_read.len);
@@ -315,10 +315,10 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
                 return ProtocolResult::InvalidPacketLen;
             }
 
-            auto& control_table = this->get_control_table(status_packet.device_id);
+            auto& control_table = this->get_or_insert(status_packet.device_id);
 
-            auto is_write_ok = control_table->write(
-                read_args.start_addr, status_packet.data.data(), read_args.len);
+            auto is_write_ok =
+                control_table.write(read_args.start_addr, status_packet.data.data(), read_args.len);
 
             if (!is_write_ok) {
                 return ProtocolResult::InvalidWrite;
@@ -372,13 +372,13 @@ void ControlTableMap::register_control_table(DeviceId device_id, uint32_t model_
     }
 }
 
-std::unique_ptr<ControlTable>& ControlTableMap::get_control_table(DeviceId device_id) {
+ControlTable& ControlTableMap::get_or_insert(DeviceId device_id) {
     auto iter = this->control_tables.find(device_id);
 
     if (iter != this->control_tables.end()) {
-        return iter->second;
+        return *iter->second;
     } else {
-        return this->control_tables.emplace(device_id, std::make_unique<UnknownControlTable>())
-            .first->second;
+        return *this->control_tables.emplace(device_id, std::make_unique<UnknownControlTable>())
+                    .first->second;
     }
 }

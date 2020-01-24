@@ -304,7 +304,8 @@ class ControlTableMap {
 
     void register_control_table(DeviceId device_id, uint32_t model_number);
 
-    std::unique_ptr<ControlTable>& get_control_table(DeviceId device_id);
+    /// Gets the `ControlTable` for `device_id` or inserts an unknown table if it does not exist.
+    ControlTable& get_or_insert(DeviceId device_id);
 
     std::unordered_map<DeviceId, std::unique_ptr<ControlTable>> control_tables;
     std::unordered_map<DeviceId, uint32_t> num_missed_packets;
