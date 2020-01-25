@@ -16,6 +16,10 @@ class Mx64ControlTable : public ControlTable {
         return MODEL_NUMBER;
     }
 
+    void set_firmware_version(uint8_t version) {
+        this->mem.write_uint8(6, version);
+    }
+
     const char* device_name() const final {
         return "MX-64";
     }

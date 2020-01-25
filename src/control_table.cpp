@@ -515,7 +515,12 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
             }
 
             auto model_number = uint16_from_le(status_packet.data.data());
-            this->register_control_table(status_packet.device_id, model_number);
+            auto firmware_version = status_packet.data[2];
+
+            auto& control_table =
+                this->register_control_table(status_packet.device_id, model_number);
+            control_table.set_firmware_version(firmware_version);
+
             break;
         }
         case Instruction::Read: {
@@ -628,7 +633,7 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
     return ProtocolResult::Ok;
 }
 
-void ControlTableMap::register_control_table(DeviceId device_id, uint32_t model_number) {
+ControlTable& ControlTableMap::register_control_table(DeviceId device_id, uint32_t model_number) {
     auto pair = this->control_tables.emplace(device_id, nullptr);
     auto& table = pair.first->second;
 
@@ -659,6 +664,8 @@ void ControlTableMap::register_control_table(DeviceId device_id, uint32_t model_
             break;
         }
     }
+
+    return *table;
 }
 
 ControlTable& ControlTableMap::get_or_insert(DeviceId device_id) {

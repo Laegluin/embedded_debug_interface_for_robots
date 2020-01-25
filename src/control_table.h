@@ -180,6 +180,9 @@ class ControlTable {
     /// `std::numeric_limits<uint16_t>::max()` does not refer to an actual device.
     virtual uint32_t model_number() const = 0;
 
+    /// Sets the firmware version of the device (usually obtained through a ping response).
+    virtual void set_firmware_version(uint8_t version) = 0;
+
     virtual const char* device_name() const = 0;
 
     virtual ControlTableMemory& memory() = 0;
@@ -202,6 +205,8 @@ class UnknownControlTable : public ControlTable {
     uint32_t model_number() const final {
         return MODEL_NUMBER;
     }
+
+    void set_firmware_version(uint8_t) {}
 
     const char* device_name() const final {
         return "<unknown>";
@@ -267,7 +272,7 @@ class ControlTableMap {
 
     ProtocolResult receive_status_packet(const Packet& status_packet);
 
-    void register_control_table(DeviceId device_id, uint32_t model_number);
+    ControlTable& register_control_table(DeviceId device_id, uint32_t model_number);
 
     /// Gets the `ControlTable` for `device_id` or inserts an unknown table if it does not exist.
     ControlTable& get_or_insert(DeviceId device_id);
