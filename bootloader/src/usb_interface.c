@@ -51,15 +51,10 @@ static int8_t cdc_control(uint8_t cmd, uint8_t* buf, uint16_t len) {
 }
 
 static int8_t cdc_receive(uint8_t* buf, uint32_t* len) {
-    USBD_CDC_SetRxBuffer(&USB_DEVICE, buf);
-
-    USBD_StatusTypeDef result = USBD_CDC_ReceivePacket(&USB_DEVICE);
-    if (result != USBD_OK) {
-        return result;
-    }
-
     bootloader_process(&BOOTLOADER, buf, *len);
-    return USBD_OK;
+
+    USBD_CDC_SetRxBuffer(&USB_DEVICE, buf);
+    return USBD_CDC_ReceivePacket(&USB_DEVICE);
 }
 
 void usb_serial_print(char* msg) {
