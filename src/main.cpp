@@ -127,6 +127,22 @@ void init_mpu() {
     installed_qspi.IsBufferable = false;
     HAL_MPU_ConfigRegion(&installed_qspi);
 
+    // null pointer page (fault on null pointer derefs)
+    // strongly-ordered, shareable (not accessible)
+    MPU_Region_InitTypeDef null_page;
+    null_page.Enable = true;
+    null_page.Number = MPU_REGION_NUMBER5;
+    null_page.BaseAddress = 0x00000000;
+    null_page.Size = MPU_REGION_SIZE_4KB;
+    null_page.SubRegionDisable = false;
+    null_page.TypeExtField = MPU_TEX_LEVEL0;
+    null_page.AccessPermission = MPU_REGION_NO_ACCESS;
+    null_page.DisableExec = true;
+    null_page.IsShareable = true;
+    null_page.IsCacheable = false;
+    null_page.IsBufferable = false;
+    HAL_MPU_ConfigRegion(&null_page);
+
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 
