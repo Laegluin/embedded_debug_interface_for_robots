@@ -3,6 +3,55 @@
 #include "device/mx64.h"
 #include <catch2/catch.hpp>
 
+TEST_CASE("read and write to control table memory", "[ControlTableMemory]") {
+    ControlTableMemory mem({
+        Segment::new_data(0x0100, 32),
+        Segment::new_data(0x0120, 32),
+        Segment::new_indirect_address(0x0300, 0x0200, 32),
+    });
+
+    uint32_t value;
+    REQUIRE(mem.read_uint32(0x011e, &value));
+    REQUIRE(value == 0);
+    REQUIRE(mem.write_uint32(0x011e, 420000042));
+    REQUIRE(mem.read_uint32(0x011e, &value));
+    REQUIRE(value == 420000042);
+
+    REQUIRE(mem.write_uint32(0x0200, 123));
+    REQUIRE(mem.read_uint32(0x0200, &value));
+    REQUIRE(value == 123);
+
+    REQUIRE_FALSE(mem.read_uint32(0x0000, &value));
+    REQUIRE_FALSE(mem.write_uint32(0x0000, 321));
+
+    REQUIRE_FALSE(mem.read_uint32(0x0160, &value));
+    REQUIRE_FALSE(mem.write_uint32(0x0160, 321));
+
+    REQUIRE_FALSE(mem.read_uint32(0x0300, &value));
+    REQUIRE_FALSE(mem.write_uint32(0x0300, 321));
+}
+
+TEST_CASE("resolve addresses", "[ControlTableMemory]") {
+    ControlTableMemory mem({
+        Segment::new_indirect_address(0x0000, 0x0200, 32),
+    });
+
+    REQUIRE(mem.resolve_addr(0x0000) == 0x0000);
+    REQUIRE(mem.resolve_addr(0x000f) == 0x0000);
+    REQUIRE(mem.resolve_addr(0x0010) == 0x0010);
+    REQUIRE(mem.resolve_addr(0x0200) == 0x0200);
+    REQUIRE(mem.resolve_addr(0xffff) == 0xffff);
+
+    REQUIRE(mem.write_uint16(0x0200, 0x1000));
+    REQUIRE(mem.write_uint16(0x021e, 0x2000));
+
+    REQUIRE(mem.resolve_addr(0x0000) == 0x1000);
+    REQUIRE(mem.resolve_addr(0x000f) == 0x2000);
+    REQUIRE(mem.resolve_addr(0x0010) == 0x0010);
+    REQUIRE(mem.resolve_addr(0x0200) == 0x0200);
+    REQUIRE(mem.resolve_addr(0xffff) == 0xffff);
+}
+
 TEST_CASE("flow control for incoming packets", "[ControlTableMap]") {
     ControlTableMap control_table_map;
 
@@ -240,21 +289,23 @@ TEST_CASE("flow control for incoming packets", "[ControlTableMap]") {
             DeviceId::broadcast(),
             Instruction::BulkWrite,
             Error(),
-            std::vector<uint8_t>{0x04,
-                                 0x10,
-                                 0x00,
-                                 0x02,
-                                 0x00,
-                                 0xab,
-                                 0xcd,
-                                 0x05,
-                                 0x20,
-                                 0x00,
-                                 0x03,
-                                 0x00,
-                                 0xf0,
-                                 0xe0,
-                                 0xd0},
+            std::vector<uint8_t>{
+                0x04,
+                0x10,
+                0x00,
+                0x02,
+                0x00,
+                0xab,
+                0xcd,
+                0x05,
+                0x20,
+                0x00,
+                0x03,
+                0x00,
+                0xf0,
+                0xe0,
+                0xd0,
+            },
         };
 
         auto result = control_table_map.receive(bulk_write_packet);
