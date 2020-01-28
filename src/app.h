@@ -17,11 +17,11 @@ struct ReceiveBuf {
         is_front_ready(false),
         is_back_ready(false) {}
 
-    uint8_t bytes[LEN];
+    volatile uint8_t bytes[LEN];
     Cursor front;
     Cursor back;
-    bool is_front_ready;
-    bool is_back_ready;
+    volatile bool is_front_ready;
+    volatile bool is_back_ready;
 };
 
 void run(const std::vector<ReceiveBuf*>& bufs);

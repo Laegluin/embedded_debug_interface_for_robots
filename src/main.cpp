@@ -23,6 +23,9 @@ void init_gui();
 int main() {
     std::vector<ReceiveBuf*> uarts;
 
+    // required since clocks have been preconfigured by bootloader
+    SystemCoreClockUpdate();
+
     if (HAL_Init() != HAL_OK) {
         on_error();
     }
@@ -513,14 +516,16 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     static UART_HandleTypeDef uart;
     uart.Instance = USART6;
     uart.Init.BaudRate = UART_BAUDRATE;
-    uart.Init.WordLength = UART_WORDLENGTH_9B;
+    uart.Init.WordLength = UART_WORDLENGTH_8B;
     uart.Init.StopBits = UART_STOPBITS_1;
     uart.Init.Parity = UART_PARITY_NONE;
     uart.Init.Mode = UART_MODE_RX;
     uart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    uart.Init.OverSampling = UART_OVERSAMPLING_8;
+    uart.Init.OverSampling = UART_OVERSAMPLING_16;
     uart.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-    uart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    uart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_AUTOBAUDRATE_INIT;
+    uart.AdvancedInit.AutoBaudRateEnable = UART_ADVFEATURE_AUTOBAUDRATE_ENABLE;
+    uart.AdvancedInit.AutoBaudRateMode = UART_ADVFEATURE_AUTOBAUDRATE_ONFALLINGEDGE;
 
     uart.hdmarx = &DMA2_STREAM1;
     DMA2_STREAM1.Parent = &uart;
@@ -550,6 +555,12 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     if (HAL_DMA_Start_IT(&DMA2_STREAM1, src_addr, dst_addr, ReceiveBuf::LEN) != HAL_OK) {
         on_error();
     }
+
+    // enable rx register not empty interrupt (handled by DMA controller)
+    uart.Instance->CR1 |= USART_CR1_RXNEIE;
+
+    // set DMA as receiver
+    uart.Instance->CR3 |= USART_CR3_DMAR;
 
     bufs.push_back(&buf);
 }

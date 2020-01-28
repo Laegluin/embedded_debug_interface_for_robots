@@ -7,14 +7,21 @@
 
 class Cursor {
   public:
-    Cursor(const uint8_t* buf, size_t buf_len) : buf(buf), buf_len(buf_len), current_pos(0) {}
+    Cursor(const volatile uint8_t* buf, size_t buf_len) :
+        buf(buf),
+        buf_len(buf_len),
+        current_pos(0) {}
 
     /// Reads a maximum of `num_bytes` into `dst` and returns the number of bytes read. If the
     /// number of read bytes is less than `num_bytes`, the buffer backing this `Cursor` is exhausted
     /// and consecutive reads will yield no more data.
     size_t read(uint8_t* dst, size_t num_bytes) {
         auto bytes_read = std::min(num_bytes, this->remaining_bytes());
-        memcpy(dst, this->buf + this->current_pos, bytes_read);
+
+        for (size_t i = 0; i < bytes_read; i++) {
+            dst[i] = this->buf[this->current_pos + i];
+        }
+
         this->current_pos += bytes_read;
         return bytes_read;
     }
@@ -28,7 +35,7 @@ class Cursor {
     }
 
   private:
-    const uint8_t* buf;
+    const volatile uint8_t* buf;
     size_t buf_len;
     size_t current_pos;
 };
