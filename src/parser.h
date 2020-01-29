@@ -23,11 +23,19 @@ class DeviceId {
         return *this == DeviceId::broadcast();
     }
 
-    friend bool operator==(const DeviceId& lhs, const DeviceId& rhs);
+    std::string to_string() const {
+        return std::to_string(this->id);
+    }
+
+    friend bool operator==(const DeviceId&, const DeviceId&);
+
+    friend bool operator>(const DeviceId& lhs, const DeviceId& rhs);
+
+    friend bool operator<(const DeviceId& lhs, const DeviceId& rhs);
 
     friend class std::hash<DeviceId>;
 
-    friend std::ostream& operator<<(std::ostream& out, const DeviceId& device_id);
+    friend std::ostream& operator<<(std::ostream&, const DeviceId&);
 
   private:
     uint8_t id;
@@ -39,6 +47,14 @@ inline bool operator==(const DeviceId& lhs, const DeviceId& rhs) {
 
 inline bool operator!=(const DeviceId& lhs, const DeviceId& rhs) {
     return !(lhs == rhs);
+}
+
+inline bool operator>(const DeviceId& lhs, const DeviceId& rhs) {
+    return lhs.id > rhs.id;
+}
+
+inline bool operator<(const DeviceId& lhs, const DeviceId& rhs) {
+    return lhs.id < rhs.id;
 }
 
 namespace std {

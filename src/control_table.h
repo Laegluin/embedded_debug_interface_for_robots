@@ -193,7 +193,7 @@ class ControlTable {
 
     bool write(uint16_t start_addr, const uint8_t* buf, uint16_t len);
 
-    std::vector<std::pair<const char*, std::string>> fmt_fields();
+    std::vector<std::pair<const char*, std::string>> fmt_fields() const;
 };
 
 class UnknownControlTable : public ControlTable {

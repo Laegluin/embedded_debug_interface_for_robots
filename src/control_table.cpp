@@ -238,7 +238,7 @@ bool ControlTable::write(uint16_t start_addr, const uint8_t* buf, uint16_t len) 
     return this->memory().write(start_addr, buf, len);
 }
 
-std::vector<std::pair<const char*, std::string>> ControlTable::fmt_fields() {
+std::vector<std::pair<const char*, std::string>> ControlTable::fmt_fields() const {
     auto& mem = this->memory();
     auto& fields = this->fields();
 
@@ -296,6 +296,17 @@ ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {
     // TODO: remove after UI is done
     this->control_tables.emplace(DeviceId(0), std::make_unique<Mx64ControlTable>());
     this->control_tables.emplace(DeviceId(1), std::make_unique<Mx106ControlTable>());
+    this->control_tables.emplace(DeviceId(10), std::make_unique<Mx106ControlTable>());
+    this->control_tables.emplace(DeviceId(11), std::make_unique<Mx106ControlTable>());
+    this->control_tables.emplace(DeviceId(12), std::make_unique<Mx106ControlTable>());
+    this->control_tables.emplace(DeviceId(13), std::make_unique<Mx64ControlTable>());
+    this->control_tables.emplace(DeviceId(14), std::make_unique<Mx106ControlTable>());
+    this->control_tables.emplace(DeviceId(42), std::make_unique<Mx64ControlTable>());
+    this->control_tables.emplace(DeviceId(99), std::make_unique<Mx64ControlTable>());
+    this->control_tables.emplace(DeviceId(100), std::make_unique<Mx106ControlTable>());
+    this->control_tables.emplace(DeviceId(101), std::make_unique<Mx64ControlTable>());
+
+    this->num_missed_packets.emplace(DeviceId(10), 9000);
 }
 
 bool ControlTableMap::is_disconnected(DeviceId device_id) const {
