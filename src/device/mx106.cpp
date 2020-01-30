@@ -3,7 +3,7 @@
 
 // See <http://emanual.robotis.com/docs/en/dxl/mx/mx-106-2/>
 
-const uint32_t Mx106ControlTable::MODEL_NUMBER;
+const uint16_t Mx106ControlTable::MODEL_NUMBER;
 
 const std::vector<ControlTableField> Mx106ControlTable::FIELDS{
     ControlTableField::new_uint16(0, "Model Number", Mx106ControlTable::MODEL_NUMBER, to_string),

@@ -234,6 +234,10 @@ uint16_t ControlTableMemory::resolve_addr(uint16_t addr) const {
     return addr;
 }
 
+bool ControlTable::is_unknown_model() const {
+    return false;
+}
+
 bool ControlTable::write(uint16_t start_addr, const uint8_t* buf, uint16_t len) {
     return this->memory().write(start_addr, buf, len);
 }
@@ -305,6 +309,8 @@ ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {
     this->control_tables.emplace(DeviceId(99), std::make_unique<Mx64ControlTable>());
     this->control_tables.emplace(DeviceId(100), std::make_unique<Mx106ControlTable>());
     this->control_tables.emplace(DeviceId(101), std::make_unique<Mx64ControlTable>());
+    this->control_tables.emplace(DeviceId(200), std::make_unique<UnknownControlTable>());
+    this->control_tables.emplace(DeviceId(222), std::make_unique<UnknownControlTable>(420));
 
     this->num_missed_packets.emplace(DeviceId(10), 9000);
 }
@@ -644,7 +650,7 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
     return ProtocolResult::Ok;
 }
 
-ControlTable& ControlTableMap::register_control_table(DeviceId device_id, uint32_t model_number) {
+ControlTable& ControlTableMap::register_control_table(DeviceId device_id, uint16_t model_number) {
     auto pair = this->control_tables.emplace(device_id, nullptr);
     auto& table = pair.first->second;
 
@@ -665,11 +671,11 @@ ControlTable& ControlTableMap::register_control_table(DeviceId device_id, uint32
             break;
         }
         default: {
-            // if there is no table the device is unknown, otherwise it is either already
-            // unknown or another table (should not happen but is most likely more correct than
-            // removing it)
-            if (!table) {
-                table = std::make_unique<UnknownControlTable>();
+            // don't know the model, so insert placeholder instead
+            // also replace an existing placeholder if we at least know that the
+            // model number changed
+            if (!table || table->is_unknown_model() || table->model_number() != model_number) {
+                table = std::make_unique<UnknownControlTable>(model_number);
             }
 
             break;

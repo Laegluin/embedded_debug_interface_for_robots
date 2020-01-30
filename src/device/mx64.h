@@ -8,11 +8,11 @@ class Mx64ControlTable : public ControlTable {
   public:
     Mx64ControlTable();
 
-    static const uint32_t MODEL_NUMBER = 311;
+    static const uint16_t MODEL_NUMBER = 311;
 
     static const std::vector<ControlTableField> FIELDS;
 
-    uint32_t model_number() const final {
+    uint16_t model_number() const final {
         return MODEL_NUMBER;
     }
 

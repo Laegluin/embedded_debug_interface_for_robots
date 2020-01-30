@@ -176,9 +176,13 @@ struct ControlTableField {
 
 class ControlTable {
   public:
-    /// Returns the model number of the device. Any model number greater than
-    /// `std::numeric_limits<uint16_t>::max()` does not refer to an actual device.
-    virtual uint32_t model_number() const = 0;
+    /// Tests if the model of the control table is known. If it is not know, the return value of
+    /// `ControlTable::model_number` is undefined. This should not be overridden by device
+    /// implementations.
+    virtual bool is_unknown_model() const;
+
+    /// Returns the model number of the device.
+    virtual uint16_t model_number() const = 0;
 
     /// Sets the firmware version of the device (usually obtained through a ping response).
     virtual void set_firmware_version(uint8_t version) = 0;
@@ -198,15 +202,29 @@ class ControlTable {
 
 class UnknownControlTable : public ControlTable {
   public:
-    static const uint32_t MODEL_NUMBER = std::numeric_limits<uint32_t>::max();
+    UnknownControlTable() :
+        mem(ControlTableMemory({Segment::new_data(0, 3)})),
+        is_unknown_model_(true) {}
 
-    UnknownControlTable() : mem(ControlTableMemory(std::vector<Segment>())) {}
-
-    uint32_t model_number() const final {
-        return MODEL_NUMBER;
+    UnknownControlTable(uint16_t model_number) :
+        mem(ControlTableMemory({Segment::new_data(0, 3)})),
+        is_unknown_model_(false) {
+        this->mem.write_uint16(0, model_number);
     }
 
-    void set_firmware_version(uint8_t) {}
+    bool is_unknown_model() const final {
+        return is_unknown_model_;
+    }
+
+    uint16_t model_number() const final {
+        uint16_t model_number;
+        this->mem.read_uint16(0, &model_number);
+        return model_number;
+    }
+
+    void set_firmware_version(uint8_t version) {
+        this->mem.write_uint8(2, version);
+    }
 
     const char* device_name() const final {
         return "<unknown>";
@@ -221,12 +239,28 @@ class UnknownControlTable : public ControlTable {
     }
 
     const std::vector<ControlTableField>& fields() const final {
-        static std::vector<ControlTableField> no_fields;
-        return no_fields;
+        static std::vector<ControlTableField> fields{
+            ControlTableField::new_uint16(
+                0, "Model Number", 0, [](uint16_t number) { return std::to_string(number); }),
+            ControlTableField::new_uint8(
+                2, "Firmware Version", 0, [](uint8_t version) { return std::to_string(version); }),
+        };
+
+        static std::vector<ControlTableField> fields_no_model{
+            ControlTableField::new_uint8(
+                2, "Firmware Version", 0, [](uint8_t version) { return std::to_string(version); }),
+        };
+
+        if (this->is_unknown_model()) {
+            return fields_no_model;
+        } else {
+            return fields;
+        }
     }
 
   private:
     ControlTableMemory mem;
+    bool is_unknown_model_;
 };
 
 enum class ProtocolResult {
@@ -272,7 +306,7 @@ class ControlTableMap {
 
     ProtocolResult receive_status_packet(const Packet& status_packet);
 
-    ControlTable& register_control_table(DeviceId device_id, uint32_t model_number);
+    ControlTable& register_control_table(DeviceId device_id, uint16_t model_number);
 
     /// Gets the `ControlTable` for `device_id` or inserts an unknown table if it does not exist.
     ControlTable& get_or_insert(DeviceId device_id);
