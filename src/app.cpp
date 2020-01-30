@@ -224,7 +224,7 @@ class DeviceInfoWindow {
         auto num_rows = LISTVIEW_GetNumRows(this->field_list);
 
         for (size_t i = 0; i < num_rows; i++) {
-            LISTVIEW_DeleteRow(this->field_list, i);
+            LISTVIEW_DeleteRow(this->field_list, num_rows - 1 - i);
         }
     }
 
@@ -250,8 +250,10 @@ class DeviceInfoWindow {
         }
 
         // delete no longer used rows
-        for (size_t i = row_idx; i < num_rows; i++) {
-            LISTVIEW_DeleteRow(this->field_list, i);
+        size_t num_unused_rows = num_rows - row_idx;
+
+        for (size_t i = 0; i < num_unused_rows; i++) {
+            LISTVIEW_DeleteRow(this->field_list, num_rows - 1 - i);
         }
     }
 
