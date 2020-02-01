@@ -70,6 +70,10 @@ class Log {
 
 static void handle_incoming_packets(Log&, Connection&, ControlTableMap&);
 static void create_ui(const Log&, const ControlTableMap&);
+static void set_ui_theme();
+static void set_header_skin();
+static void set_scrollbar_skin();
+static void set_button_skin();
 static void with_touch_scrolling(WM_MESSAGE*, void (*)(WM_MESSAGE*));
 
 void run(const std::vector<ReceiveBuf*>& bufs) {
@@ -341,8 +345,12 @@ class DeviceInfoWindow {
         this->device_list = LISTBOX_CreateEx(
             0, 40, 150, DISPLAY_HEIGHT - 40, this->handle, WM_CF_SHOW, 0, NO_ID, nullptr);
 
+        LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_UNSEL, MENU_COLOR);
+        LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_SEL, MENU_PRESSED_COLOR);
+        LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_SELFOCUS, MENU_PRESSED_COLOR);
+        LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_DISABLED, DEVICE_DISCONNECTED_COLOR);
+        LISTBOX_SetTextColor(this->device_list, LISTBOX_CI_DISABLED, DEVICE_STATUS_TEXT_COLOR);
         LISTBOX_SetAutoScrollV(this->device_list, true);
-        LISTBOX_SetTextAlign(this->device_list, GUI_TA_LEFT | GUI_TA_VCENTER);
         LISTBOX_SetItemSpacing(this->device_list, 20);
         WM_SetCallback(
             this->device_list, [](auto msg) { with_touch_scrolling(msg, LISTBOX_Callback); });
@@ -354,6 +362,8 @@ class DeviceInfoWindow {
         LISTVIEW_AddColumn(this->field_list, 150, "Field", GUI_TA_LEFT | GUI_TA_VCENTER);
         LISTVIEW_AddColumn(
             this->field_list, DISPLAY_WIDTH - 150, "Value", GUI_TA_LEFT | GUI_TA_VCENTER);
+        LISTVIEW_SetTextAlign(this->field_list, 0, GUI_TA_LEFT | GUI_TA_VCENTER);
+        LISTVIEW_SetTextAlign(this->field_list, 1, GUI_TA_LEFT | GUI_TA_VCENTER);
         auto listview_back_color = LISTVIEW_GetBkColor(this->field_list, LISTVIEW_CI_UNSEL);
         LISTVIEW_SetBkColor(this->field_list, LISTVIEW_CI_SEL, listview_back_color);
         LISTVIEW_SetBkColor(this->field_list, LISTVIEW_CI_SELFOCUS, listview_back_color);
@@ -560,7 +570,6 @@ class LogWindow {
         this->log_list = LISTBOX_CreateEx(
             0, 40, DISPLAY_WIDTH, DISPLAY_HEIGHT - 40, this->handle, WM_CF_SHOW, 0, NO_ID, nullptr);
         LISTBOX_SetAutoScrollV(this->log_list, true);
-        LISTBOX_SetTextAlign(this->log_list, GUI_TA_LEFT | GUI_TA_VCENTER);
         WM_SetCallback(
             this->log_list, [](auto msg) { with_touch_scrolling(msg, LISTBOX_Callback); });
 
@@ -648,6 +657,8 @@ class LogWindow {
 };
 
 static void create_ui(const Log& log, const ControlTableMap& control_table_map) {
+    set_ui_theme();
+
     auto device_overview_win = WINDOW_CreateUser(
         0,
         0,
@@ -695,6 +706,115 @@ static void create_ui(const Log& log, const ControlTableMap& control_table_map) 
 
     auto log_obj = new LogWindow(&log, log_win, device_overview_win);
     WINDOW_SetUserData(log_win, &log_obj, sizeof(void*));
+}
+
+static void set_ui_theme() {
+    // set skins
+    set_header_skin();
+    set_scrollbar_skin();
+    set_button_skin();
+    WIDGET_SetDefaultEffect(&WIDGET_Effect_None);
+
+    // fonts
+    TEXT_SetDefaultFont(GUI_FONT_16_1);
+    HEADER_SetDefaultFont(GUI_FONT_20_1);
+    BUTTON_SetDefaultFont(GUI_FONT_20_1);
+    LISTVIEW_SetDefaultFont(GUI_FONT_16_1);
+    LISTBOX_SetDefaultFont(GUI_FONT_16_1);
+
+    // colors
+    TEXT_SetDefaultTextColor(TEXT_COLOR);
+
+    WINDOW_SetDefaultBkColor(BACKGROUND_COLOR);
+
+    BUTTON_SetDefaultBkColor(BUTTON_CI_UNPRESSED, BUTTON_COLOR);
+    BUTTON_SetDefaultBkColor(BUTTON_CI_PRESSED, BUTTON_PRESSED_COLOR);
+    BUTTON_SetDefaultTextColor(BUTTON_CI_UNPRESSED, TEXT_COLOR);
+    BUTTON_SetDefaultTextColor(BUTTON_CI_PRESSED, TEXT_COLOR);
+
+    SCROLLBAR_SetDefaultColor(SCROLLBAR_CI_SHAFT, SCROLLBAR_COLOR);
+    SCROLLBAR_SetDefaultColor(SCROLLBAR_CI_ARROW, SCROLLBAR_COLOR);
+    SCROLLBAR_SetDefaultColor(SCROLLBAR_CI_THUMB, SCROLLBAR_THUMB_COLOR);
+
+    HEADER_SetDefaultBkColor(LIST_HEADER_COLOR);
+    HEADER_SetDefaultTextColor(TEXT_COLOR);
+
+    LISTBOX_SetDefaultBkColor(LISTBOX_CI_UNSEL, LIST_ITEM_COLOR);
+    LISTBOX_SetDefaultTextColor(LISTBOX_CI_UNSEL, TEXT_COLOR);
+    LISTBOX_SetDefaultTextColor(LISTBOX_CI_SEL, TEXT_COLOR);
+    LISTBOX_SetDefaultTextColor(LISTBOX_CI_SELFOCUS, TEXT_COLOR);
+
+    LISTVIEW_SetDefaultBkColor(LISTVIEW_CI_UNSEL, LIST_ITEM_COLOR);
+    LISTVIEW_SetDefaultTextColor(0, TEXT_COLOR);
+    LISTVIEW_SetDefaultTextColor(1, TEXT_COLOR);
+    LISTVIEW_SetDefaultTextColor(2, TEXT_COLOR);
+
+    // size, margin and alignment
+    SCROLLBAR_SetDefaultWidth(2);
+    LISTBOX_SetDefaultTextAlign(GUI_TA_LEFT | GUI_TA_VCENTER);
+    FRAMEWIN_SetDefaultBorderSize(0);
+}
+
+static void set_header_skin() {
+    HEADER_SKINFLEX_PROPS props;
+    props.aColorFrame[0] = LIST_HEADER_COLOR;
+    props.aColorFrame[1] = LIST_HEADER_COLOR;
+    props.aColorUpper[0] = LIST_HEADER_COLOR;
+    props.aColorUpper[1] = LIST_HEADER_COLOR;
+    props.aColorLower[0] = LIST_HEADER_COLOR;
+    props.aColorLower[1] = LIST_HEADER_COLOR;
+    props.ColorArrow = LIST_HEADER_COLOR;
+    HEADER_SetSkinFlexProps(&props, 0);
+}
+
+// FIXME: coords are wrong
+static void set_scrollbar_skin() {
+    SCROLLBAR_SetDefaultSkin([](const WIDGET_ITEM_DRAW_INFO* draw_info) -> int {
+        switch (draw_info->Cmd) {
+            // case WIDGET_ITEM_DRAW_BUTTON_L:
+            // case WIDGET_ITEM_DRAW_BUTTON_R:
+            // case WIDGET_ITEM_DRAW_OVERLAP:
+            // case WIDGET_ITEM_DRAW_SHAFT_L:
+            // case WIDGET_ITEM_DRAW_SHAFT_R: {
+            //     GUI_SetColor(SCROLLBAR_COLOR);
+            //     GUI_FillRect(draw_info->x0, draw_info->y0, draw_info->x1, draw_info->y1);
+            //     return 0;
+            // }
+            case WIDGET_ITEM_DRAW_THUMB: {
+                GUI_SetColor(SCROLLBAR_THUMB_COLOR);
+                GUI_FillRect(0, 0, 1, 100);
+                return 0;
+            }
+            // case WIDGET_ITEM_GET_BUTTONSIZE: {
+            //     return 0;
+            // }
+            default: { return SCROLLBAR_DrawSkinFlex(draw_info); }
+        }
+    });
+}
+
+static void set_button_skin() {
+    BUTTON_SKINFLEX_PROPS props;
+    props.aColorFrame[0] = BUTTON_COLOR;
+    props.aColorFrame[1] = BUTTON_COLOR;
+    props.aColorFrame[2] = BUTTON_COLOR;
+    props.aColorUpper[0] = BUTTON_COLOR;
+    props.aColorUpper[1] = BUTTON_COLOR;
+    props.aColorLower[0] = BUTTON_COLOR;
+    props.aColorLower[1] = BUTTON_COLOR;
+    props.Radius = 0;
+    BUTTON_SetSkinFlexProps(&props, BUTTON_SKINFLEX_PI_ENABLED);
+    BUTTON_SetSkinFlexProps(&props, BUTTON_SKINFLEX_PI_FOCUSED);
+
+    props.aColorFrame[0] = BUTTON_PRESSED_COLOR;
+    props.aColorFrame[1] = BUTTON_PRESSED_COLOR;
+    props.aColorFrame[2] = BUTTON_PRESSED_COLOR;
+    props.aColorUpper[0] = BUTTON_PRESSED_COLOR;
+    props.aColorUpper[1] = BUTTON_PRESSED_COLOR;
+    props.aColorLower[0] = BUTTON_PRESSED_COLOR;
+    props.aColorLower[1] = BUTTON_PRESSED_COLOR;
+    props.Radius = 0;
+    BUTTON_SetSkinFlexProps(&props, BUTTON_SKINFLEX_PI_PRESSED);
 }
 
 // TODO: use accumulator to allow small scrolling increments
