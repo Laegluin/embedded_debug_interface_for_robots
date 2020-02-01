@@ -8,15 +8,20 @@
 #include <LISTBOX.h>
 #include <LISTVIEW.h>
 #include <SCROLLBAR.h>
+#include <TEXT.h>
 
 #include <cmath>
+#include <deque>
+#include <map>
 #include <memory>
 #include <sstream>
 #include <stm32f7xx.h>
 #include <unordered_map>
 
+const int NO_ID = GUI_ID_USER + 0;
+const size_t MAX_NUM_LOG_ENTRIES = 30;
+
 struct Connection {
-  public:
     Connection(ReceiveBuf* buf) :
         buf(buf),
         parser(Parser()),
@@ -32,11 +37,38 @@ struct Connection {
     Packet last_packet;
 };
 
+class Log {
+  public:
+    void log(std::string message) {
+        if (messages.size() >= MAX_NUM_LOG_ENTRIES) {
+            this->messages.pop_back();
+        }
+
+        this->messages.push_front(std::move(message));
+    }
+
+    size_t size() const {
+        return this->messages.size();
+    }
+
+    std::deque<std::string>::const_iterator begin() const {
+        return this->messages.begin();
+    }
+
+    std::deque<std::string>::const_iterator end() const {
+        return this->messages.end();
+    }
+
+  private:
+    std::deque<std::string> messages;
+};
+
 static void handle_incoming_packets(Connection&, ControlTableMap&);
-static void create_ui(const ControlTableMap&);
-void with_touch_scrolling(WM_MESSAGE*, void (*)(WM_MESSAGE*));
+static void create_ui(const Log&, const ControlTableMap&);
+static void with_touch_scrolling(WM_MESSAGE*, void (*)(WM_MESSAGE*));
 
 void run(const std::vector<ReceiveBuf*>& bufs) {
+    Log log;
     ControlTableMap control_table_map;
     std::vector<Connection> connections;
 
@@ -46,7 +78,7 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
         connections.push_back(Connection(buf));
     }
 
-    create_ui(control_table_map);
+    create_ui(log, control_table_map);
     uint32_t last_render = 0;
 
     while (true) {
@@ -96,16 +128,238 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
     }
 }
 
+class DeviceOverviewWindow {
+  public:
+    DeviceOverviewWindow(
+        const ControlTableMap* control_table_map,
+        WM_HWIN handle,
+        WM_HWIN log_win,
+        WM_HWIN device_info_win) :
+        control_table_map(control_table_map),
+        handle(handle),
+        device_info_win(device_info_win),
+        log_win(log_win) {
+        this->status_label = TEXT_CreateEx(
+            20,
+            20,
+            DISPLAY_WIDTH - 40,
+            40,
+            this->handle,
+            WM_CF_SHOW,
+            TEXT_CF_LEFT | TEXT_CF_VCENTER,
+            NO_ID,
+            "");
+
+        TEXT_SetBkColor(this->status_label, DEVICE_CONNECTED_COLOR);
+        TEXT_SetTextColor(this->status_label, GUI_WHITE);
+
+        this->log_button =
+            BUTTON_CreateEx(DISPLAY_WIDTH - 220, 20, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
+        BUTTON_SetText(this->log_button, "Log");
+
+        this->details_button =
+            BUTTON_CreateEx(DISPLAY_WIDTH - 120, 20, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
+        BUTTON_SetText(this->details_button, "Details");
+    }
+
+    static DeviceOverviewWindow* from_handle(WM_HWIN handle) {
+        DeviceOverviewWindow* self;
+        WINDOW_GetUserData(handle, &self, sizeof(void*));
+        return self;
+    }
+
+    static void handle_message(WM_MESSAGE* msg) {
+        DeviceOverviewWindow::from_handle(msg->hWin)->on_message(msg);
+    }
+
+  private:
+    void on_message(WM_MESSAGE* msg) {
+        switch (msg->MsgId) {
+            case WM_USER_DATA: {
+                this->update();
+                WM_CreateTimer(msg->hWin, 0, 500, 0);
+                break;
+            }
+            case WM_TIMER: {
+                this->update();
+                WM_RestartTimer(msg->Data.v, 0);
+                break;
+            }
+            case WM_NOTIFY_PARENT: {
+                if (msg->Data.v == WM_NOTIFICATION_RELEASED) {
+                    if (msg->hWinSrc == this->details_button) {
+                        this->on_details_button_click();
+                    } else if (msg->hWinSrc == this->log_button) {
+                        this->on_log_button_click();
+                    }
+                }
+
+                break;
+            }
+            case WM_DELETE: {
+                this->~DeviceOverviewWindow();
+                break;
+            }
+            default: {
+                WM_DefaultProc(msg);
+                break;
+            }
+        }
+    }
+
+    void update() {
+        struct DeviceModelStatus {
+            const char* model_name;
+            size_t num_connected;
+            size_t num_disconnected;
+        };
+
+        size_t num_connected = 0;
+        size_t num_disconnected = 0;
+
+        std::map<uint16_t, DeviceModelStatus> model_to_status;
+
+        // group by model and count total number of disconnected devices
+        for (auto& id_and_table : *this->control_table_map) {
+            auto device_id = id_and_table.first;
+            auto& control_table = id_and_table.second;
+            bool is_disconnected = this->control_table_map->is_disconnected(device_id);
+
+            num_connected += !is_disconnected;
+            num_disconnected += is_disconnected;
+
+            if (!control_table->is_unknown_model()) {
+                auto result = model_to_status.emplace(
+                    control_table->model_number(),
+                    DeviceModelStatus{control_table->device_name(), 0, 0});
+
+                auto& status = result.first->second;
+
+                if (is_disconnected) {
+                    status.num_disconnected++;
+                } else {
+                    status.num_connected++;
+                }
+            }
+        }
+
+        // update status label
+        std::stringstream fmt;
+        fmt << std::to_string(num_connected) << " devices connected\n"
+            << std::to_string(num_disconnected) << " devices disconnected";
+        TEXT_SetText(this->status_label, fmt.str().c_str());
+
+        if (num_disconnected > 0) {
+            TEXT_SetBkColor(this->status_label, DEVICE_DISCONNECTED_COLOR);
+        } else {
+            TEXT_SetBkColor(this->status_label, DEVICE_CONNECTED_COLOR);
+        }
+
+        // update/create model labels
+        size_t model_idx = 0;
+
+        for (auto& model_and_status : model_to_status) {
+            auto& status = model_and_status.second;
+
+            if (model_idx == this->model_labels.size()) {
+                auto new_label = TEXT_CreateEx(
+                    20 + model_idx * 110,
+                    100,
+                    100,
+                    100,
+                    this->handle,
+                    WM_CF_SHOW,
+                    TEXT_CF_LEFT | TEXT_CF_VCENTER,
+                    NO_ID,
+                    "");
+
+                TEXT_SetTextColor(new_label, GUI_WHITE);
+                this->model_labels.push_back(new_label);
+            }
+
+            auto model_label = this->model_labels.at(model_idx);
+
+            std::stringstream fmt;
+            fmt << status.model_name << "\n"
+                << std::to_string(status.num_connected) << " connected\n"
+                << std::to_string(status.num_disconnected) << " disconnected";
+            TEXT_SetText(model_label, fmt.str().c_str());
+
+            if (status.num_disconnected > 0) {
+                TEXT_SetBkColor(model_label, DEVICE_DISCONNECTED_COLOR);
+            } else {
+                TEXT_SetBkColor(model_label, DEVICE_CONNECTED_COLOR);
+            }
+
+            model_idx++;
+        }
+    }
+
+    void on_log_button_click() {
+        WM_EnableWindow(this->log_win);
+        WM_ShowWindow(this->log_win);
+        WM_HideWindow(this->handle);
+        WM_DisableWindow(this->handle);
+    }
+
+    void on_details_button_click() {
+        WM_EnableWindow(this->device_info_win);
+        WM_ShowWindow(this->device_info_win);
+        WM_HideWindow(this->handle);
+        WM_DisableWindow(this->handle);
+    }
+
+    const ControlTableMap* control_table_map;
+    WM_HWIN handle;
+    TEXT_Handle status_label;
+    BUTTON_Handle log_button;
+    BUTTON_Handle details_button;
+    std::vector<TEXT_Handle> model_labels;
+    WM_HWIN device_info_win;
+    WM_HWIN log_win;
+};
+
 class DeviceInfoWindow {
   public:
     DeviceInfoWindow(
         const ControlTableMap* control_table_map,
-        LISTBOX_Handle device_list,
-        LISTVIEW_Handle field_list) :
+        WM_HWIN handle,
+        WM_HWIN device_overview_win) :
         control_table_map(control_table_map),
-        selected_item_idx(0),
-        device_list(device_list),
-        field_list(field_list) {}
+        handle(handle),
+        device_overview_win(device_overview_win),
+        selected_item_idx(0) {
+        WM_HideWindow(this->handle);
+        WM_DisableWindow(this->handle);
+
+        this->device_list = LISTBOX_CreateEx(
+            0, 40, 150, DISPLAY_HEIGHT - 40, this->handle, WM_CF_SHOW, 0, NO_ID, nullptr);
+
+        LISTBOX_SetAutoScrollV(this->device_list, true);
+        LISTBOX_SetTextAlign(this->device_list, GUI_TA_LEFT | GUI_TA_VCENTER);
+        LISTBOX_SetItemSpacing(this->device_list, 20);
+        WM_SetCallback(
+            this->device_list, [](auto msg) { with_touch_scrolling(msg, LISTBOX_Callback); });
+
+        this->field_list = LISTVIEW_CreateEx(
+            150, 0, DISPLAY_WIDTH - 150, DISPLAY_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
+
+        LISTVIEW_SetAutoScrollV(this->field_list, true);
+        LISTVIEW_AddColumn(this->field_list, 150, "Field", GUI_TA_LEFT | GUI_TA_VCENTER);
+        LISTVIEW_AddColumn(
+            this->field_list, DISPLAY_WIDTH - 150, "Value", GUI_TA_LEFT | GUI_TA_VCENTER);
+        auto listview_back_color = LISTVIEW_GetBkColor(this->field_list, LISTVIEW_CI_UNSEL);
+        LISTVIEW_SetBkColor(this->field_list, LISTVIEW_CI_SEL, listview_back_color);
+        LISTVIEW_SetBkColor(this->field_list, LISTVIEW_CI_SELFOCUS, listview_back_color);
+        auto listview_text_color = LISTVIEW_GetTextColor(this->field_list, LISTVIEW_CI_UNSEL);
+        LISTVIEW_SetTextColor(this->field_list, LISTVIEW_CI_SEL, listview_text_color);
+        LISTVIEW_SetTextColor(this->field_list, LISTVIEW_CI_SELFOCUS, listview_text_color);
+        WM_SetCallback(
+            this->field_list, [](auto msg) { with_touch_scrolling(msg, LISTVIEW_Callback); });
+
+        this->back_button = BUTTON_CreateEx(0, 0, 150, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
+        BUTTON_SetText(this->back_button, "Back");
+    }
 
     static DeviceInfoWindow* from_handle(WM_HWIN handle) {
         DeviceInfoWindow* self;
@@ -131,10 +385,23 @@ class DeviceInfoWindow {
                 break;
             }
             case WM_NOTIFY_PARENT: {
-                if (msg->Data.v == WM_NOTIFICATION_SEL_CHANGED
-                    && msg->hWinSrc == this->device_list) {
-                    this->selected_item_idx = LISTBOX_GetSel(this->device_list);
-                    this->update();
+                switch (msg->Data.v) {
+                    case WM_NOTIFICATION_SEL_CHANGED: {
+                        if (msg->hWinSrc == this->device_list) {
+                            this->selected_item_idx = LISTBOX_GetSel(this->device_list);
+                            this->update();
+                        }
+
+                        break;
+                    }
+                    case WM_NOTIFICATION_RELEASED: {
+                        if (msg->hWinSrc == this->back_button) {
+                            this->on_back_button_click();
+                        }
+
+                        break;
+                    }
+                    default: { break; }
                 }
 
                 break;
@@ -257,17 +524,137 @@ class DeviceInfoWindow {
         }
     }
 
+    void on_back_button_click() {
+        WM_EnableWindow(this->device_overview_win);
+        WM_ShowWindow(this->device_overview_win);
+        WM_HideWindow(this->handle);
+        WM_DisableWindow(this->handle);
+    }
+
     const ControlTableMap* control_table_map;
+    WM_HWIN handle;
+    WM_HWIN device_overview_win;
     std::unordered_map<DeviceId, int> device_to_idx;
     int selected_item_idx;
+    BUTTON_Handle back_button;
     LISTBOX_Handle device_list;
     LISTVIEW_Handle field_list;
 };
 
-static void create_ui(const ControlTableMap& control_table_map) {
-    const int NO_ID = GUI_ID_USER + 0;
+// TODO: print last update time
+class LogWindow {
+  public:
+    LogWindow(const Log* log, WM_HWIN handle, WM_HWIN device_overview_win) :
+        log(log),
+        handle(handle),
+        device_overview_win(device_overview_win) {
+        WM_HideWindow(this->handle);
+        WM_DisableWindow(this->handle);
 
-    auto dev_info_win = WINDOW_CreateUser(
+        this->log_list = LISTBOX_CreateEx(
+            0, 40, DISPLAY_WIDTH, DISPLAY_HEIGHT - 40, this->handle, WM_CF_SHOW, 0, NO_ID, nullptr);
+        LISTBOX_SetAutoScrollV(this->log_list, true);
+        LISTBOX_SetTextAlign(this->log_list, GUI_TA_LEFT | GUI_TA_VCENTER);
+        WM_SetCallback(
+            this->log_list, [](auto msg) { with_touch_scrolling(msg, LISTBOX_Callback); });
+
+        this->back_button = BUTTON_CreateEx(0, 0, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
+        BUTTON_SetText(this->back_button, "Back");
+
+        this->refresh_button =
+            BUTTON_CreateEx(DISPLAY_WIDTH - 100, 0, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
+        BUTTON_SetText(this->refresh_button, "Refresh");
+    }
+
+    static LogWindow* from_handle(WM_HWIN handle) {
+        LogWindow* self;
+        WINDOW_GetUserData(handle, &self, sizeof(void*));
+        return self;
+    }
+
+    static void handle_message(WM_MESSAGE* msg) {
+        LogWindow::from_handle(msg->hWin)->on_message(msg);
+    }
+
+  private:
+    void on_message(WM_MESSAGE* msg) {
+        switch (msg->MsgId) {
+            case WM_NOTIFY_PARENT: {
+                if (msg->Data.v == WM_NOTIFICATION_RELEASED) {
+                    if (msg->hWinSrc == this->back_button) {
+                        this->on_back_button_click();
+                    } else if (msg->hWinSrc == this->refresh_button) {
+                        this->on_refresh_button_click();
+                    }
+                }
+
+                break;
+            }
+            case WM_DELETE: {
+                this->~LogWindow();
+                break;
+            }
+            default: {
+                WM_DefaultProc(msg);
+                break;
+            }
+        }
+    }
+
+    void on_back_button_click() {
+        WM_EnableWindow(this->device_overview_win);
+        WM_ShowWindow(this->device_overview_win);
+        WM_HideWindow(this->handle);
+        WM_DisableWindow(this->handle);
+    }
+
+    void on_refresh_button_click() {
+        auto num_items = LISTBOX_GetNumItems(this->log_list);
+
+        // delete or add items as necessary
+        if (num_items < this->log->size()) {
+            auto num_missing_items = this->log->size() - num_items;
+
+            for (size_t i = 0; i < num_missing_items; i++)
+                LISTBOX_AddString(this->log_list, "");
+        } else if (num_items > this->log->size()) {
+            auto num_extra_items = num_items - this->log->size();
+
+            for (size_t i = 0; i < num_extra_items; i++) {
+                LISTBOX_DeleteItem(this->log_list, num_items - 1 - i);
+            }
+        }
+
+        size_t item_idx = 0;
+
+        for (auto& log_entry : *this->log) {
+            LISTBOX_SetString(this->log_list, log_entry.c_str(), item_idx);
+            item_idx++;
+        }
+    }
+
+    const Log* log;
+    WM_HWIN handle;
+    LISTBOX_Handle log_list;
+    BUTTON_Handle back_button;
+    BUTTON_Handle refresh_button;
+    WM_HWIN device_overview_win;
+};
+
+static void create_ui(const Log& log, const ControlTableMap& control_table_map) {
+    auto device_overview_win = WINDOW_CreateUser(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        0,
+        NO_ID,
+        DeviceOverviewWindow::handle_message,
+        sizeof(void*));
+
+    auto device_info_win = WINDOW_CreateUser(
         0,
         0,
         DISPLAY_WIDTH,
@@ -279,33 +666,33 @@ static void create_ui(const ControlTableMap& control_table_map) {
         DeviceInfoWindow::handle_message,
         sizeof(void*));
 
-    auto device_list =
-        LISTBOX_CreateEx(0, 0, 150, DISPLAY_HEIGHT, dev_info_win, WM_CF_SHOW, 0, NO_ID, nullptr);
+    auto log_win = WINDOW_CreateUser(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        0,
+        NO_ID,
+        LogWindow::handle_message,
+        sizeof(void*));
 
-    LISTBOX_SetAutoScrollV(device_list, true);
-    LISTBOX_SetTextAlign(device_list, GUI_TA_LEFT | GUI_TA_VCENTER);
-    LISTBOX_SetItemSpacing(device_list, 20);
-    WM_SetCallback(device_list, [](auto msg) { with_touch_scrolling(msg, LISTBOX_Callback); });
+    // create objects for widgets
+    auto device_overview_obj =
+        new DeviceOverviewWindow(&control_table_map, device_overview_win, log_win, device_info_win);
+    WINDOW_SetUserData(device_overview_win, &device_overview_obj, sizeof(void*));
 
-    auto field_list = LISTVIEW_CreateEx(
-        150, 0, DISPLAY_WIDTH - 150, DISPLAY_HEIGHT, dev_info_win, WM_CF_SHOW, 0, NO_ID);
+    auto device_info_obj =
+        new DeviceInfoWindow(&control_table_map, device_info_win, device_overview_win);
+    WINDOW_SetUserData(device_info_win, &device_info_obj, sizeof(void*));
 
-    LISTVIEW_SetAutoScrollV(field_list, true);
-    LISTVIEW_AddColumn(field_list, 150, "Field", GUI_TA_LEFT | GUI_TA_VCENTER);
-    LISTVIEW_AddColumn(field_list, DISPLAY_WIDTH - 150, "Value", GUI_TA_LEFT | GUI_TA_VCENTER);
-    auto listview_back_color = LISTVIEW_GetBkColor(field_list, LISTVIEW_CI_UNSEL);
-    LISTVIEW_SetBkColor(field_list, LISTVIEW_CI_SEL, listview_back_color);
-    LISTVIEW_SetBkColor(field_list, LISTVIEW_CI_SELFOCUS, listview_back_color);
-    auto listview_text_color = LISTVIEW_GetTextColor(field_list, LISTVIEW_CI_UNSEL);
-    LISTVIEW_SetTextColor(field_list, LISTVIEW_CI_SEL, listview_text_color);
-    LISTVIEW_SetTextColor(field_list, LISTVIEW_CI_SELFOCUS, listview_text_color);
-    WM_SetCallback(field_list, [](auto msg) { with_touch_scrolling(msg, LISTVIEW_Callback); });
-
-    auto device_info = new DeviceInfoWindow(&control_table_map, device_list, field_list);
-    WINDOW_SetUserData(dev_info_win, &device_info, sizeof(void*));
+    auto log_obj = new LogWindow(&log, log_win, device_overview_win);
+    WINDOW_SetUserData(log_win, &log_obj, sizeof(void*));
 }
 
-void with_touch_scrolling(WM_MESSAGE* msg, void (*default_handler)(WM_MESSAGE*)) {
+// TODO: use accumulator to allow small scrolling increments
+static void with_touch_scrolling(WM_MESSAGE* msg, void (*default_handler)(WM_MESSAGE*)) {
     switch (msg->MsgId) {
         case WM_MOTION: {
             SCROLLBAR_Handle scrollbar = WM_GetScrollbarV(msg->hWin);

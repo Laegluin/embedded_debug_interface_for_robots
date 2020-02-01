@@ -291,6 +291,10 @@ class ControlTableMap {
 
     ProtocolResult receive(const Packet& packet);
 
+    size_t size() const {
+        return this->control_tables.size();
+    }
+
     std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>::const_iterator begin() const
         noexcept {
         return this->control_tables.begin();

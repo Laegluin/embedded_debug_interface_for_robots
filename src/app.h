@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <vector>
 
-const uint32_t DEVICE_CONNECTED_COLOR = 0xff00aa00;
-const uint32_t DEVICE_DISCONNECTED_COLOR = 0xffaa0000;
+const uint32_t DEVICE_CONNECTED_COLOR = 0xff00cc00;
+const uint32_t DEVICE_DISCONNECTED_COLOR = 0xffcc0000;
 
 struct ReceiveBuf {
   public:
