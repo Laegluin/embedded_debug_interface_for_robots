@@ -74,7 +74,7 @@ static void set_ui_theme();
 static void set_header_skin();
 static void set_scrollbar_skin();
 static void set_button_skin();
-static void with_touch_scrolling(WM_MESSAGE*, void (*)(WM_MESSAGE*));
+static void handle_touch_scroll(WM_MESSAGE*, float, float&, void (*)(WM_MESSAGE*));
 
 void run(const std::vector<ReceiveBuf*>& bufs) {
     Log log;
@@ -352,8 +352,11 @@ class DeviceInfoWindow {
         LISTBOX_SetTextColor(this->device_list, LISTBOX_CI_DISABLED, DEVICE_STATUS_TEXT_COLOR);
         LISTBOX_SetAutoScrollV(this->device_list, true);
         LISTBOX_SetItemSpacing(this->device_list, 20);
-        WM_SetCallback(
-            this->device_list, [](auto msg) { with_touch_scrolling(msg, LISTBOX_Callback); });
+
+        WM_SetCallback(this->device_list, [](auto msg) {
+            static float state;
+            handle_touch_scroll(msg, 0.05, state, LISTBOX_Callback);
+        });
 
         this->field_list = LISTVIEW_CreateEx(
             150, 0, DISPLAY_WIDTH - 150, DISPLAY_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
@@ -370,8 +373,11 @@ class DeviceInfoWindow {
         auto listview_text_color = LISTVIEW_GetTextColor(this->field_list, LISTVIEW_CI_UNSEL);
         LISTVIEW_SetTextColor(this->field_list, LISTVIEW_CI_SEL, listview_text_color);
         LISTVIEW_SetTextColor(this->field_list, LISTVIEW_CI_SELFOCUS, listview_text_color);
-        WM_SetCallback(
-            this->field_list, [](auto msg) { with_touch_scrolling(msg, LISTVIEW_Callback); });
+
+        WM_SetCallback(this->field_list, [](auto msg) {
+            static float state;
+            handle_touch_scroll(msg, 0.15, state, LISTVIEW_Callback);
+        });
 
         this->back_button = BUTTON_CreateEx(0, 0, 150, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
         BUTTON_SetText(this->back_button, "Back");
@@ -570,8 +576,17 @@ class LogWindow {
         this->log_list = LISTBOX_CreateEx(
             0, 40, DISPLAY_WIDTH, DISPLAY_HEIGHT - 40, this->handle, WM_CF_SHOW, 0, NO_ID, nullptr);
         LISTBOX_SetAutoScrollV(this->log_list, true);
-        WM_SetCallback(
-            this->log_list, [](auto msg) { with_touch_scrolling(msg, LISTBOX_Callback); });
+        auto background_color = LISTBOX_GetBkColor(this->log_list, LISTBOX_CI_UNSEL);
+        LISTBOX_SetBkColor(this->log_list, LISTBOX_CI_SEL, background_color);
+        LISTBOX_SetBkColor(this->log_list, LISTBOX_CI_SELFOCUS, background_color);
+        auto text_color = LISTBOX_GetTextColor(this->log_list, LISTBOX_CI_UNSEL);
+        LISTBOX_SetTextColor(this->log_list, LISTBOX_CI_SEL, text_color);
+        LISTBOX_SetTextColor(this->log_list, LISTBOX_CI_SELFOCUS, text_color);
+
+        WM_SetCallback(this->log_list, [](auto msg) {
+            static float state;
+            handle_touch_scroll(msg, 0.15, state, LISTBOX_Callback);
+        });
 
         this->back_button = BUTTON_CreateEx(0, 0, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
         BUTTON_SetText(this->back_button, "Back");
@@ -817,8 +832,11 @@ static void set_button_skin() {
     BUTTON_SetSkinFlexProps(&props, BUTTON_SKINFLEX_PI_PRESSED);
 }
 
-// TODO: use accumulator to allow small scrolling increments
-static void with_touch_scrolling(WM_MESSAGE* msg, void (*default_handler)(WM_MESSAGE*)) {
+static void handle_touch_scroll(
+    WM_MESSAGE* msg,
+    float inc_per_pixel,
+    float& state,
+    void (*default_handler)(WM_MESSAGE*)) {
     switch (msg->MsgId) {
         case WM_MOTION: {
             SCROLLBAR_Handle scrollbar = WM_GetScrollbarV(msg->hWin);
@@ -830,11 +848,14 @@ static void with_touch_scrolling(WM_MESSAGE* msg, void (*default_handler)(WM_MES
 
             switch (motion_info->Cmd) {
                 case WM_MOTION_INIT: {
+                    state = 0.0;
                     motion_info->Flags |= WM_MOTION_MANAGE_BY_WINDOW | WM_CF_MOTION_Y;
                     break;
                 }
                 case WM_MOTION_MOVE: {
-                    int move_by = std::round(motion_info->dy * -0.2);
+                    state += motion_info->dy * -inc_per_pixel;
+                    int move_by = std::trunc(state);
+                    state -= move_by;
                     SCROLLBAR_AddValue(scrollbar, move_by);
                     break;
                 }
