@@ -140,6 +140,12 @@ static void
 
 class DeviceOverviewWindow {
   public:
+    struct DeviceModelWidgets {
+        WM_HWIN window;
+        TEXT_Handle model_label;
+        TEXT_Handle status_label;
+    };
+
     DeviceOverviewWindow(
         const ControlTableMap* control_table_map,
         WM_HWIN handle,
@@ -149,27 +155,69 @@ class DeviceOverviewWindow {
         handle(handle),
         device_info_win(device_info_win),
         log_win(log_win) {
-        this->status_label = TEXT_CreateEx(
-            20,
-            20,
-            DISPLAY_WIDTH - 40,
-            40,
+        auto title = TEXT_CreateEx(
+            6,
+            0,
+            300,
+            TITLE_BAR_HEIGHT,
             this->handle,
+            WM_CF_SHOW,
+            TEXT_CF_LEFT | TEXT_CF_VCENTER,
+            NO_ID,
+            "Device Overview");
+
+        TEXT_SetFont(title, GUI_FONT_24B_1);
+
+        this->details_button = BUTTON_CreateEx(
+            DISPLAY_WIDTH - 2 * (BUTTON_WIDTH + MARGIN),
+            MARGIN,
+            BUTTON_WIDTH,
+            BUTTON_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID);
+
+        BUTTON_SetText(this->details_button, "Details");
+
+        this->log_button = BUTTON_CreateEx(
+            DISPLAY_WIDTH - (BUTTON_WIDTH + MARGIN),
+            MARGIN,
+            BUTTON_WIDTH,
+            BUTTON_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID);
+
+        BUTTON_SetText(this->log_button, "Log");
+
+        this->status_label_win = WINDOW_CreateEx(
+            MARGIN,
+            TITLE_BAR_HEIGHT,
+            DISPLAY_WIDTH - 2 * MARGIN,
+            60,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID,
+            WM_DefaultProc);
+
+        WINDOW_SetBkColor(this->status_label_win, DEVICE_CONNECTED_COLOR);
+
+        this->status_label = TEXT_CreateEx(
+            MARGIN,
+            0,
+            300,
+            60,
+            this->status_label_win,
             WM_CF_SHOW,
             TEXT_CF_LEFT | TEXT_CF_VCENTER,
             NO_ID,
             "");
 
-        TEXT_SetBkColor(this->status_label, DEVICE_CONNECTED_COLOR);
+        TEXT_SetFont(this->status_label, GUI_FONT_20_1);
         TEXT_SetTextColor(this->status_label, GUI_WHITE);
-
-        this->log_button =
-            BUTTON_CreateEx(DISPLAY_WIDTH - 220, 20, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
-        BUTTON_SetText(this->log_button, "Log");
-
-        this->details_button =
-            BUTTON_CreateEx(DISPLAY_WIDTH - 120, 20, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
-        BUTTON_SetText(this->details_button, "Details");
     }
 
     static DeviceOverviewWindow* from_handle(WM_HWIN handle) {
@@ -260,49 +308,83 @@ class DeviceOverviewWindow {
         TEXT_SetText(this->status_label, fmt.str().c_str());
 
         if (num_disconnected > 0) {
-            TEXT_SetBkColor(this->status_label, DEVICE_DISCONNECTED_COLOR);
+            WINDOW_SetBkColor(this->status_label_win, DEVICE_DISCONNECTED_COLOR);
         } else {
-            TEXT_SetBkColor(this->status_label, DEVICE_CONNECTED_COLOR);
+            WINDOW_SetBkColor(this->status_label_win, DEVICE_CONNECTED_COLOR);
         }
 
-        // update/create model labels
+        // update/create model widgets
         size_t model_idx = 0;
 
         for (auto& model_and_status : model_to_status) {
             auto& status = model_and_status.second;
 
-            if (model_idx == this->model_labels.size()) {
-                auto new_label = TEXT_CreateEx(
-                    20 + model_idx * 110,
-                    100,
-                    100,
-                    100,
-                    this->handle,
-                    WM_CF_SHOW,
-                    TEXT_CF_LEFT | TEXT_CF_VCENTER,
-                    NO_ID,
-                    "");
-
-                TEXT_SetTextColor(new_label, GUI_WHITE);
-                this->model_labels.push_back(new_label);
+            while (model_idx >= this->model_widgets.size()) {
+                this->push_back_model_widgets();
             }
 
-            auto model_label = this->model_labels.at(model_idx);
-
-            std::stringstream fmt;
-            fmt << status.model_name << "\n"
-                << std::to_string(status.num_connected) << " connected\n"
-                << std::to_string(status.num_disconnected) << " disconnected";
-            TEXT_SetText(model_label, fmt.str().c_str());
+            auto widgets = this->model_widgets[model_idx];
 
             if (status.num_disconnected > 0) {
-                TEXT_SetBkColor(model_label, DEVICE_DISCONNECTED_COLOR);
+                WINDOW_SetBkColor(widgets.window, DEVICE_DISCONNECTED_COLOR);
             } else {
-                TEXT_SetBkColor(model_label, DEVICE_CONNECTED_COLOR);
+                WINDOW_SetBkColor(widgets.window, DEVICE_CONNECTED_COLOR);
             }
+
+            TEXT_SetText(widgets.model_label, status.model_name);
+            std::stringstream fmt;
+            fmt << std::to_string(status.num_connected) << " connected\n"
+                << std::to_string(status.num_disconnected) << " disconnected";
+            TEXT_SetText(widgets.status_label, fmt.str().c_str());
 
             model_idx++;
         }
+    }
+
+    void push_back_model_widgets() {
+        auto window = WINDOW_CreateEx(
+            MARGIN + this->model_widgets.size() * (MARGIN + 115),
+            116,
+            115,
+            115,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID,
+            WM_DefaultProc);
+
+        auto model_label = TEXT_CreateEx(
+            MARGIN,
+            0,
+            115 - 2 * MARGIN,
+            25,
+            window,
+            WM_CF_SHOW,
+            TEXT_CF_LEFT | TEXT_CF_VCENTER,
+            NO_ID,
+            "");
+
+        TEXT_SetFont(model_label, GUI_FONT_20_1);
+        TEXT_SetTextColor(model_label, DEVICE_STATUS_TEXT_COLOR);
+
+        auto status_label = TEXT_CreateEx(
+            MARGIN,
+            25,
+            115 - 2 * MARGIN,
+            90,
+            window,
+            WM_CF_SHOW,
+            TEXT_CF_LEFT | TEXT_CF_TOP,
+            NO_ID,
+            "");
+
+        TEXT_SetTextColor(status_label, DEVICE_STATUS_TEXT_COLOR);
+
+        this->model_widgets.push_back(DeviceModelWidgets{
+            window,
+            model_label,
+            status_label,
+        });
     }
 
     void on_log_button_click() {
@@ -322,9 +404,10 @@ class DeviceOverviewWindow {
     const ControlTableMap* control_table_map;
     WM_HWIN handle;
     TEXT_Handle status_label;
+    WM_HWIN status_label_win;
     BUTTON_Handle log_button;
     BUTTON_Handle details_button;
-    std::vector<TEXT_Handle> model_labels;
+    std::vector<DeviceModelWidgets> model_widgets;
     WM_HWIN device_info_win;
     WM_HWIN log_win;
 };
@@ -342,8 +425,33 @@ class DeviceInfoWindow {
         WM_HideWindow(this->handle);
         WM_DisableWindow(this->handle);
 
+        this->back_button = BUTTON_CreateEx(
+            MARGIN, MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
+        BUTTON_SetText(this->back_button, "Back");
+
+        auto title = TEXT_CreateEx(
+            90,
+            0,
+            300,
+            TITLE_BAR_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            TEXT_CF_LEFT | TEXT_CF_VCENTER,
+            NO_ID,
+            "Device Details");
+
+        TEXT_SetFont(title, GUI_FONT_24B_1);
+
         this->device_list = LISTBOX_CreateEx(
-            0, 40, 150, DISPLAY_HEIGHT - 40, this->handle, WM_CF_SHOW, 0, NO_ID, nullptr);
+            0,
+            TITLE_BAR_HEIGHT,
+            150,
+            DISPLAY_HEIGHT - TITLE_BAR_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID,
+            nullptr);
 
         LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_UNSEL, MENU_COLOR);
         LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_SEL, MENU_PRESSED_COLOR);
@@ -359,7 +467,14 @@ class DeviceInfoWindow {
         });
 
         this->field_list = LISTVIEW_CreateEx(
-            150, 0, DISPLAY_WIDTH - 150, DISPLAY_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
+            150 + MARGIN,
+            TITLE_BAR_HEIGHT,
+            DISPLAY_WIDTH - (150 + MARGIN),
+            DISPLAY_HEIGHT - TITLE_BAR_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID);
 
         LISTVIEW_SetAutoScrollV(this->field_list, true);
         LISTVIEW_AddColumn(this->field_list, 150, "Field", GUI_TA_LEFT | GUI_TA_VCENTER);
@@ -378,9 +493,6 @@ class DeviceInfoWindow {
             static float state;
             handle_touch_scroll(msg, 0.15, state, LISTVIEW_Callback);
         });
-
-        this->back_button = BUTTON_CreateEx(0, 0, 150, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
-        BUTTON_SetText(this->back_button, "Back");
     }
 
     static DeviceInfoWindow* from_handle(WM_HWIN handle) {
@@ -573,8 +685,46 @@ class LogWindow {
         WM_HideWindow(this->handle);
         WM_DisableWindow(this->handle);
 
+        this->back_button = BUTTON_CreateEx(
+            MARGIN, MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
+        BUTTON_SetText(this->back_button, "Back");
+
+        auto title = TEXT_CreateEx(
+            90,
+            0,
+            300,
+            TITLE_BAR_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            TEXT_CF_LEFT | TEXT_CF_VCENTER,
+            NO_ID,
+            "Log");
+
+        TEXT_SetFont(title, GUI_FONT_24B_1);
+
+        this->refresh_button = BUTTON_CreateEx(
+            DISPLAY_WIDTH - (BUTTON_WIDTH + MARGIN),
+            MARGIN,
+            BUTTON_WIDTH,
+            BUTTON_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID);
+
+        BUTTON_SetText(this->refresh_button, "Refresh");
+
         this->log_list = LISTBOX_CreateEx(
-            0, 40, DISPLAY_WIDTH, DISPLAY_HEIGHT - 40, this->handle, WM_CF_SHOW, 0, NO_ID, nullptr);
+            0,
+            TITLE_BAR_HEIGHT,
+            DISPLAY_WIDTH,
+            DISPLAY_HEIGHT - TITLE_BAR_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID,
+            nullptr);
+
         LISTBOX_SetAutoScrollV(this->log_list, true);
         auto background_color = LISTBOX_GetBkColor(this->log_list, LISTBOX_CI_UNSEL);
         LISTBOX_SetBkColor(this->log_list, LISTBOX_CI_SEL, background_color);
@@ -587,13 +737,6 @@ class LogWindow {
             static float state;
             handle_touch_scroll(msg, 0.15, state, LISTBOX_Callback);
         });
-
-        this->back_button = BUTTON_CreateEx(0, 0, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
-        BUTTON_SetText(this->back_button, "Back");
-
-        this->refresh_button =
-            BUTTON_CreateEx(DISPLAY_WIDTH - 100, 0, 100, 40, this->handle, WM_CF_SHOW, 0, NO_ID);
-        BUTTON_SetText(this->refresh_button, "Refresh");
     }
 
     static LogWindow* from_handle(WM_HWIN handle) {

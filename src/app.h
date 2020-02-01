@@ -24,6 +24,11 @@ const uint32_t DEVICE_STATUS_TEXT_COLOR = 0xffffffff;
 const uint32_t DEVICE_CONNECTED_COLOR = 0xff3ad30b;
 const uint32_t DEVICE_DISCONNECTED_COLOR = 0xffed2525;
 
+const int MARGIN = 4;
+const int TITLE_BAR_HEIGHT = 44;
+const int BUTTON_WIDTH = 80;
+const int BUTTON_HEIGHT = 36;
+
 struct ReceiveBuf {
   public:
     static const size_t LEN = 8192;
