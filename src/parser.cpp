@@ -610,3 +610,21 @@ InstructionParseResult
 
     return InstructionParseResult::Ok;
 }
+
+std::string to_string(const ParseResult& result) {
+    switch (result) {
+        case ParseResult::PacketAvailable: {
+            return "packet available";
+        }
+        case ParseResult::NeedMoreData: {
+            return "need more data";
+        }
+        case ParseResult::BufferOverflow: {
+            return "buffer overflow";
+        }
+        case ParseResult::MismatchedChecksum: {
+            return "mismatched checksum";
+        }
+        default: { return "unknown parse error"; }
+    }
+}

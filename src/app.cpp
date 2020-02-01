@@ -39,12 +39,9 @@ struct Connection {
 
 class Log {
   public:
-    void log(std::string message) {
-        if (messages.size() >= MAX_NUM_LOG_ENTRIES) {
-            this->messages.pop_back();
-        }
-
-        this->messages.push_front(std::move(message));
+    void error(std::string message) {
+        message.insert(0, "error: ");
+        this->push_message(std::move(message));
     }
 
     size_t size() const {
@@ -60,10 +57,18 @@ class Log {
     }
 
   private:
+    void push_message(std::string message) {
+        if (messages.size() >= MAX_NUM_LOG_ENTRIES) {
+            this->messages.pop_back();
+        }
+
+        this->messages.push_front(std::move(message));
+    }
+
     std::deque<std::string> messages;
 };
 
-static void handle_incoming_packets(Connection&, ControlTableMap&);
+static void handle_incoming_packets(Log&, Connection&, ControlTableMap&);
 static void create_ui(const Log&, const ControlTableMap&);
 static void with_touch_scrolling(WM_MESSAGE*, void (*)(WM_MESSAGE*));
 
@@ -91,12 +96,13 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
                 last_render = now;
             }
 
-            handle_incoming_packets(connection, control_table_map);
+            handle_incoming_packets(log, connection, control_table_map);
         }
     }
 }
 
-static void handle_incoming_packets(Connection& connection, ControlTableMap& control_table_map) {
+static void
+    handle_incoming_packets(Log& log, Connection& connection, ControlTableMap& control_table_map) {
     Cursor* cursor;
 
     if (connection.buf->is_front_ready) {
@@ -117,13 +123,13 @@ static void handle_incoming_packets(Connection& connection, ControlTableMap& con
                 return;
             }
 
-            // TODO: err handling
+            log.error(to_string(parse_result));
             continue;
         }
 
         auto result = control_table_map.receive(connection.last_packet);
         if (result != ProtocolResult::Ok) {
-            // TODO: err handling
+            log.error(to_string(result));
         }
     }
 }

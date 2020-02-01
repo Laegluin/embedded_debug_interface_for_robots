@@ -275,6 +275,8 @@ enum class ProtocolResult {
     InvalidInstructionPacket,
 };
 
+std::string to_string(const ProtocolResult& result);
+
 class ControlTableMap {
   public:
     static const uint32_t MAX_ALLOWED_MISSED_PACKETS = 4;

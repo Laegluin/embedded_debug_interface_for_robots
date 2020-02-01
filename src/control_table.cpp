@@ -695,3 +695,36 @@ ControlTable& ControlTableMap::get_or_insert(DeviceId device_id) {
                     .first->second;
     }
 }
+
+std::string to_string(const ProtocolResult& result) {
+    switch (result) {
+        case ProtocolResult::Ok: {
+            return "ok";
+        }
+        case ProtocolResult::StatusIsInstruction: {
+            return "expected status packet but found instruction packet";
+        }
+        case ProtocolResult::StatusHasError: {
+            return "status packet has an error";
+        }
+        case ProtocolResult::InstructionIsStatus: {
+            return "expected instruction packet but found status packet";
+        }
+        case ProtocolResult::UnknownInstruction: {
+            return "unknown instruction";
+        }
+        case ProtocolResult::InvalidPacketLen: {
+            return "invalid packet length";
+        }
+        case ProtocolResult::InvalidDeviceId: {
+            return "invalid device id";
+        }
+        case ProtocolResult::InvalidWrite: {
+            return "invalid write";
+        }
+        case ProtocolResult::InvalidInstructionPacket: {
+            return "invalid instruction packet";
+        }
+        default: { return "unknown protocol error"; }
+    }
+}

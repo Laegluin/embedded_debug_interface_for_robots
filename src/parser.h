@@ -160,6 +160,8 @@ enum class ParseResult {
     MismatchedChecksum,
 };
 
+std::string to_string(const ParseResult& result);
+
 enum class ParserState {
     Header,
     CommonFields,
