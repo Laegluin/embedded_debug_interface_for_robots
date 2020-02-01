@@ -207,7 +207,7 @@ class DeviceOverviewWindow {
                 break;
             }
             case WM_DELETE: {
-                this->~DeviceOverviewWindow();
+                delete this;
                 break;
             }
             default: {
@@ -423,7 +423,7 @@ class DeviceInfoWindow {
                 break;
             }
             case WM_DELETE: {
-                this->~DeviceInfoWindow();
+                delete this;
                 break;
             }
             default: {
@@ -606,7 +606,7 @@ class LogWindow {
                 break;
             }
             case WM_DELETE: {
-                this->~LogWindow();
+                delete this;
                 break;
             }
             default: {
