@@ -5,7 +5,7 @@
 **  File        : LinkerScript.ld
 **
 **  Abstract    : Linker script for STM32F750N8Hx Device with
-**                16384KByte FLASH, 320KByte RAM
+**                16MiB FLASH, 320KiB RAM (64KiB DTCM + 240KiB SRAM1 + 16KiB SRAM2)
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
@@ -29,20 +29,20 @@
 *****************************************************************************
 */
 
-/* Entry Point */
 ENTRY(Reset_Handler)
 
-/* Highest address of the user mode stack */
-_estack = 0x20050000;    /* end of RAM */
-/* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x400;      /* required amount of heap  */
-_Min_Stack_Size = 0x800; /* required amount of stack */
+/* highest address of the user mode stack (SRAM2) */
+_estack = 0x20050000;
+/* generate a link error if heap does not fit into SRAM1 */
+_max_heap_size = 150K;
 
 /* Specify the memory areas */
 MEMORY
 {
-  FLASH (rx)     : ORIGIN = 0x90000000, LENGTH = 16384K
-  RAM (rwx)      : ORIGIN = 0x20000000, LENGTH = 320K
+  FLASH (rx)  : ORIGIN = 0x90000000, LENGTH = 16384K
+  DTCM (rwx)  : ORIGIN = 0x20000000, LENGTH = 64K
+  SRAM1 (rwx) : ORIGIN = 0x20010000, LENGTH = 240K
+  SRAM2 (rwx) : ORIGIN = 0x2004c000, LENGTH = 16K
 }
 
 /* Define output sections */
@@ -110,10 +110,23 @@ SECTIONS
     PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH
 
+  _dtcm_data_flash_start = LOADADDR(.dtcm_data);
+
+  .dtcm_data : {
+    . = ALIGN(4);
+    _dtcm_data_start = .;
+
+    *(.dtcm_data)
+    *(.dtcm_data*)
+
+    . = ALIGN(4);
+    _dtcm_data_end = .;
+  } >DTCM AT> FLASH
+
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
 
-  /* Initialized data sections goes into RAM, load LMA copy after code */
+  /* Initialized data sections goes into SRAM1, load LMA copy after code */
   .data : 
   {
     . = ALIGN(4);
@@ -123,7 +136,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM AT> FLASH
+  } >SRAM1 AT> FLASH
 
   
   /* Uninitialized data section */
@@ -141,20 +154,16 @@ SECTIONS
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
     __end__ = _ebss;
-  } >RAM
+  } >SRAM1
 
-  /* User_heap_stack section, used to check that there is enough RAM left */
-  ._user_heap_stack :
+  /* make sure there is enough space left for heap and stack */
+  ._user_heap :
   {
     . = ALIGN(8);
     PROVIDE ( end = . );
     PROVIDE ( _end = . );
-    . = . + _Min_Heap_Size;
-    . = . + _Min_Stack_Size;
-    . = ALIGN(8);
-  } >RAM
-
-  
+    . = . + _max_heap_size;
+  } >SRAM1
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

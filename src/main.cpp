@@ -535,7 +535,7 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     }
 
     // setup buffer/callbacks and start transfer
-    static ReceiveBuf buf;
+    static ReceiveBuf buf __attribute__((section(".dtcm_data")));
 
     HAL_DMA_RegisterCallback(&DMA2_STREAM1, HAL_DMA_XFER_HALFCPLT_CB_ID, [](auto) {
         buf.is_front_ready = true;

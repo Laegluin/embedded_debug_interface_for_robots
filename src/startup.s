@@ -62,6 +62,11 @@ defined in linker script */
 .word  _ebss
 /* stack used for SystemInit_ExtMemCtl; always internal RAM used */
 
+@ start addresses for .dtcm_data
+.word _dtcm_data_flash_start
+.word _dtcm_data_start
+.word _dtcm_data_end
+
 /**
  * @brief  This is the code that gets called when the processor first
  *          starts execution following a reset event. Only the absolutely
@@ -104,6 +109,20 @@ LoopFillZerobss:
   ldr  r3, = _ebss
   cmp  r2, r3
   bcc  FillZerobss
+
+  @ init .dtcm_data
+  ldr r0, =_dtcm_data_flash_start
+  ldr r1, =_dtcm_data_start
+  ldr r2, =_dtcm_data_end
+  init_dtcm_data:
+  cmp r1, r2
+  bge init_dtcm_data_end
+    ldr r3, [r0]
+    str r3, [r1]
+    add r0, #4
+    add r1, #4
+    b init_dtcm_data
+  init_dtcm_data_end:
 
   bl __libc_init_array
   bl main
