@@ -217,7 +217,7 @@ class UnknownControlTable : public ControlTable {
     }
 
     uint16_t model_number() const final {
-        uint16_t model_number;
+        uint16_t model_number = 0;
         this->mem.read_uint16(0, &model_number);
         return model_number;
     }
