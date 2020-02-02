@@ -453,6 +453,7 @@ class DeviceInfoWindow {
             NO_ID,
             nullptr);
 
+        // TODO: replace listbox with something more sensible and less broken
         LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_UNSEL, MENU_COLOR);
         LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_SEL, MENU_PRESSED_COLOR);
         LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_SELFOCUS, MENU_PRESSED_COLOR);
@@ -714,7 +715,7 @@ class LogWindow {
 
         BUTTON_SetText(this->refresh_button, "Refresh");
 
-        this->log_list = LISTBOX_CreateEx(
+        this->log_list = LISTVIEW_CreateEx(
             0,
             TITLE_BAR_HEIGHT,
             DISPLAY_WIDTH,
@@ -722,20 +723,21 @@ class LogWindow {
             this->handle,
             WM_CF_SHOW,
             0,
-            NO_ID,
-            nullptr);
+            NO_ID);
 
-        LISTBOX_SetAutoScrollV(this->log_list, true);
-        auto background_color = LISTBOX_GetBkColor(this->log_list, LISTBOX_CI_UNSEL);
-        LISTBOX_SetBkColor(this->log_list, LISTBOX_CI_SEL, background_color);
-        LISTBOX_SetBkColor(this->log_list, LISTBOX_CI_SELFOCUS, background_color);
-        auto text_color = LISTBOX_GetTextColor(this->log_list, LISTBOX_CI_UNSEL);
-        LISTBOX_SetTextColor(this->log_list, LISTBOX_CI_SEL, text_color);
-        LISTBOX_SetTextColor(this->log_list, LISTBOX_CI_SELFOCUS, text_color);
+        LISTVIEW_SetHeaderHeight(this->log_list, 0);
+        LISTVIEW_AddColumn(this->log_list, DISPLAY_WIDTH, "", GUI_TA_LEFT | GUI_TA_VCENTER);
+        LISTVIEW_SetAutoScrollV(this->log_list, true);
+        auto background_color = LISTVIEW_GetBkColor(this->log_list, LISTVIEW_CI_UNSEL);
+        LISTVIEW_SetBkColor(this->log_list, LISTVIEW_CI_SEL, background_color);
+        LISTVIEW_SetBkColor(this->log_list, LISTVIEW_CI_SELFOCUS, background_color);
+        auto text_color = LISTVIEW_GetTextColor(this->log_list, LISTVIEW_CI_UNSEL);
+        LISTVIEW_SetTextColor(this->log_list, LISTVIEW_CI_SEL, text_color);
+        LISTVIEW_SetTextColor(this->log_list, LISTVIEW_CI_SELFOCUS, text_color);
 
         WM_SetCallback(this->log_list, [](auto msg) {
             static float state;
-            handle_touch_scroll(msg, 0.15, state, LISTBOX_Callback);
+            handle_touch_scroll(msg, 0.15, state, LISTVIEW_Callback);
         });
     }
 
@@ -782,33 +784,35 @@ class LogWindow {
     }
 
     void on_refresh_button_click() {
-        auto num_items = LISTBOX_GetNumItems(this->log_list);
+        auto num_items = LISTVIEW_GetNumRows(this->log_list);
 
         // delete or add items as necessary
         if (num_items < this->log->size()) {
             auto num_missing_items = this->log->size() - num_items;
 
-            for (size_t i = 0; i < num_missing_items; i++)
-                LISTBOX_AddString(this->log_list, "");
+            for (size_t i = 0; i < num_missing_items; i++) {
+                const char* cells[]{""};
+                LISTVIEW_AddRow(this->log_list, cells);
+            }
         } else if (num_items > this->log->size()) {
             auto num_extra_items = num_items - this->log->size();
 
             for (size_t i = 0; i < num_extra_items; i++) {
-                LISTBOX_DeleteItem(this->log_list, num_items - 1 - i);
+                LISTVIEW_DeleteRow(this->log_list, num_items - 1 - i);
             }
         }
 
         size_t item_idx = 0;
 
         for (auto& log_entry : *this->log) {
-            LISTBOX_SetString(this->log_list, log_entry.c_str(), item_idx);
+            LISTVIEW_SetItemText(this->log_list, 0, item_idx, log_entry.c_str());
             item_idx++;
         }
     }
 
     const Log* log;
     WM_HWIN handle;
-    LISTBOX_Handle log_list;
+    LISTVIEW_Handle log_list;
     BUTTON_Handle back_button;
     BUTTON_Handle refresh_button;
     WM_HWIN device_overview_win;
@@ -890,10 +894,6 @@ static void set_ui_theme() {
     BUTTON_SetDefaultTextColor(BUTTON_CI_UNPRESSED, TEXT_COLOR);
     BUTTON_SetDefaultTextColor(BUTTON_CI_PRESSED, TEXT_COLOR);
 
-    SCROLLBAR_SetDefaultColor(SCROLLBAR_CI_SHAFT, SCROLLBAR_COLOR);
-    SCROLLBAR_SetDefaultColor(SCROLLBAR_CI_ARROW, SCROLLBAR_COLOR);
-    SCROLLBAR_SetDefaultColor(SCROLLBAR_CI_THUMB, SCROLLBAR_THUMB_COLOR);
-
     HEADER_SetDefaultBkColor(LIST_HEADER_COLOR);
     HEADER_SetDefaultTextColor(TEXT_COLOR);
 
@@ -925,27 +925,36 @@ static void set_header_skin() {
     HEADER_SetSkinFlexProps(&props, 0);
 }
 
-// FIXME: coords are wrong
 static void set_scrollbar_skin() {
     SCROLLBAR_SetDefaultSkin([](const WIDGET_ITEM_DRAW_INFO* draw_info) -> int {
         switch (draw_info->Cmd) {
-            // case WIDGET_ITEM_DRAW_BUTTON_L:
-            // case WIDGET_ITEM_DRAW_BUTTON_R:
-            // case WIDGET_ITEM_DRAW_OVERLAP:
-            // case WIDGET_ITEM_DRAW_SHAFT_L:
-            // case WIDGET_ITEM_DRAW_SHAFT_R: {
-            //     GUI_SetColor(SCROLLBAR_COLOR);
-            //     GUI_FillRect(draw_info->x0, draw_info->y0, draw_info->x1, draw_info->y1);
-            //     return 0;
-            // }
-            case WIDGET_ITEM_DRAW_THUMB: {
-                GUI_SetColor(SCROLLBAR_THUMB_COLOR);
-                GUI_FillRect(0, 0, 1, 100);
+            case WIDGET_ITEM_CREATE: {
+                WM_SetHasTrans(draw_info->hWin);
                 return 0;
             }
-            // case WIDGET_ITEM_GET_BUTTONSIZE: {
-            //     return 0;
-            // }
+            case WIDGET_ITEM_DRAW_BUTTON_L:
+            case WIDGET_ITEM_DRAW_BUTTON_R:
+            case WIDGET_ITEM_DRAW_OVERLAP:
+            case WIDGET_ITEM_DRAW_SHAFT_L:
+            case WIDGET_ITEM_DRAW_SHAFT_R: {
+                return 0;
+            }
+            case WIDGET_ITEM_DRAW_THUMB: {
+                SCROLLBAR_SKINFLEX_INFO* scrollbar_info = (SCROLLBAR_SKINFLEX_INFO*) draw_info->p;
+                GUI_SetColor(SCROLLBAR_THUMB_COLOR);
+
+                if (scrollbar_info->IsVertical) {
+                    // coords are for some reason not translated when scrollbar is not horizontal
+                    GUI_FillRect(draw_info->y0, draw_info->x0, draw_info->y1, draw_info->x1);
+                } else {
+                    GUI_FillRect(draw_info->x0, draw_info->y0, draw_info->x1, draw_info->y1);
+                }
+
+                return 0;
+            }
+            case WIDGET_ITEM_GET_BUTTONSIZE: {
+                return 0;
+            }
             default: { return SCROLLBAR_DrawSkinFlex(draw_info); }
         }
     });
