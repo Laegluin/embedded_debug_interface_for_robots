@@ -4,4 +4,5 @@ SUBSYSTEM=="tty", \
 	ATTRS{idVendor}=="0483", \
 	ATTRS{idProduct}=="5740", \
 	MODE="0666", \
-	SYMLINK+="stm32_virtual_com_port"
+	SYMLINK+="stm32_virtual_com_port", \
+	ENV{ID_MM_DEVICE_IGNORE}="1"
