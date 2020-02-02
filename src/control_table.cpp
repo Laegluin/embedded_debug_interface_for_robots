@@ -296,24 +296,7 @@ std::vector<std::pair<const char*, std::string>> ControlTable::fmt_fields() cons
     return formatted_fields;
 }
 
-ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {
-    // TODO: remove after UI is done
-    this->control_tables.emplace(DeviceId(0), std::make_unique<Mx64ControlTable>());
-    this->control_tables.emplace(DeviceId(1), std::make_unique<Mx106ControlTable>());
-    this->control_tables.emplace(DeviceId(10), std::make_unique<Mx106ControlTable>());
-    this->control_tables.emplace(DeviceId(11), std::make_unique<Mx106ControlTable>());
-    this->control_tables.emplace(DeviceId(12), std::make_unique<Mx106ControlTable>());
-    this->control_tables.emplace(DeviceId(13), std::make_unique<Mx64ControlTable>());
-    this->control_tables.emplace(DeviceId(14), std::make_unique<Mx106ControlTable>());
-    this->control_tables.emplace(DeviceId(42), std::make_unique<Mx64ControlTable>());
-    this->control_tables.emplace(DeviceId(99), std::make_unique<Mx64ControlTable>());
-    this->control_tables.emplace(DeviceId(100), std::make_unique<Mx106ControlTable>());
-    this->control_tables.emplace(DeviceId(101), std::make_unique<Mx64ControlTable>());
-    this->control_tables.emplace(DeviceId(200), std::make_unique<UnknownControlTable>());
-    this->control_tables.emplace(DeviceId(222), std::make_unique<UnknownControlTable>(420));
-
-    this->num_missed_packets.emplace(DeviceId(10), 9000);
-}
+ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {}
 
 bool ControlTableMap::is_disconnected(DeviceId device_id) const {
     auto iter = this->num_missed_packets.find(device_id);
