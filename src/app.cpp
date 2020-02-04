@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include <deque>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -19,7 +20,7 @@
 #include <unordered_map>
 
 const int NO_ID = GUI_ID_USER + 0;
-const size_t MAX_NUM_LOG_ENTRIES = 30;
+const size_t MAX_NUM_LOG_ENTRIES = 100;
 
 struct Connection {
     Connection(ReceiveBuf* buf) :
@@ -39,9 +40,45 @@ struct Connection {
 
 class Log {
   public:
+    Log() :
+        max_ui_update_time_(0),
+        min_ui_update_time_(0),
+        ui_update_time_sum(0),
+        num_ui_updates(0),
+        max_buf_processing_time_(0),
+        min_buf_processing_time_(0),
+        buf_processing_time_sum(0),
+        num_processed_bufs(0) {}
+
     void error(std::string message) {
-        message.insert(0, "error: ");
-        this->push_message(std::move(message));
+        auto now = HAL_GetTick();
+
+        auto minutes = now / (60 * 1000);
+        auto remaining_millis = now % (60 * 1000);
+        auto seconds = remaining_millis / 1000;
+        remaining_millis = remaining_millis % 1000;
+        auto millis = remaining_millis;
+
+        std::stringstream fmt;
+        fmt << "[+" << std::setfill('0') << std::setw(2) << minutes << ":" << std::setfill('0')
+            << std::setw(2) << seconds << "." << std::setfill('0') << std::setw(3) << std::left
+            << millis << "] error: " << message;
+
+        this->push_message(fmt.str());
+    }
+
+    void ui_update_time(uint32_t time) {
+        this->max_ui_update_time_ = std::max(time, this->max_ui_update_time_);
+        this->min_ui_update_time_ = std::min(time, this->min_ui_update_time_);
+        this->ui_update_time_sum += time;
+        this->num_ui_updates++;
+    }
+
+    void buf_processing_time(uint32_t time) {
+        this->max_buf_processing_time_ = std::max(time, this->max_buf_processing_time_);
+        this->min_buf_processing_time_ = std::max(time, this->min_buf_processing_time_);
+        this->buf_processing_time_sum += time;
+        this->num_processed_bufs++;
     }
 
     size_t size() const {
@@ -56,6 +93,30 @@ class Log {
         return this->messages.end();
     }
 
+    uint32_t max_ui_update_time() const {
+        return this->max_ui_update_time_;
+    }
+
+    float avg_ui_update_time() const {
+        return (float) this->ui_update_time_sum / (float) this->num_ui_updates;
+    }
+
+    uint32_t min_ui_update_time() const {
+        return this->min_ui_update_time_;
+    }
+
+    uint32_t max_buf_processing_time() const {
+        return this->max_buf_processing_time_;
+    }
+
+    float avg_buf_processing_time() const {
+        return (float) this->buf_processing_time_sum / (float) this->num_processed_bufs;
+    }
+
+    uint32_t min_buf_processing_time() const {
+        return this->min_buf_processing_time_;
+    }
+
   private:
     void push_message(std::string message) {
         if (messages.size() >= MAX_NUM_LOG_ENTRIES) {
@@ -66,6 +127,14 @@ class Log {
     }
 
     std::deque<std::string> messages;
+    uint32_t max_ui_update_time_;
+    uint32_t min_ui_update_time_;
+    uint32_t ui_update_time_sum;
+    uint32_t num_ui_updates;
+    uint32_t max_buf_processing_time_;
+    uint32_t min_buf_processing_time_;
+    uint32_t buf_processing_time_sum;
+    uint32_t num_processed_bufs;
 };
 
 static void handle_incoming_packets(Log&, Connection&, ControlTableMap&);
@@ -88,16 +157,19 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
     }
 
     create_ui(log, control_table_map);
-    uint32_t last_render = 0;
+    uint32_t last_update = 0;
 
     while (true) {
         for (auto& connection : connections) {
             auto now = HAL_GetTick();
 
             // render every 16ms (roughly 60 fps)
-            if (now - last_render > 16) {
+            if (now - last_update > 16) {
+                auto update_start = HAL_GetTick();
                 GUI_Exec();
-                last_render = now;
+                auto update_end = HAL_GetTick();
+                last_update = now;
+                log.ui_update_time(update_end - update_start);
             }
 
             handle_incoming_packets(log, connection, control_table_map);
@@ -119,6 +191,9 @@ static void
         return;
     }
 
+    auto is_buf_empty = cursor->remaining_bytes() > 0;
+    auto buf_processing_start = HAL_GetTick();
+
     while (cursor->remaining_bytes() > 0) {
         auto parse_result = connection.parser.parse(*cursor, &connection.last_packet);
 
@@ -135,6 +210,11 @@ static void
         if (result != ProtocolResult::Ok) {
             log.error(to_string(result));
         }
+    }
+
+    if (!is_buf_empty) {
+        auto buf_processing_end = HAL_GetTick();
+        log.buf_processing_time(buf_processing_end - buf_processing_start);
     }
 }
 
@@ -715,10 +795,34 @@ class LogWindow {
 
         BUTTON_SetText(this->refresh_button, "Refresh");
 
-        this->log_list = LISTVIEW_CreateEx(
+        auto stats_window = WINDOW_CreateEx(
             0,
             TITLE_BAR_HEIGHT,
-            DISPLAY_WIDTH,
+            150,
+            DISPLAY_HEIGHT - TITLE_BAR_HEIGHT,
+            this->handle,
+            WM_CF_SHOW,
+            0,
+            NO_ID,
+            WM_DefaultProc);
+
+        WINDOW_SetBkColor(stats_window, MENU_COLOR);
+
+        this->stats_label = TEXT_CreateEx(
+            MARGIN,
+            MARGIN,
+            150 - 2 * MARGIN,
+            DISPLAY_HEIGHT - TITLE_BAR_HEIGHT - 2 * MARGIN,
+            stats_window,
+            WM_CF_SHOW,
+            TEXT_CF_LEFT | TEXT_CF_TOP,
+            NO_ID,
+            "<no data>");
+
+        this->log_list = LISTVIEW_CreateEx(
+            150 + MARGIN,
+            TITLE_BAR_HEIGHT,
+            DISPLAY_WIDTH - (150 + MARGIN),
             DISPLAY_HEIGHT - TITLE_BAR_HEIGHT,
             this->handle,
             WM_CF_SHOW,
@@ -784,6 +888,21 @@ class LogWindow {
     }
 
     void on_refresh_button_click() {
+        std::stringstream fmt;
+        fmt << "Min. UI update time\n"
+            << std::to_string(this->log->min_ui_update_time()) << " ms\n"
+            << "Avg. UI update time\n"
+            << std::to_string(this->log->avg_ui_update_time()) << " ms\n"
+            << "Max. UI update time\n"
+            << std::to_string(this->log->max_ui_update_time()) << " ms\n\n"
+            << "Min. time per buffer\n"
+            << std::to_string(this->log->min_buf_processing_time()) << " ms\n"
+            << "Avg. time per buffer\n"
+            << std::to_string(this->log->avg_buf_processing_time()) << " ms\n"
+            << "Max. time per buffer\n"
+            << std::to_string(this->log->max_buf_processing_time()) << " ms";
+        TEXT_SetText(this->stats_label, fmt.str().c_str());
+
         auto num_items = LISTVIEW_GetNumRows(this->log_list);
 
         // delete or add items as necessary
@@ -812,6 +931,7 @@ class LogWindow {
 
     const Log* log;
     WM_HWIN handle;
+    TEXT_Handle stats_label;
     LISTVIEW_Handle log_list;
     BUTTON_Handle back_button;
     BUTTON_Handle refresh_button;
