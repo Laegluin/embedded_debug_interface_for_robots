@@ -523,9 +523,7 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     uart.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     uart.Init.OverSampling = UART_OVERSAMPLING_16;
     uart.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-    uart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_AUTOBAUDRATE_INIT;
-    uart.AdvancedInit.AutoBaudRateEnable = UART_ADVFEATURE_AUTOBAUDRATE_ENABLE;
-    uart.AdvancedInit.AutoBaudRateMode = UART_ADVFEATURE_AUTOBAUDRATE_ONFALLINGEDGE;
+    uart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 
     uart.hdmarx = &DMA2_STREAM1;
     DMA2_STREAM1.Parent = &uart;
