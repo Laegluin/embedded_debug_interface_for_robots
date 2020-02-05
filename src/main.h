@@ -3,6 +3,9 @@
 
 #include <stm32f7xx.h>
 
+/// The size of each task's stack, in words (4 bytes).
+const size_t TASK_STACK_SIZE = 1000;
+
 const uint32_t DISPLAY_WIDTH = 480;
 const uint32_t DISPLAY_HEIGHT = 272;
 #define LCD_DISPLAY_ENABLE_PORT GPIOI
@@ -23,6 +26,7 @@ extern LTDC_HandleTypeDef LCD_CONTROLLER;
 extern I2C_HandleTypeDef I2C_BUS3;
 extern DMA_HandleTypeDef DMA2_STREAM1;
 extern TIM_HandleTypeDef TIMER2;
+extern TIM_HandleTypeDef TIMER3;
 
 void poll_touch_state();
 

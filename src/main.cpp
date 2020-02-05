@@ -1,17 +1,25 @@
 #include "main.h"
 #include "app.h"
+
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include <GUI.h>
 #include <WM.h>
+
 #include <stm32f7508_discovery_ts.h>
 #include <stm32f7xx_hal_rcc_ex.h>
+
 #include <vector>
 
 LTDC_HandleTypeDef LCD_CONTROLLER;
 I2C_HandleTypeDef I2C_BUS3;
 DMA_HandleTypeDef DMA2_STREAM1;
 TIM_HandleTypeDef TIMER2;
+TIM_HandleTypeDef TIMER3;
 
 void init_mpu();
+void init_tick_timer();
 void init_lcd_controller();
 void reset_lcd_controller();
 void init_touch_controller();
@@ -20,8 +28,9 @@ void init_uarts(std::vector<ReceiveBuf*>&);
 void init_gui();
 
 // TODO: hardware accel for UI
+// TODO: clock selection in user application
 int main() {
-    std::vector<ReceiveBuf*> uarts;
+    static std::vector<ReceiveBuf*> bufs;
 
     // required since clocks have been preconfigured by bootloader
     SystemCoreClockUpdate();
@@ -31,20 +40,29 @@ int main() {
     }
 
     init_mpu();
-    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(SysTick_IRQn);
-
+    init_tick_timer();
     init_sdram();
-    init_uarts(uarts);
+    init_uarts(bufs);
     init_lcd_controller();
     init_touch_controller();
     init_gui();
 
-    try {
-        run(uarts);
-    } catch (...) {
-        on_error();
-    }
+    xTaskCreate(
+        [](void* arg) {
+            try {
+                auto bufs = (std::vector<ReceiveBuf*>*) arg;
+                run(*bufs);
+            } catch (...) {
+                on_error();
+            }
+        },
+        "main",
+        TASK_STACK_SIZE,
+        &bufs,
+        6,
+        nullptr);
+
+    vTaskStartScheduler();
 }
 
 void init_mpu() {
@@ -147,6 +165,30 @@ void init_mpu() {
     HAL_MPU_ConfigRegion(&null_page);
 
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+}
+
+void init_tick_timer() {
+    // configure timer for incrementing the HAL tick counter (1000 Hz)
+    // cannot use systick because FreeRTOS uses it and requires it to be lowest priority
+    // equation: freq = (Clock / (Prescaler + 1)) / (Period + 1)
+    __TIM3_CLK_ENABLE();
+    TIMER3.Instance = TIM3;
+    TIMER3.Init.Prescaler = 4000 - 1;
+    TIMER3.Init.CounterMode = TIM_COUNTERMODE_UP;
+    TIMER3.Init.Period = 27 - 1;
+    TIMER3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    TIMER3.Init.RepetitionCounter = 0;
+
+    if (HAL_TIM_Base_Init(&TIMER3) != HAL_OK) {
+        on_error();
+    }
+
+    if (HAL_TIM_Base_Start_IT(&TIMER3) != HAL_OK) {
+        on_error();
+    }
+
+    HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(TIM3_IRQn);
 }
 
 void init_lcd_controller() {
@@ -314,13 +356,13 @@ void init_touch_controller() {
         on_error();
     }
 
-    // configure timer for polling the touch controller (ca. 60 Hz)
+    // configure timer for polling the touch controller (30 Hz)
     // equation: freq = (Clock / (Prescaler + 1)) / (Period + 1)
     __TIM2_CLK_ENABLE();
     TIMER2.Instance = TIM2;
-    TIMER2.Init.Prescaler = 36000;
+    TIMER2.Init.Prescaler = 20000 - 1;
     TIMER2.Init.CounterMode = TIM_COUNTERMODE_UP;
-    TIMER2.Init.Period = 100;
+    TIMER2.Init.Period = 180 - 1;
     TIMER2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     TIMER2.Init.RepetitionCounter = 0;
 
@@ -332,7 +374,7 @@ void init_touch_controller() {
         on_error();
     }
 
-    HAL_NVIC_SetPriority(TIM2_IRQn, 10, 0);
+    HAL_NVIC_SetPriority(TIM2_IRQn, 3, 0);
     HAL_NVIC_EnableIRQ(TIM2_IRQn);
 }
 

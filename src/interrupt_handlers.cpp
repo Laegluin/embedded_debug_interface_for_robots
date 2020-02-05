@@ -1,8 +1,14 @@
 #include "main.h"
+#include <FreeRTOS.h>
 #include <stm32f7xx.h>
+#include <task.h>
+
+extern "C" void xPortSysTickHandler();
 
 extern "C" void SysTick_Handler() {
-    HAL_IncTick();
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) {
+        xPortSysTickHandler();
+    }
 }
 
 extern "C" void DMA2_Stream1_IRQHandler() {
@@ -21,8 +27,14 @@ extern "C" void TIM2_IRQHandler() {
     HAL_TIM_IRQHandler(&TIMER2);
 }
 
+extern "C" void TIM3_IRQHandler() {
+    HAL_TIM_IRQHandler(&TIMER3);
+}
+
 extern "C" void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* timer) {
     if (timer == &TIMER2) {
         poll_touch_state();
+    } else if (timer == &TIMER3) {
+        HAL_IncTick();
     }
 }

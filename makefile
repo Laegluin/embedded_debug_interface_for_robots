@@ -12,6 +12,8 @@ INCLUDE_FLAGS := \
 	-Isrc \
 	-Isrc/config \
 	-Iinclude \
+	-I$(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/include \
+	-I$(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1 \
 	-I$(STM_CUBE_DIR)/Middlewares/ST/STemWin/inc \
 	-I$(STM_CUBE_DIR)/Drivers/BSP/STM32F7508-Discovery \
 	-I$(STM_CUBE_DIR)/Drivers/STM32F7xx_HAL_Driver/Inc \
@@ -56,6 +58,11 @@ vendor_objects := $(addprefix $(object_dir)/,\
 	stm32f7xx_hal_i2c.o \
 	stm32f7508_discovery_ts.o \
 	ft5336.o \
+	list.o \
+	queue.o \
+	tasks.o \
+	port.o \
+	heap_3.o \
 )
 
 archives := $(STM_CUBE_DIR)/Middlewares/ST/STemWin/Lib/STemWin_CM7_wc32_ot_ARGB.a
@@ -119,6 +126,15 @@ $(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/BSP/STM32F7508-Discovery/%.c | $(obje
 	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 $(object_dir)/%.o: $(STM_CUBE_DIR)/Drivers/BSP/Components/ft5336/%.c | $(object_dir) $(dep_dir)
+	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/%.c | $(object_dir) $(dep_dir)
+	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/%.c | $(object_dir) $(dep_dir)
+	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/%.c | $(object_dir) $(dep_dir)
 	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # actual binary for mcu

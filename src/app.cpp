@@ -3,6 +3,10 @@
 #include "main.h"
 #include "parser.h"
 
+#include <FreeRTOS.h>
+#include <semphr.h>
+#include <task.h>
+
 #include <DIALOG.h>
 #include <GUI.h>
 #include <LISTBOX.h>
@@ -21,6 +25,25 @@
 
 const int NO_ID = GUI_ID_USER + 0;
 const size_t MAX_NUM_LOG_ENTRIES = 100;
+
+static SemaphoreHandle_t CONTROL_TABLE_MAP_MUTEX;
+static SemaphoreHandle_t LOG_MUTEX;
+
+static void lock_control_table_map() {
+    xSemaphoreTake(CONTROL_TABLE_MAP_MUTEX, portMAX_DELAY);
+}
+
+static void release_control_table_map() {
+    xSemaphoreGive(CONTROL_TABLE_MAP_MUTEX);
+}
+
+static void lock_log() {
+    xSemaphoreTake(LOG_MUTEX, portMAX_DELAY);
+}
+
+static void release_log() {
+    xSemaphoreGive(LOG_MUTEX);
+}
 
 struct Connection {
     Connection(ReceiveBuf* buf) :
@@ -48,7 +71,8 @@ class Log {
         max_buf_processing_time_(0),
         min_buf_processing_time_(0),
         buf_processing_time_sum(0),
-        num_processed_bufs(0) {}
+        num_processed_bufs(0),
+        max_time_between_buf_processing_(0) {}
 
     void error(std::string message) {
         auto now = HAL_GetTick();
@@ -79,6 +103,11 @@ class Log {
         this->min_buf_processing_time_ = std::max(time, this->min_buf_processing_time_);
         this->buf_processing_time_sum += time;
         this->num_processed_bufs++;
+    }
+
+    void time_between_buf_processing(uint32_t time) {
+        this->max_time_between_buf_processing_ =
+            std::max(time, this->max_time_between_buf_processing_);
     }
 
     size_t size() const {
@@ -117,6 +146,10 @@ class Log {
         return this->min_buf_processing_time_;
     }
 
+    uint32_t max_time_between_buf_processing() const {
+        return this->max_time_between_buf_processing_;
+    }
+
   private:
     void push_message(std::string message) {
         if (messages.size() >= MAX_NUM_LOG_ENTRIES) {
@@ -135,9 +168,11 @@ class Log {
     uint32_t min_buf_processing_time_;
     uint32_t buf_processing_time_sum;
     uint32_t num_processed_bufs;
+    uint32_t max_time_between_buf_processing_;
 };
 
-static void handle_incoming_packets(Log&, Connection&, ControlTableMap&);
+static void process_buffer(Log&, Connection&, ControlTableMap&);
+static void run_ui(Log&, const ControlTableMap&);
 static void create_ui(const Log&, const ControlTableMap&);
 static void set_ui_theme();
 static void set_header_skin();
@@ -146,6 +181,13 @@ static void set_button_skin();
 static void handle_touch_scroll(WM_MESSAGE*, float, float&, void (*)(WM_MESSAGE*));
 
 void run(const std::vector<ReceiveBuf*>& bufs) {
+    CONTROL_TABLE_MAP_MUTEX = xSemaphoreCreateMutex();
+    LOG_MUTEX = xSemaphoreCreateMutex();
+
+    if (!CONTROL_TABLE_MAP_MUTEX || !LOG_MUTEX) {
+        on_error();
+    }
+
     Log log;
     ControlTableMap control_table_map;
     std::vector<Connection> connections;
@@ -156,29 +198,48 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
         connections.push_back(Connection(buf));
     }
 
-    create_ui(log, control_table_map);
-    uint32_t last_update = 0;
+    void* args[2] = {&log, &control_table_map};
+
+    xTaskCreate(
+        [](void* args) {
+            auto log = (Log*) ((void**) args)[0];
+            auto control_table_map = (ControlTableMap*) ((void**) args)[1];
+
+            try {
+                run_ui(*log, *control_table_map);
+            } catch (...) {
+                on_error();
+            }
+        },
+        "ui",
+        TASK_STACK_SIZE,
+        args,
+        0,
+        nullptr);
+
+    std::vector<uint32_t> last_buffer_starts(connections.size(), HAL_GetTick());
 
     while (true) {
+        size_t connection_idx = 0;
+
         for (auto& connection : connections) {
             auto now = HAL_GetTick();
+            lock_log();
+            log.time_between_buf_processing(now - last_buffer_starts[connection_idx]);
+            release_log();
+            last_buffer_starts[connection_idx] = now;
 
-            // render every 16ms (roughly 60 fps)
-            if (now - last_update > 16) {
-                auto update_start = HAL_GetTick();
-                GUI_Exec();
-                auto update_end = HAL_GetTick();
-                last_update = now;
-                log.ui_update_time(update_end - update_start);
-            }
-
-            handle_incoming_packets(log, connection, control_table_map);
+            process_buffer(log, connection, control_table_map);
+            connection_idx++;
         }
+
+        // delay for a while to allow UI updates
+        // for 2Mbs a delay of up to 16ms between buffers is okay
+        vTaskDelay(8 / portTICK_PERIOD_MS);
     }
 }
 
-static void
-    handle_incoming_packets(Log& log, Connection& connection, ControlTableMap& control_table_map) {
+static void process_buffer(Log& log, Connection& connection, ControlTableMap& control_table_map) {
     Cursor* cursor;
 
     if (connection.buf->is_front_ready) {
@@ -202,19 +263,29 @@ static void
                 return;
             }
 
+            lock_log();
             log.error(to_string(parse_result));
+            release_log();
             continue;
         }
 
+        lock_control_table_map();
         auto result = control_table_map.receive(connection.last_packet);
+        release_control_table_map();
+
         if (result != ProtocolResult::Ok) {
+            lock_log();
             log.error(to_string(result));
+            release_log();
         }
     }
 
     if (!is_buf_empty) {
         auto buf_processing_end = HAL_GetTick();
+
+        lock_log();
         log.buf_processing_time(buf_processing_end - buf_processing_start);
+        release_log();
     }
 }
 
@@ -358,6 +429,8 @@ class DeviceOverviewWindow {
         std::map<uint16_t, DeviceModelStatus> model_to_status;
 
         // group by model and count total number of disconnected devices
+        lock_control_table_map();
+
         for (auto& id_and_table : *this->control_table_map) {
             auto device_id = id_and_table.first;
             auto& control_table = id_and_table.second;
@@ -380,6 +453,8 @@ class DeviceOverviewWindow {
                 }
             }
         }
+
+        release_control_table_map();
 
         // update status label
         std::stringstream fmt;
@@ -633,6 +708,8 @@ class DeviceInfoWindow {
     }
 
     void update() {
+        lock_control_table_map();
+
         for (auto& id_and_table : *this->control_table_map) {
             auto device_id = id_and_table.first;
             auto& control_table = id_and_table.second;
@@ -641,10 +718,12 @@ class DeviceInfoWindow {
 
             if (item_idx == this->selected_item_idx) {
                 this->update_field_list(*control_table);
-            } else if (item_idx < 0) {
+            } else if (this->selected_item_idx < 0) {
                 this->clear_field_list();
             }
         }
+
+        release_control_table_map();
     }
 
     /// Adds or updates a device in the list. This function assumes that devices are only
@@ -756,7 +835,6 @@ class DeviceInfoWindow {
     LISTVIEW_Handle field_list;
 };
 
-// TODO: print last update time
 class LogWindow {
   public:
     LogWindow(const Log* log, WM_HWIN handle, WM_HWIN device_overview_win) :
@@ -888,19 +966,21 @@ class LogWindow {
     }
 
     void on_refresh_button_click() {
+        lock_log();
+
         std::stringstream fmt;
-        fmt << "Min. UI update time\n"
-            << std::to_string(this->log->min_ui_update_time()) << " ms\n"
-            << "Avg. UI update time\n"
-            << std::to_string(this->log->avg_ui_update_time()) << " ms\n"
-            << "Max. UI update time\n"
-            << std::to_string(this->log->max_ui_update_time()) << " ms\n\n"
+        fmt << "Max. time btw. buffers\n"
+            << this->log->max_time_between_buf_processing() << " ms\n"
             << "Min. time per buffer\n"
-            << std::to_string(this->log->min_buf_processing_time()) << " ms\n"
+            << this->log->min_buf_processing_time() << " ms\n"
             << "Avg. time per buffer\n"
-            << std::to_string(this->log->avg_buf_processing_time()) << " ms\n"
+            << this->log->avg_buf_processing_time() << " ms\n"
             << "Max. time per buffer\n"
-            << std::to_string(this->log->max_buf_processing_time()) << " ms";
+            << this->log->max_buf_processing_time() << " ms\n\n"
+            << "Max. UI update time\n"
+            << this->log->max_ui_update_time() << " ms\n"
+            << "Avg. UI update time\n"
+            << this->log->avg_ui_update_time() << " ms";
         TEXT_SetText(this->stats_label, fmt.str().c_str());
 
         auto num_items = LISTVIEW_GetNumRows(this->log_list);
@@ -927,6 +1007,8 @@ class LogWindow {
             LISTVIEW_SetItemText(this->log_list, 0, item_idx, log_entry.c_str());
             item_idx++;
         }
+
+        release_log();
     }
 
     const Log* log;
@@ -937,6 +1019,20 @@ class LogWindow {
     BUTTON_Handle refresh_button;
     WM_HWIN device_overview_win;
 };
+
+static void run_ui(Log& log, const ControlTableMap& control_table_map) {
+    create_ui(log, control_table_map);
+
+    while (true) {
+        auto update_start = HAL_GetTick();
+        GUI_Exec();
+        auto update_end = HAL_GetTick();
+
+        lock_log();
+        log.ui_update_time(update_end - update_start);
+        release_log();
+    }
+}
 
 static void create_ui(const Log& log, const ControlTableMap& control_table_map) {
     set_ui_theme();
