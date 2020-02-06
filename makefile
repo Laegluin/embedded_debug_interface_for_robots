@@ -36,7 +36,7 @@ test_dep_dir := $(dep_dir)/test
 test_object_dir := $(object_dir)/test
 
 
-objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.cpp src/config/*.c src/config/*.cpp src/device/*.cpp)))))
+objects := $(addprefix $(object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.s src/*.cpp src/config/*.c src/config/*.cpp src/device/*.cpp src/ui/*.cpp)))))
 
 test_objects := $(addprefix $(test_object_dir)/,$(addsuffix .o,$(basename $(notdir $(wildcard src/test/*.cpp)))))
 test_objects += $(addprefix $(test_object_dir)/,$(filter-out main.o app.o interrupt_handlers.o,$(addsuffix .o,$(basename $(notdir $(wildcard src/*.cpp src/device/*.cpp)))))) 
@@ -84,7 +84,7 @@ test: $(TARGET_DIR)/test
 	@$(abspath $<)
 
 format:
-	@clang-format -style=file -i src/*.cpp src/*.h src/test/*.cpp
+	@clang-format -style=file -i src/*.cpp src/*.h src/test/*.cpp src/device/*.cpp src/device/*.h src/ui/*.cpp src/ui/*.h
 
 clean:
 	@rm -rf $(TARGET_DIR)
@@ -110,6 +110,9 @@ $(object_dir)/%.o: src/%.cpp | $(object_dir) $(dep_dir)
 	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 $(object_dir)/%.o: src/device/%.cpp | $(object_dir) $(dep_dir)
+	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+
+$(object_dir)/%.o: src/ui/%.cpp | $(object_dir) $(dep_dir)
 	@$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 $(object_dir)/%.o: src/config/%.cpp | $(object_dir) $(dep_dir)
