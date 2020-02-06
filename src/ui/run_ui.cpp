@@ -5,13 +5,13 @@
 #include "ui/log_window.h"
 #include <cmath>
 
-static void create_ui(const Log&, const ControlTableMap&);
+static void create_ui(const Mutex<Log>&, const Mutex<ControlTableMap>&);
 static void set_ui_theme();
 static void set_header_skin();
 static void set_scrollbar_skin();
 static void set_button_skin();
 
-void run_ui(Log& log, const ControlTableMap& control_table_map) {
+void run_ui(Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map) {
     create_ui(log, control_table_map);
 
     while (true) {
@@ -19,7 +19,7 @@ void run_ui(Log& log, const ControlTableMap& control_table_map) {
     }
 }
 
-static void create_ui(const Log& log, const ControlTableMap& control_table_map) {
+static void create_ui(const Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map) {
     set_ui_theme();
 
     auto device_overview_win = WINDOW_CreateUser(

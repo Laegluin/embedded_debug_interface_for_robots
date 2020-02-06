@@ -1,6 +1,7 @@
 #ifndef DEVICE_INFO_WINDOW_H
 #define DEVICE_INFO_WINDOW_H
 
+#include "app.h"
 #include "control_table.h"
 #include <BUTTON.h>
 #include <DIALOG.h>
@@ -11,7 +12,7 @@
 class DeviceInfoWindow {
   public:
     DeviceInfoWindow(
-        const ControlTableMap* control_table_map,
+        const Mutex<ControlTableMap>* control_table_map,
         WM_HWIN handle,
         WM_HWIN device_overview_win);
 
@@ -30,11 +31,8 @@ class DeviceInfoWindow {
 
     void update();
 
-    /// Adds or updates a device in the list. This function assumes that devices are only
-    /// added, but not removed. Returns the index of the device in the list.
+    /// Adds a device to the list if it is missing. Returns the index of the device in the list.
     int update_device_list(DeviceId device_id, const ControlTable& control_table);
-
-    void update_device_list_item_color(DeviceId device_id, int item_idx);
 
     void clear_field_list();
 
@@ -42,7 +40,7 @@ class DeviceInfoWindow {
 
     void on_back_button_click();
 
-    const ControlTableMap* control_table_map;
+    const Mutex<ControlTableMap>* control_table_map;
     WM_HWIN handle;
     WM_HWIN device_overview_win;
     std::unordered_map<DeviceId, int> device_to_idx;

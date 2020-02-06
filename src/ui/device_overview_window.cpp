@@ -1,12 +1,11 @@
 #include "ui/device_overview_window.h"
-#include "app.h"
 #include "main.h"
 #include "ui/run_ui.h"
 #include <map>
 #include <sstream>
 
 DeviceOverviewWindow::DeviceOverviewWindow(
-    const ControlTableMap* control_table_map,
+    const Mutex<ControlTableMap>* control_table_map,
     WM_HWIN handle,
     WM_HWIN log_win,
     WM_HWIN device_info_win) :
@@ -126,12 +125,12 @@ void DeviceOverviewWindow::update() {
     std::map<uint16_t, DeviceModelStatus> model_to_status;
 
     // group by model and count total number of disconnected devices
-    lock_control_table_map();
+    auto& control_table_map = this->control_table_map->lock();
 
-    for (auto& id_and_table : *this->control_table_map) {
+    for (auto& id_and_table : control_table_map) {
         auto device_id = id_and_table.first;
         auto& control_table = id_and_table.second;
-        bool is_disconnected = this->control_table_map->is_disconnected(device_id);
+        bool is_disconnected = control_table_map.is_disconnected(device_id);
 
         num_connected += !is_disconnected;
         num_disconnected += is_disconnected;
@@ -151,7 +150,7 @@ void DeviceOverviewWindow::update() {
         }
     }
 
-    release_control_table_map();
+    this->control_table_map->unlock();
 
     // update status label
     std::stringstream fmt;

@@ -8,7 +8,7 @@
 
 const int NO_ID = GUI_ID_USER + 0;
 
-void run_ui(Log& log, const ControlTableMap& control_table_map);
+void run_ui(Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map);
 
 void handle_touch_scroll(
     WM_MESSAGE* msg,

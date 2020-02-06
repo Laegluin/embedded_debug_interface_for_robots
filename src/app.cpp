@@ -5,30 +5,10 @@
 #include "ui/run_ui.h"
 
 #include <FreeRTOS.h>
-#include <semphr.h>
 #include <task.h>
 
 #include <iomanip>
 #include <sstream>
-
-static SemaphoreHandle_t CONTROL_TABLE_MAP_MUTEX;
-static SemaphoreHandle_t LOG_MUTEX;
-
-void lock_control_table_map() {
-    xSemaphoreTake(CONTROL_TABLE_MAP_MUTEX, portMAX_DELAY);
-}
-
-void release_control_table_map() {
-    xSemaphoreGive(CONTROL_TABLE_MAP_MUTEX);
-}
-
-void lock_log() {
-    xSemaphoreTake(LOG_MUTEX, portMAX_DELAY);
-}
-
-void release_log() {
-    xSemaphoreGive(LOG_MUTEX);
-}
 
 struct Connection {
     Connection(ReceiveBuf* buf) :
@@ -46,7 +26,7 @@ struct Connection {
     Packet last_packet;
 };
 
-static void process_buffer(Log&, Connection&, ControlTableMap&);
+static void process_buffer(Mutex<Log>&, Connection&, Mutex<ControlTableMap>&);
 
 void Log::error(std::string message) {
     auto now = HAL_GetTick();
@@ -113,15 +93,8 @@ void Log::push_message(std::string message) {
 }
 
 void run(const std::vector<ReceiveBuf*>& bufs) {
-    CONTROL_TABLE_MAP_MUTEX = xSemaphoreCreateMutex();
-    LOG_MUTEX = xSemaphoreCreateMutex();
-
-    if (!CONTROL_TABLE_MAP_MUTEX || !LOG_MUTEX) {
-        on_error();
-    }
-
-    Log log;
-    ControlTableMap control_table_map;
+    Mutex<Log> log;
+    Mutex<ControlTableMap> control_table_map;
     std::vector<Connection> connections;
 
     connections.reserve(bufs.size());
@@ -134,8 +107,8 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
 
     xTaskCreate(
         [](void* args) {
-            auto log = (Log*) ((void**) args)[0];
-            auto control_table_map = (ControlTableMap*) ((void**) args)[1];
+            auto log = (Mutex<Log>*) ((void**) args)[0];
+            auto control_table_map = (Mutex<ControlTableMap>*) ((void**) args)[1];
 
             try {
                 run_ui(*log, *control_table_map);
@@ -156,9 +129,9 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
 
         for (auto& connection : connections) {
             auto now = HAL_GetTick();
-            lock_log();
-            log.time_between_buf_processing(now - last_buffer_starts[connection_idx]);
-            release_log();
+            auto& log_ref = log.lock();
+            log_ref.time_between_buf_processing(now - last_buffer_starts[connection_idx]);
+            log.unlock();
             last_buffer_starts[connection_idx] = now;
 
             process_buffer(log, connection, control_table_map);
@@ -171,7 +144,10 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
     }
 }
 
-static void process_buffer(Log& log, Connection& connection, ControlTableMap& control_table_map) {
+static void process_buffer(
+    Mutex<Log>& log,
+    Connection& connection,
+    Mutex<ControlTableMap>& control_table_map) {
     Cursor* cursor;
 
     if (connection.buf->is_front_ready) {
@@ -195,28 +171,24 @@ static void process_buffer(Log& log, Connection& connection, ControlTableMap& co
                 return;
             }
 
-            lock_log();
-            log.error(to_string(parse_result));
-            release_log();
+            log.lock().error(to_string(parse_result));
+            log.unlock();
             continue;
         }
 
-        lock_control_table_map();
-        auto result = control_table_map.receive(connection.last_packet);
-        release_control_table_map();
+        auto result = control_table_map.lock().receive(connection.last_packet);
+        control_table_map.unlock();
 
         if (result != ProtocolResult::Ok) {
-            lock_log();
-            log.error(to_string(result));
-            release_log();
+            log.lock().error(to_string(result));
+            log.unlock();
         }
     }
 
     if (!is_buf_empty) {
         auto buf_processing_end = HAL_GetTick();
 
-        lock_log();
-        log.buf_processing_time(buf_processing_end - buf_processing_start);
-        release_log();
+        log.lock().buf_processing_time(buf_processing_end - buf_processing_start);
+        log.unlock();
     }
 }

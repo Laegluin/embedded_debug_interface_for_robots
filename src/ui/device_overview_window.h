@@ -1,6 +1,7 @@
 #ifndef DEVICE_OVERVIEW_WINDOW_H
 #define DEVICE_OVERVIEW_WINDOW_H
 
+#include "app.h"
 #include "control_table.h"
 #include <BUTTON.h>
 #include <DIALOG.h>
@@ -17,7 +18,7 @@ class DeviceOverviewWindow {
     };
 
     DeviceOverviewWindow(
-        const ControlTableMap* control_table_map,
+        const Mutex<ControlTableMap>* control_table_map,
         WM_HWIN handle,
         WM_HWIN log_win,
         WM_HWIN device_info_win);
@@ -43,7 +44,7 @@ class DeviceOverviewWindow {
 
     void on_details_button_click();
 
-    const ControlTableMap* control_table_map;
+    const Mutex<ControlTableMap>* control_table_map;
     WM_HWIN handle;
     TEXT_Handle status_label;
     WM_HWIN status_label_win;

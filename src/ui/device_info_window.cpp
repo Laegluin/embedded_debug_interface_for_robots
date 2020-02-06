@@ -1,11 +1,10 @@
 #include "ui/device_info_window.h"
-#include "app.h"
 #include "main.h"
 #include "ui/run_ui.h"
 #include <sstream>
 
 DeviceInfoWindow::DeviceInfoWindow(
-    const ControlTableMap* control_table_map,
+    const Mutex<ControlTableMap>* control_table_map,
     WM_HWIN handle,
     WM_HWIN device_overview_win) :
     control_table_map(control_table_map),
@@ -132,13 +131,19 @@ void DeviceInfoWindow::on_message(WM_MESSAGE* msg) {
 }
 
 void DeviceInfoWindow::update() {
-    lock_control_table_map();
+    auto& control_table_map = this->control_table_map->lock();
 
-    for (auto& id_and_table : *this->control_table_map) {
+    for (auto& id_and_table : control_table_map) {
         auto device_id = id_and_table.first;
         auto& control_table = id_and_table.second;
 
         auto item_idx = this->update_device_list(device_id, *control_table);
+
+        if (control_table_map.is_disconnected(device_id)) {
+            LISTBOX_SetItemDisabled(this->device_list, item_idx, true);
+        } else {
+            LISTBOX_SetItemDisabled(this->device_list, item_idx, false);
+        }
 
         if (item_idx == this->selected_item_idx) {
             this->update_field_list(*control_table);
@@ -147,14 +152,13 @@ void DeviceInfoWindow::update() {
         }
     }
 
-    release_control_table_map();
+    this->control_table_map->unlock();
 }
 
 int DeviceInfoWindow::update_device_list(DeviceId device_id, const ControlTable& control_table) {
     auto iter = this->device_to_idx.find(device_id);
     if (iter != this->device_to_idx.end()) {
         auto item_idx = iter->second;
-        this->update_device_list_item_color(device_id, item_idx);
         return item_idx;
     }
 
@@ -189,18 +193,8 @@ int DeviceInfoWindow::update_device_list(DeviceId device_id, const ControlTable&
 
     LISTBOX_InsertString(this->device_list, stream.str().c_str(), insert_idx);
     this->device_to_idx.emplace(device_id, insert_idx);
-    this->update_device_list_item_color(device_id, insert_idx);
 
     return insert_idx;
-}
-
-void DeviceInfoWindow::update_device_list_item_color(DeviceId device_id, int item_idx) {
-    // TODO: use custom function to change background color instead
-    if (this->control_table_map->is_disconnected(device_id)) {
-        LISTBOX_SetItemDisabled(this->device_list, item_idx, true);
-    } else {
-        LISTBOX_SetItemDisabled(this->device_list, item_idx, false);
-    }
 }
 
 void DeviceInfoWindow::clear_field_list() {

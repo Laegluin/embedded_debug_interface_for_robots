@@ -11,7 +11,7 @@
 
 class LogWindow {
   public:
-    LogWindow(const Log* log, WM_HWIN handle, WM_HWIN device_overview_win);
+    LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overview_win);
 
     static LogWindow* from_handle(WM_HWIN handle) {
         LogWindow* self;
@@ -30,7 +30,7 @@ class LogWindow {
 
     void on_refresh_button_click();
 
-    const Log* log;
+    const Mutex<Log>* log;
     WM_HWIN handle;
     TEXT_Handle stats_label;
     LISTVIEW_Handle log_list;

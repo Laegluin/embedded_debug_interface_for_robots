@@ -1,11 +1,10 @@
 #include "ui/log_window.h"
-#include "app.h"
 #include "main.h"
 #include "ui/run_ui.h"
 #include <FreeRTOS.h>
 #include <sstream>
 
-LogWindow::LogWindow(const Log* log, WM_HWIN handle, WM_HWIN device_overview_win) :
+LogWindow::LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overview_win) :
     log(log),
     handle(handle),
     device_overview_win(device_overview_win) {
@@ -123,17 +122,17 @@ void LogWindow::on_back_button_click() {
 }
 
 void LogWindow::on_refresh_button_click() {
-    lock_log();
+    auto& log = this->log->lock();
 
     std::stringstream fmt;
     fmt << "Max. time btw. buffers\n"
-        << this->log->max_time_between_buf_processing() << " ms\n"
+        << log.max_time_between_buf_processing() << " ms\n"
         << "Min. time per buffer\n"
-        << this->log->min_buf_processing_time() << " ms\n"
+        << log.min_buf_processing_time() << " ms\n"
         << "Avg. time per buffer\n"
-        << this->log->avg_buf_processing_time() << " ms\n"
+        << log.avg_buf_processing_time() << " ms\n"
         << "Max. time per buffer\n"
-        << this->log->max_buf_processing_time() << " ms\n\n"
+        << log.max_buf_processing_time() << " ms\n\n"
         << "Free heap memory\n"
         << xPortGetFreeHeapSize() << " B\n"
         << "Free UI memory\n"
@@ -143,15 +142,15 @@ void LogWindow::on_refresh_button_click() {
     auto num_items = LISTVIEW_GetNumRows(this->log_list);
 
     // delete or add items as necessary
-    if (num_items < this->log->size()) {
-        auto num_missing_items = this->log->size() - num_items;
+    if (num_items < log.size()) {
+        auto num_missing_items = log.size() - num_items;
 
         for (size_t i = 0; i < num_missing_items; i++) {
             const char* cells[]{""};
             LISTVIEW_AddRow(this->log_list, cells);
         }
-    } else if (num_items > this->log->size()) {
-        auto num_extra_items = num_items - this->log->size();
+    } else if (num_items > log.size()) {
+        auto num_extra_items = num_items - log.size();
 
         for (size_t i = 0; i < num_extra_items; i++) {
             LISTVIEW_DeleteRow(this->log_list, num_items - 1 - i);
@@ -160,10 +159,10 @@ void LogWindow::on_refresh_button_click() {
 
     size_t item_idx = 0;
 
-    for (auto& log_entry : *this->log) {
+    for (auto& log_entry : log) {
         LISTVIEW_SetItemText(this->log_list, 0, item_idx, log_entry.c_str());
         item_idx++;
     }
 
-    release_log();
+    this->log->unlock();
 }

@@ -2,11 +2,15 @@
 #define APP_H
 
 #include "cursor.h"
+
 #include <deque>
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
 #include <vector>
+
+#include <FreeRTOS.h>
+#include <semphr.h>
 
 const uint32_t TEXT_COLOR = 0xff000000;
 const uint32_t BACKGROUND_COLOR = 0xffffffff;
@@ -51,6 +55,40 @@ struct ReceiveBuf {
     volatile bool is_back_ready;
 };
 
+template <typename T>
+class Mutex {
+  public:
+    Mutex() : obj(T()) {
+        this->mutex = xSemaphoreCreateMutex();
+
+        if (!this->mutex) {
+            throw "cannot create mutex";
+        }
+    }
+
+    Mutex(const Mutex&) = delete;
+
+    Mutex(Mutex&&) = delete;
+
+    T& lock() {
+        xSemaphoreTake(this->mutex, portMAX_DELAY);
+        return this->obj;
+    }
+
+    const T& lock() const {
+        xSemaphoreTake(this->mutex, portMAX_DELAY);
+        return this->obj;
+    }
+
+    void unlock() const {
+        xSemaphoreGive(this->mutex);
+    }
+
+  private:
+    T obj;
+    SemaphoreHandle_t mutex;
+};
+
 class Log {
   public:
     Log() :
@@ -90,14 +128,6 @@ class Log {
     uint32_t num_processed_bufs;
     uint32_t max_time_between_buf_processing_;
 };
-
-void lock_control_table_map();
-
-void release_control_table_map();
-
-void lock_log();
-
-void release_log();
 
 void run(const std::vector<ReceiveBuf*>& bufs);
 
