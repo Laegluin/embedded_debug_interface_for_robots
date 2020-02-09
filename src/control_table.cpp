@@ -135,6 +135,18 @@ ControlTableMemory::ControlTableMemory(std::vector<Segment>&& segments) : segmen
     }
 }
 
+ControlTableMemory::ControlTableMemory(const ControlTableMemory& src) :
+    segments(src.segments),
+    buf(src.buf) {
+    // need to change the backing storage pointers to point to our copy
+    size_t offset = 0;
+
+    for (auto& segment : this->segments) {
+        segment.set_backing_storage(this->buf.data() + offset);
+        offset += segment.len();
+    }
+}
+
 bool ControlTableMemory::read_uint8(uint16_t addr, uint8_t* dst) const {
     return this->read(addr, dst, 1);
 }

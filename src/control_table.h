@@ -62,6 +62,8 @@ class ControlTableMemory {
     /// Segments must not overlap.
     ControlTableMemory(std::vector<Segment>&& segments);
 
+    ControlTableMemory(const ControlTableMemory& src);
+
     bool read_uint8(uint16_t addr, uint8_t* dst) const;
 
     bool read_uint16(uint16_t addr, uint16_t* dst) const;
@@ -176,6 +178,11 @@ struct ControlTableField {
 
 class ControlTable {
   public:
+    virtual ~ControlTable() = default;
+
+    /// Clones the control table (calls the correct copy constructor).
+    virtual std::unique_ptr<ControlTable> clone() const = 0;
+
     /// Tests if the model of the control table is known. If it is not know, the return value of
     /// `ControlTable::model_number` is undefined. This should not be overridden by device
     /// implementations.
@@ -210,6 +217,10 @@ class UnknownControlTable : public ControlTable {
         mem(ControlTableMemory({Segment::new_data(0, 3)})),
         is_unknown_model_(false) {
         this->mem.write_uint16(0, model_number);
+    }
+
+    std::unique_ptr<ControlTable> clone() const final {
+        return std::make_unique<UnknownControlTable>(*this);
     }
 
     bool is_unknown_model() const final {

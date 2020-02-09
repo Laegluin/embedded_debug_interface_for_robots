@@ -131,31 +131,55 @@ void DeviceInfoWindow::on_message(WM_MESSAGE* msg) {
 }
 
 void DeviceInfoWindow::update() {
+    struct DeviceInfo {
+        DeviceId id;
+        const char* name;
+        bool is_disconnected;
+    };
+
+    // copy the required values to minimize the time spent holding the lock
+    std::unique_ptr<ControlTable> selected_control_table = nullptr;
+    std::vector<DeviceInfo> device_infos;
+    device_infos.reserve(256);
+
     auto& control_table_map = this->control_table_map->lock();
 
     for (auto& id_and_table : control_table_map) {
         auto device_id = id_and_table.first;
         auto& control_table = id_and_table.second;
 
-        auto item_idx = this->update_device_list(device_id, *control_table);
+        device_infos.push_back(DeviceInfo{
+            device_id,
+            control_table->device_name(),
+            control_table_map.is_disconnected(device_id),
+        });
 
-        if (control_table_map.is_disconnected(device_id)) {
-            LISTBOX_SetItemDisabled(this->device_list, item_idx, true);
-        } else {
-            LISTBOX_SetItemDisabled(this->device_list, item_idx, false);
-        }
-
-        if (item_idx == this->selected_item_idx) {
-            this->update_field_list(*control_table);
-        } else if (this->selected_item_idx < 0) {
-            this->clear_field_list();
+        auto iter = this->device_to_idx.find(device_id);
+        if (iter != this->device_to_idx.end() && iter->second == this->selected_item_idx) {
+            selected_control_table = control_table->clone();
         }
     }
 
     this->control_table_map->unlock();
+
+    for (auto& device_info : device_infos) {
+        auto item_idx = this->update_device_list(device_info.id, device_info.name);
+
+        if (device_info.is_disconnected) {
+            LISTBOX_SetItemDisabled(this->device_list, item_idx, true);
+        } else {
+            LISTBOX_SetItemDisabled(this->device_list, item_idx, false);
+        }
+    }
+
+    if (selected_control_table) {
+        this->update_field_list(*selected_control_table);
+    } else {
+        this->clear_field_list();
+    }
 }
 
-int DeviceInfoWindow::update_device_list(DeviceId device_id, const ControlTable& control_table) {
+int DeviceInfoWindow::update_device_list(DeviceId device_id, const char* device_name) {
     auto iter = this->device_to_idx.find(device_id);
     if (iter != this->device_to_idx.end()) {
         auto item_idx = iter->second;
@@ -189,7 +213,7 @@ int DeviceInfoWindow::update_device_list(DeviceId device_id, const ControlTable&
     }
 
     std::stringstream stream;
-    stream << control_table.device_name() << " (" << device_id << ")";
+    stream << device_name << " (" << device_id << ")";
 
     LISTBOX_InsertString(this->device_list, stream.str().c_str(), insert_idx);
     this->device_to_idx.emplace(device_id, insert_idx);

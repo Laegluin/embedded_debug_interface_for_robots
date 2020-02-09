@@ -12,6 +12,10 @@ class Mx64ControlTable : public ControlTable {
 
     static const std::vector<ControlTableField> FIELDS;
 
+    std::unique_ptr<ControlTable> clone() const final {
+        return std::make_unique<Mx64ControlTable>(*this);
+    }
+
     uint16_t model_number() const final {
         return MODEL_NUMBER;
     }

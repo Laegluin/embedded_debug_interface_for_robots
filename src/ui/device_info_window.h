@@ -32,7 +32,7 @@ class DeviceInfoWindow {
     void update();
 
     /// Adds a device to the list if it is missing. Returns the index of the device in the list.
-    int update_device_list(DeviceId device_id, const ControlTable& control_table);
+    int update_device_list(DeviceId device_id, const char* device_name);
 
     void clear_field_list();
 
