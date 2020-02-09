@@ -46,7 +46,9 @@ struct ReceiveBuf {
         front(Cursor(this->bytes, LEN / 2)),
         back(Cursor(this->bytes + LEN / 2, LEN / 2)),
         is_front_ready(false),
-        is_back_ready(false) {}
+        is_back_ready(true) {
+        this->back.set_empty();
+    }
 
     volatile uint8_t bytes[LEN];
     Cursor front;

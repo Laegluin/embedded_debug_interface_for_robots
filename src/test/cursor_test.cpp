@@ -31,3 +31,18 @@ TEST_CASE("read from empty cursor", "[Cursor]") {
     REQUIRE(cursor.read(dst, 4) == 0);
     REQUIRE(cursor.remaining_bytes() == 0);
 }
+
+TEST_CASE("set cursor to empty", "[Cursor]") {
+    Cursor cursor(nullptr, 0);
+
+    REQUIRE(cursor.remaining_bytes() == 0);
+    cursor.set_empty();
+    REQUIRE(cursor.remaining_bytes() == 0);
+
+    uint8_t buf[] = {1, 3, 2};
+    cursor = Cursor(buf, sizeof(buf));
+
+    REQUIRE(cursor.remaining_bytes() == 3);
+    cursor.set_empty();
+    REQUIRE(cursor.remaining_bytes() == 0);
+}

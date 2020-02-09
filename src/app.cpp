@@ -12,6 +12,7 @@
 
 struct Connection {
     Connection(ReceiveBuf* buf) :
+        last_processing_start(0),
         buf(buf),
         parser(Parser()),
         last_packet(Packet{
@@ -21,6 +22,7 @@ struct Connection {
             std::vector<uint8_t>(),
         }) {}
 
+    uint32_t last_processing_start;
     ReceiveBuf* buf;
     Parser parser;
     Packet last_packet;
@@ -95,13 +97,6 @@ void Log::push_message(std::string message) {
 void run(const std::vector<ReceiveBuf*>& bufs) {
     Mutex<Log> log;
     Mutex<ControlTableMap> control_table_map;
-    std::vector<Connection> connections;
-
-    connections.reserve(bufs.size());
-
-    for (auto buf : bufs) {
-        connections.push_back(Connection(buf));
-    }
 
     void* args[2] = {&log, &control_table_map};
 
@@ -122,20 +117,20 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
         0,
         nullptr);
 
-    std::vector<uint32_t> last_buffer_starts(connections.size(), HAL_GetTick());
+    std::vector<Connection> connections;
+    connections.reserve(bufs.size());
+
+    for (auto buf : bufs) {
+        connections.push_back(Connection(buf));
+    }
 
     while (true) {
-        size_t connection_idx = 0;
-
         for (auto& connection : connections) {
-            auto now = HAL_GetTick();
-            auto& log_ref = log.lock();
-            log_ref.time_between_buf_processing(now - last_buffer_starts[connection_idx]);
-            log.unlock();
-            last_buffer_starts[connection_idx] = now;
+            if (connection.last_processing_start == 0) {
+                connection.last_processing_start = HAL_GetTick();
+            }
 
             process_buffer(log, connection, control_table_map);
-            connection_idx++;
         }
 
         // delay for a while to allow UI updates
@@ -157,11 +152,15 @@ static void process_buffer(
         connection.buf->front.reset();
         cursor = &connection.buf->back;
     } else {
-        return;
+        on_error();
     }
 
-    auto is_buf_empty = cursor->remaining_bytes() > 0;
-    auto buf_processing_start = HAL_GetTick();
+    auto processing_start = HAL_GetTick();
+    auto is_buf_empty = cursor->remaining_bytes() == 0;
+    std::vector<ParseResult> parse_errors;
+    std::vector<ProtocolResult> protocol_errors;
+
+    auto& control_table_map_ref = control_table_map.lock();
 
     while (cursor->remaining_bytes() > 0) {
         auto parse_result = connection.parser.parse(*cursor, &connection.last_packet);
@@ -171,24 +170,37 @@ static void process_buffer(
                 return;
             }
 
-            log.lock().error(to_string(parse_result));
-            log.unlock();
+            parse_errors.push_back(parse_result);
             continue;
         }
 
-        auto result = control_table_map.lock().receive(connection.last_packet);
-        control_table_map.unlock();
+        auto result = control_table_map_ref.receive(connection.last_packet);
 
         if (result != ProtocolResult::Ok) {
-            log.lock().error(to_string(result));
-            log.unlock();
+            protocol_errors.push_back(result);
         }
     }
 
-    if (!is_buf_empty) {
-        auto buf_processing_end = HAL_GetTick();
+    // never lock both at the same time to prevent deadlocks
+    control_table_map.unlock();
+    auto& log_ref = log.lock();
 
-        log.lock().buf_processing_time(buf_processing_end - buf_processing_start);
-        log.unlock();
+    // only report time for non empty buffers in order to have useful min and average
+    if (!is_buf_empty) {
+        auto processing_end = HAL_GetTick();
+        log_ref.buf_processing_time(processing_end - processing_start);
     }
+
+    for (auto parse_error : parse_errors) {
+        log_ref.error(to_string(parse_error));
+    }
+
+    for (auto protocol_error : protocol_errors) {
+        log_ref.error(to_string(protocol_error));
+    }
+
+    log_ref.time_between_buf_processing(processing_start - connection.last_processing_start);
+    connection.last_processing_start = processing_start;
+
+    log.unlock();
 }

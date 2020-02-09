@@ -30,6 +30,10 @@ class Cursor {
         this->current_pos = 0;
     }
 
+    void set_empty() {
+        this->current_pos = this->buf_len;
+    }
+
     size_t remaining_bytes() const {
         return this->buf_len - this->current_pos;
     }
