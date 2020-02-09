@@ -4,6 +4,7 @@
 #include "cursor.h"
 
 #include <deque>
+#include <memory>
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -108,9 +109,9 @@ class Log {
 
     size_t size() const;
 
-    std::deque<std::string>::const_iterator begin() const;
+    std::deque<std::shared_ptr<std::string>>::const_iterator begin() const;
 
-    std::deque<std::string>::const_iterator end() const;
+    std::deque<std::shared_ptr<std::string>>::const_iterator end() const;
 
     uint32_t max_buf_processing_time() const;
 
@@ -121,9 +122,9 @@ class Log {
     uint32_t max_time_between_buf_processing() const;
 
   private:
-    void push_message(std::string message);
+    void push_message(std::string&& message);
 
-    std::deque<std::string> messages;
+    std::deque<std::shared_ptr<std::string>> messages;
     uint32_t max_buf_processing_time_;
     uint32_t min_buf_processing_time_;
     uint32_t buf_processing_time_sum;

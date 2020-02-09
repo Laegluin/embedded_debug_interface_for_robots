@@ -62,11 +62,11 @@ size_t Log::size() const {
     return this->messages.size();
 }
 
-std::deque<std::string>::const_iterator Log::begin() const {
+std::deque<std::shared_ptr<std::string>>::const_iterator Log::begin() const {
     return this->messages.begin();
 }
 
-std::deque<std::string>::const_iterator Log::end() const {
+std::deque<std::shared_ptr<std::string>>::const_iterator Log::end() const {
     return this->messages.end();
 }
 
@@ -86,12 +86,12 @@ uint32_t Log::max_time_between_buf_processing() const {
     return this->max_time_between_buf_processing_;
 }
 
-void Log::push_message(std::string message) {
+void Log::push_message(std::string&& message) {
     if (messages.size() >= MAX_NUM_LOG_ENTRIES) {
         this->messages.pop_back();
     }
 
-    this->messages.push_front(std::move(message));
+    this->messages.push_front(std::make_shared<std::string>(std::move(message)));
 }
 
 void run(const std::vector<ReceiveBuf*>& bufs) {

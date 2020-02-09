@@ -122,17 +122,19 @@ void LogWindow::on_back_button_click() {
 }
 
 void LogWindow::on_refresh_button_click() {
-    auto& log = this->log->lock();
+    // make a copy to avoid holding the lock for a long time
+    Log log_copy(this->log->lock());
+    this->log->unlock();
 
     std::stringstream fmt;
     fmt << "Max. time btw. buffers\n"
-        << log.max_time_between_buf_processing() << " ms\n"
+        << log_copy.max_time_between_buf_processing() << " ms\n"
         << "Min. time per buffer\n"
-        << log.min_buf_processing_time() << " ms\n"
+        << log_copy.min_buf_processing_time() << " ms\n"
         << "Avg. time per buffer\n"
-        << log.avg_buf_processing_time() << " ms\n"
+        << log_copy.avg_buf_processing_time() << " ms\n"
         << "Max. time per buffer\n"
-        << log.max_buf_processing_time() << " ms\n\n"
+        << log_copy.max_buf_processing_time() << " ms\n\n"
         << "Free heap memory\n"
         << xPortGetFreeHeapSize() << " B\n"
         << "Free UI memory\n"
@@ -142,15 +144,15 @@ void LogWindow::on_refresh_button_click() {
     auto num_items = LISTVIEW_GetNumRows(this->log_list);
 
     // delete or add items as necessary
-    if (num_items < log.size()) {
-        auto num_missing_items = log.size() - num_items;
+    if (num_items < log_copy.size()) {
+        auto num_missing_items = log_copy.size() - num_items;
 
         for (size_t i = 0; i < num_missing_items; i++) {
             const char* cells[]{""};
             LISTVIEW_AddRow(this->log_list, cells);
         }
-    } else if (num_items > log.size()) {
-        auto num_extra_items = num_items - log.size();
+    } else if (num_items > log_copy.size()) {
+        auto num_extra_items = num_items - log_copy.size();
 
         for (size_t i = 0; i < num_extra_items; i++) {
             LISTVIEW_DeleteRow(this->log_list, num_items - 1 - i);
@@ -159,10 +161,8 @@ void LogWindow::on_refresh_button_click() {
 
     size_t item_idx = 0;
 
-    for (auto& log_entry : log) {
-        LISTVIEW_SetItemText(this->log_list, 0, item_idx, log_entry.c_str());
+    for (auto& log_entry : log_copy) {
+        LISTVIEW_SetItemText(this->log_list, 0, item_idx, log_entry->c_str());
         item_idx++;
     }
-
-    this->log->unlock();
 }
