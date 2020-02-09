@@ -61,7 +61,7 @@
 #define configCPU_CLOCK_HZ                (SystemCoreClock)
 #define configTICK_RATE_HZ                ((TickType_t)1000)
 #define configMINIMAL_STACK_SIZE          ((uint16_t)128)
-#define configTOTAL_HEAP_SIZE             ((size_t)(15 * 1024))
+#define configTOTAL_HEAP_SIZE             ((size_t)143360)  // 140 KiB
 #define configMAX_TASK_NAME_LEN           (16)
 #define configUSE_TRACE_FACILITY          0
 #define configUSE_16_BIT_TICKS            0
@@ -117,7 +117,7 @@ to exclude the API function. */
 //define USE_FreeRTOS_HEAP_5
 
 */
-#define USE_FreeRTOS_HEAP_3
+#define USE_FreeRTOS_HEAP_4
 #define configUSE_NEWLIB_REENTRANT 1
 
 /* Cortex-M specific definitions. */
@@ -145,6 +145,7 @@ to all Cortex-M ports, and do not rely on any particular library functions. */
 See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY  ( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
 
+// TODO: remove when everything works
 /* Normal assert() semantics without relying on the provision of an assert.h
 header file. */
 #define configASSERT( x ) if( ( x ) == 0 ) { taskDISABLE_INTERRUPTS(); for( ;; ); }

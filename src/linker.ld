@@ -33,8 +33,6 @@ ENTRY(Reset_Handler)
 
 /* highest address of the user mode stack (SRAM2) */
 _estack = 0x20050000;
-/* generate a link error if heap does not fit into SRAM1 */
-_max_heap_size = 150K;
 
 /* Specify the memory areas */
 MEMORY
@@ -152,17 +150,6 @@ SECTIONS
 
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
-    __bss_end__ = _ebss;
-    __end__ = _ebss;
-  } >SRAM1
-
-  /* make sure there is enough space left for heap and stack */
-  ._user_heap :
-  {
-    . = ALIGN(8);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
-    . = . + _max_heap_size;
   } >SRAM1
 
   /* Remove information from the standard libraries */

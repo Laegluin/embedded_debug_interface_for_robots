@@ -31,7 +31,7 @@ const int TITLE_BAR_HEIGHT = 44;
 const int BUTTON_WIDTH = 80;
 const int BUTTON_HEIGHT = 36;
 
-const size_t MAX_NUM_LOG_ENTRIES = 100;
+const size_t MAX_NUM_LOG_ENTRIES = 50;
 
 struct ReceiveBuf {
   public:
@@ -54,10 +54,6 @@ struct ReceiveBuf {
 class Log {
   public:
     Log() :
-        max_ui_update_time_(0),
-        min_ui_update_time_(0),
-        ui_update_time_sum(0),
-        num_ui_updates(0),
         max_buf_processing_time_(0),
         min_buf_processing_time_(0),
         buf_processing_time_sum(0),
@@ -65,8 +61,6 @@ class Log {
         max_time_between_buf_processing_(0) {}
 
     void error(std::string message);
-
-    void ui_update_time(uint32_t time);
 
     void buf_processing_time(uint32_t time);
 
@@ -77,12 +71,6 @@ class Log {
     std::deque<std::string>::const_iterator begin() const;
 
     std::deque<std::string>::const_iterator end() const;
-
-    uint32_t max_ui_update_time() const;
-
-    float avg_ui_update_time() const;
-
-    uint32_t min_ui_update_time() const;
 
     uint32_t max_buf_processing_time() const;
 
@@ -96,10 +84,6 @@ class Log {
     void push_message(std::string message);
 
     std::deque<std::string> messages;
-    uint32_t max_ui_update_time_;
-    uint32_t min_ui_update_time_;
-    uint32_t ui_update_time_sum;
-    uint32_t num_ui_updates;
     uint32_t max_buf_processing_time_;
     uint32_t min_buf_processing_time_;
     uint32_t buf_processing_time_sum;

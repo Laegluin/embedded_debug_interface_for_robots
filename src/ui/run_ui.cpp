@@ -15,13 +15,7 @@ void run_ui(Log& log, const ControlTableMap& control_table_map) {
     create_ui(log, control_table_map);
 
     while (true) {
-        auto update_start = HAL_GetTick();
         GUI_Exec();
-        auto update_end = HAL_GetTick();
-
-        lock_log();
-        log.ui_update_time(update_end - update_start);
-        release_log();
     }
 }
 

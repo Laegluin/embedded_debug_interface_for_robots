@@ -2,6 +2,7 @@
 #include "app.h"
 #include "main.h"
 #include "ui/run_ui.h"
+#include <FreeRTOS.h>
 #include <sstream>
 
 LogWindow::LogWindow(const Log* log, WM_HWIN handle, WM_HWIN device_overview_win) :
@@ -133,10 +134,10 @@ void LogWindow::on_refresh_button_click() {
         << this->log->avg_buf_processing_time() << " ms\n"
         << "Max. time per buffer\n"
         << this->log->max_buf_processing_time() << " ms\n\n"
-        << "Max. UI update time\n"
-        << this->log->max_ui_update_time() << " ms\n"
-        << "Avg. UI update time\n"
-        << this->log->avg_ui_update_time() << " ms";
+        << "Free heap memory\n"
+        << xPortGetFreeHeapSize() << " B\n"
+        << "Free UI memory\n"
+        << GUI_ALLOC_GetNumFreeBytes() << " B";
     TEXT_SetText(this->stats_label, fmt.str().c_str());
 
     auto num_items = LISTVIEW_GetNumRows(this->log_list);

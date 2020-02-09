@@ -65,13 +65,6 @@ void Log::error(std::string message) {
     this->push_message(fmt.str());
 }
 
-void Log::ui_update_time(uint32_t time) {
-    this->max_ui_update_time_ = std::max(time, this->max_ui_update_time_);
-    this->min_ui_update_time_ = std::min(time, this->min_ui_update_time_);
-    this->ui_update_time_sum += time;
-    this->num_ui_updates++;
-}
-
 void Log::buf_processing_time(uint32_t time) {
     this->max_buf_processing_time_ = std::max(time, this->max_buf_processing_time_);
     this->min_buf_processing_time_ = std::max(time, this->min_buf_processing_time_);
@@ -93,18 +86,6 @@ std::deque<std::string>::const_iterator Log::begin() const {
 
 std::deque<std::string>::const_iterator Log::end() const {
     return this->messages.end();
-}
-
-uint32_t Log::max_ui_update_time() const {
-    return this->max_ui_update_time_;
-}
-
-float Log::avg_ui_update_time() const {
-    return (float) this->ui_update_time_sum / (float) this->num_ui_updates;
-}
-
-uint32_t Log::min_ui_update_time() const {
-    return this->min_ui_update_time_;
 }
 
 uint32_t Log::max_buf_processing_time() const {
@@ -186,7 +167,7 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
 
         // delay for a while to allow UI updates
         // for 2Mbs a delay of up to 16ms between buffers is okay
-        vTaskDelay(8 / portTICK_PERIOD_MS);
+        vTaskDelay(4 / portTICK_PERIOD_MS);
     }
 }
 

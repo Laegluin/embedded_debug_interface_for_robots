@@ -62,7 +62,7 @@ vendor_objects := $(addprefix $(object_dir)/,\
 	queue.o \
 	tasks.o \
 	port.o \
-	heap_3.o \
+	heap_4.o \
 )
 
 archives := $(STM_CUBE_DIR)/Middlewares/ST/STemWin/Lib/STemWin_CM7_wc32_ot_ARGB.a
@@ -142,7 +142,7 @@ $(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/porta
 
 # actual binary for mcu
 $(TARGET_DIR)/firmware.elf: $(objects) $(vendor_objects) $(archives) src/linker.ld | $(TARGET_DIR)
-	@$(CXX) $(LDFLAGS) --specs=nosys.specs -Tsrc/linker.ld -Wl,--gc-sections -o $@ $(filter %.o %.a,$^)
+	@$(CXX) $(LDFLAGS) --specs=nosys.specs -Tsrc/linker.ld -Wl,--gc-sections -Wl,--wrap=_malloc_r -Wl,--wrap=_free_r -o $@ $(filter %.o %.a,$^)
 
 $(TARGET_DIR)/firmware.bin: $(TARGET_DIR)/firmware.elf
 	@$(SIZE) $<
