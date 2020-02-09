@@ -113,18 +113,24 @@ void DeviceOverviewWindow::on_message(WM_MESSAGE* msg) {
 }
 
 void DeviceOverviewWindow::update() {
+    struct DeviceStatus {
+        const char* device_name;
+        uint16_t model_number;
+        bool is_disconnected;
+    };
+
     struct DeviceModelStatus {
         const char* model_name;
         size_t num_connected;
         size_t num_disconnected;
     };
 
+    // copy only the required data as quickly as possible
+    std::vector<DeviceStatus> device_statuses;
+    device_statuses.reserve(256);
     size_t num_connected = 0;
     size_t num_disconnected = 0;
 
-    std::map<uint16_t, DeviceModelStatus> model_to_status;
-
-    // group by model and count total number of disconnected devices
     auto& control_table_map = this->control_table_map->lock();
 
     for (auto& id_and_table : control_table_map) {
@@ -136,21 +142,36 @@ void DeviceOverviewWindow::update() {
         num_disconnected += is_disconnected;
 
         if (!control_table->is_unknown_model()) {
-            auto result = model_to_status.emplace(
+            device_statuses.push_back(DeviceStatus{
+                control_table->device_name(),
                 control_table->model_number(),
-                DeviceModelStatus{control_table->device_name(), 0, 0});
-
-            auto& status = result.first->second;
-
-            if (is_disconnected) {
-                status.num_disconnected++;
-            } else {
-                status.num_connected++;
-            }
+                is_disconnected,
+            });
         }
     }
 
     this->control_table_map->unlock();
+
+    // group by model; we're doing this here to avoid allocations while holding the lock
+    std::map<uint16_t, DeviceModelStatus> model_to_status;
+
+    for (auto& device_status : device_statuses) {
+        auto result = model_to_status.emplace(
+            device_status.model_number,
+            DeviceModelStatus{
+                device_status.device_name,
+                0,
+                0,
+            });
+
+        auto& model_status = result.first->second;
+
+        if (device_status.is_disconnected) {
+            model_status.num_disconnected++;
+        } else {
+            model_status.num_connected++;
+        }
+    }
 
     // update status label
     std::stringstream fmt;
