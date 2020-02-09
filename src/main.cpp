@@ -618,20 +618,30 @@ void init_gui() {
 }
 
 void poll_touch_state() {
-    TS_StateTypeDef src_state;
-    BSP_TS_ResetTouchData(&src_state);
+    static TS_StateTypeDef last_state;
 
-    if (BSP_TS_GetState(&src_state) != TS_OK) {
+    TS_StateTypeDef current_state;
+    BSP_TS_ResetTouchData(&current_state);
+
+    if (BSP_TS_GetState(&current_state) != TS_OK) {
         return;
     }
 
-    GUI_PID_STATE dst_state;
-    dst_state.x = src_state.touchX[0];
-    dst_state.y = src_state.touchY[0];
-    dst_state.Pressed = src_state.touchDetected > 0;
-    dst_state.Layer = 0;
+    // do not fill the touch fifo if nothing changed (prevents data loss)
+    if (last_state.touchDetected == current_state.touchDetected
+        && last_state.touchX[0] == current_state.touchX[0]
+        && last_state.touchY[0] == current_state.touchY[0]) {
+        return;
+    }
 
-    GUI_TOUCH_StoreStateEx(&dst_state);
+    GUI_PID_STATE state;
+    state.x = current_state.touchX[0];
+    state.y = current_state.touchY[0];
+    state.Pressed = current_state.touchDetected > 0;
+    state.Layer = 0;
+
+    GUI_TOUCH_StoreStateEx(&state);
+    last_state = current_state;
 }
 
 __attribute__((noinline)) void on_error() {
