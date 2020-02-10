@@ -4,7 +4,7 @@
 #include <stm32f7xx.h>
 
 /// The size of each task's stack, in words (4 bytes).
-const size_t TASK_STACK_SIZE = 1000;
+const size_t TASK_STACK_SIZE = 1024;
 
 const uint32_t DISPLAY_WIDTH = 480;
 const uint32_t DISPLAY_HEIGHT = 272;
