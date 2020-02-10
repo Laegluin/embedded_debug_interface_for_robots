@@ -565,7 +565,7 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     // we're only receiving, so they can simply stay low
     gpio_config.Pin = GPIO_PIN_6;
     gpio_config.Mode = GPIO_MODE_OUTPUT_PP;
-    gpio_config.Pull = GPIO_NOPULL;
+    gpio_config.Pull = GPIO_PULLUP;
     gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOG, &gpio_config);
     HAL_GPIO_WritePin(GPIOG, GPIO_PIN_6, GPIO_PIN_RESET);
