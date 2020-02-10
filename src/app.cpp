@@ -49,7 +49,7 @@ void Log::error(std::string message) {
 
 void Log::buf_processing_time(uint32_t time) {
     this->max_buf_processing_time_ = std::max(time, this->max_buf_processing_time_);
-    this->min_buf_processing_time_ = std::max(time, this->min_buf_processing_time_);
+    this->min_buf_processing_time_ = std::min(time, this->min_buf_processing_time_);
     this->buf_processing_time_sum += time;
     this->num_processed_bufs++;
 }
