@@ -167,7 +167,7 @@ static void process_buffer(
 
         if (parse_result != ParseResult::PacketAvailable) {
             if (parse_result == ParseResult::NeedMoreData) {
-                return;
+                break;
             }
 
             parse_errors.push_back(parse_result);
