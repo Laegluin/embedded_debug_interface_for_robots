@@ -545,8 +545,11 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
 
     // init uart
     __HAL_RCC_USART6_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOG_CLK_ENABLE();
 
+    // uart rx/tx (D0/D1)
     GPIO_InitTypeDef gpio_config;
     gpio_config.Pin = GPIO_PIN_7 | GPIO_PIN_6;
     gpio_config.Mode = GPIO_MODE_AF_PP;
@@ -554,6 +557,22 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     gpio_config.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     gpio_config.Alternate = GPIO_AF8_USART6;
     HAL_GPIO_Init(GPIOC, &gpio_config);
+
+    // data and receive enable for rs485 transceiver (D2/D3)
+    // we're only receiving, so they can simply stay low
+    gpio_config.Pin = GPIO_PIN_6;
+    gpio_config.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio_config.Pull = GPIO_NOPULL;
+    gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOG, &gpio_config);
+    HAL_GPIO_WritePin(GPIOG, GPIO_PIN_6, GPIO_PIN_RESET);
+
+    gpio_config.Pin = GPIO_PIN_4;
+    gpio_config.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio_config.Pull = GPIO_NOPULL;
+    gpio_config.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOB, &gpio_config);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
 
     static UART_HandleTypeDef uart;
     uart.Instance = USART6;
