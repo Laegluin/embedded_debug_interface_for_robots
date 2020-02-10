@@ -142,7 +142,7 @@ $(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/porta
 
 # actual binary for mcu
 $(TARGET_DIR)/firmware.elf: $(objects) $(vendor_objects) $(archives) src/linker.ld | $(TARGET_DIR)
-	@$(CXX) $(LDFLAGS) --specs=nosys.specs -Tsrc/linker.ld -Wl,--gc-sections -Wl,--wrap=_malloc_r -Wl,--wrap=_free_r -o $@ $(filter %.o %.a,$^)
+	@$(CXX) $(LDFLAGS) --specs=nosys.specs -Tsrc/linker.ld -Wl,--gc-sections -Wl,--wrap=_malloc_r -Wl,--wrap=_calloc_r -Wl,--wrap=_free_r -o $@ $(filter %.o %.a,$^)
 
 $(TARGET_DIR)/firmware.bin: $(TARGET_DIR)/firmware.elf
 	@$(SIZE) $<
