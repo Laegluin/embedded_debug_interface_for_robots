@@ -231,13 +231,15 @@ void init_lcd_controller() {
     gpio_config.Alternate = GPIO_AF14_LTDC;
     HAL_GPIO_Init(GPIOK, &gpio_config);
 
-    gpio_config.Pin = LCD_DISPLAY_ENABLE_PIN;
+    // display enable
+    gpio_config.Pin = GPIO_PIN_12;
     gpio_config.Mode = GPIO_MODE_OUTPUT_PP;
-    HAL_GPIO_Init(LCD_DISPLAY_ENABLE_PORT, &gpio_config);
+    HAL_GPIO_Init(GPIOI, &gpio_config);
 
-    gpio_config.Pin = LCD_BACKLIGHT_ENABLE_PIN;
+    // backlight enable
+    gpio_config.Pin = GPIO_PIN_3;
     gpio_config.Mode = GPIO_MODE_OUTPUT_PP;
-    HAL_GPIO_Init(LCD_BACKLIGHT_ENABLE_PORT, &gpio_config);
+    HAL_GPIO_Init(GPIOK, &gpio_config);
 
     // lcd controller init
     LCD_CONTROLLER.Instance = LTDC;
@@ -270,8 +272,8 @@ void init_lcd_controller() {
     }
 
     // enable display and backlight
-    HAL_GPIO_WritePin(LCD_DISPLAY_ENABLE_PORT, LCD_DISPLAY_ENABLE_PIN, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(LCD_BACKLIGHT_ENABLE_PORT, LCD_BACKLIGHT_ENABLE_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOI, GPIO_PIN_12, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOK, GPIO_PIN_3, GPIO_PIN_SET);
 
     LTDC_LayerCfgTypeDef layer_config;
     layer_config.WindowX0 = 0;
@@ -302,7 +304,8 @@ void reset_lcd_controller() {
 
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_4);
     HAL_GPIO_DeInit(GPIOG, GPIO_PIN_12);
-    HAL_GPIO_DeInit(GPIOI, GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15);
+    HAL_GPIO_DeInit(
+        GPIOI, GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_13 | GPIO_PIN_12 | GPIO_PIN_14 | GPIO_PIN_15);
 
     HAL_GPIO_DeInit(
         GPIOJ,
@@ -312,10 +315,8 @@ void reset_lcd_controller() {
 
     HAL_GPIO_DeInit(
         GPIOK,
-        GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
-
-    HAL_GPIO_DeInit(LCD_DISPLAY_ENABLE_PORT, LCD_DISPLAY_ENABLE_PIN);
-    HAL_GPIO_DeInit(LCD_BACKLIGHT_ENABLE_PORT, LCD_BACKLIGHT_ENABLE_PIN);
+        GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6
+            | GPIO_PIN_7);
 }
 
 void init_touch_controller() {
@@ -463,13 +464,15 @@ void init_sdram() {
     }
 
     // SDRAM initialization
+    const uint32_t timeout = 0xffff;
+
     FMC_SDRAM_CommandTypeDef command;
     command.CommandMode = FMC_SDRAM_CMD_CLK_ENABLE;
     command.CommandTarget = FMC_SDRAM_CMD_TARGET_BANK1;
     command.AutoRefreshNumber = 1;
     command.ModeRegisterDefinition = 0;
 
-    result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
+    result = HAL_SDRAM_SendCommand(&handle, &command, timeout);
     if (result != HAL_OK) {
         on_error();
     }
@@ -481,7 +484,7 @@ void init_sdram() {
     command.AutoRefreshNumber = 1;
     command.ModeRegisterDefinition = 0;
 
-    result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
+    result = HAL_SDRAM_SendCommand(&handle, &command, timeout);
     if (result != HAL_OK) {
         on_error();
     }
@@ -491,7 +494,7 @@ void init_sdram() {
     command.AutoRefreshNumber = 8;
     command.ModeRegisterDefinition = 0;
 
-    result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
+    result = HAL_SDRAM_SendCommand(&handle, &command, timeout);
     if (result != HAL_OK) {
         on_error();
     }
@@ -508,7 +511,7 @@ void init_sdram() {
     command.ModeRegisterDefinition = MODEREG_BURST_LENGTH_1 | MODEREG_BURST_TYPE_SEQUENTIAL
         | MODEREG_CAS_LATENCY_3 | MODEREG_OPERATING_MODE_STANDARD | MODEREG_WRITEBURST_MODE_SINGLE;
 
-    result = HAL_SDRAM_SendCommand(&handle, &command, SDRAM_TIMEOUT);
+    result = HAL_SDRAM_SendCommand(&handle, &command, timeout);
     if (result != HAL_OK) {
         on_error();
     }
