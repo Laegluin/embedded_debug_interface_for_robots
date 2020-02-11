@@ -234,8 +234,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet* packet) {
                 return ParseResult::MismatchedChecksum;
             }
         }
-        default:
-            std::abort();
+        default: { return ParseResult::UnknownState; }
     }
 }
 
@@ -624,6 +623,9 @@ std::string to_string(const ParseResult& result) {
         }
         case ParseResult::MismatchedChecksum: {
             return "mismatched checksum";
+        }
+        case ParseResult::UnknownState: {
+            return "unknown parser state";
         }
         default: { return "unknown parse error"; }
     }

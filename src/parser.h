@@ -158,6 +158,7 @@ enum class ParseResult {
     NeedMoreData,
     BufferOverflow,
     MismatchedChecksum,
+    UnknownState,
 };
 
 std::string to_string(const ParseResult& result);
