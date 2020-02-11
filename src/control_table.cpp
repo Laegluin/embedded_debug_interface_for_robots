@@ -671,7 +671,7 @@ ControlTable& ControlTableMap::register_control_table(DeviceId device_id, uint16
             // don't know the model, so insert placeholder instead
             // also replace an existing placeholder if we at least know that the
             // model number changed
-            if (!table || table->is_unknown_model() || table->model_number() != model_number) {
+            if (!table || (table->model_number() != model_number && table->is_unknown_model())) {
                 table = std::make_unique<UnknownControlTable>(model_number);
             }
 
