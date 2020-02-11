@@ -140,7 +140,7 @@ void DeviceInfoWindow::update() {
     // copy the required values to minimize the time spent holding the lock
     std::unique_ptr<ControlTable> selected_control_table = nullptr;
     std::vector<DeviceInfo> device_infos;
-    device_infos.reserve(256);
+    device_infos.reserve(DeviceId::num_values());
 
     auto& control_table_map = this->control_table_map->lock();
 

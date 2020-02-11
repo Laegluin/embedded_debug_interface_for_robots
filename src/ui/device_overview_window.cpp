@@ -127,7 +127,7 @@ void DeviceOverviewWindow::update() {
 
     // copy only the required data as quickly as possible
     std::vector<DeviceStatus> device_statuses;
-    device_statuses.reserve(256);
+    device_statuses.reserve(DeviceId::num_values());
     size_t num_connected = 0;
     size_t num_disconnected = 0;
 

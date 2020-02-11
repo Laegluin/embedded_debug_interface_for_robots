@@ -13,10 +13,14 @@ const uint32_t MAX_PACKET_DATA_LEN = 256;
 
 class DeviceId {
   public:
-    explicit DeviceId(uint8_t id) : id(id) {}
+    constexpr explicit DeviceId(uint8_t id) : id(id) {}
 
-    static DeviceId broadcast() {
+    constexpr static DeviceId broadcast() {
         return DeviceId(254);
+    }
+
+    constexpr static size_t num_values() {
+        return std::numeric_limits<uint8_t>::max() + 1;
     }
 
     bool is_broadcast() const {

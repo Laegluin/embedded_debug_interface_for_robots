@@ -94,12 +94,7 @@ class Mutex {
 
 class Log {
   public:
-    Log() :
-        max_buf_processing_time_(0),
-        min_buf_processing_time_(0),
-        buf_processing_time_sum(0),
-        num_processed_bufs(0),
-        max_time_between_buf_processing_(0) {}
+    Log();
 
     void error(std::string message);
 

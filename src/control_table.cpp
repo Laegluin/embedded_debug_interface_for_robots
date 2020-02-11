@@ -308,7 +308,11 @@ std::vector<std::pair<const char*, std::string>> ControlTable::fmt_fields() cons
     return formatted_fields;
 }
 
-ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {}
+ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {
+    this->control_tables.reserve(DeviceId::num_values());
+    this->num_missed_packets.reserve(DeviceId::num_values());
+    this->pending_responses.reserve(DeviceId::num_values());
+}
 
 bool ControlTableMap::is_disconnected(DeviceId device_id) const {
     auto iter = this->num_missed_packets.find(device_id);

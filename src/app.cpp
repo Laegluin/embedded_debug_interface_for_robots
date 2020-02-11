@@ -20,7 +20,10 @@ struct Connection {
             Instruction::Ping,
             Error(),
             std::vector<uint8_t>(),
-        }) {}
+        }) {
+        // prevent allocations in the main loop
+        this->last_packet.data.reserve(MAX_PACKET_DATA_LEN);
+    }
 
     uint32_t last_processing_start;
     ReceiveBuf* buf;
@@ -29,6 +32,20 @@ struct Connection {
 };
 
 static void process_buffer(Mutex<Log>&, Connection&, Mutex<ControlTableMap>&);
+
+Log::Log() :
+    max_buf_processing_time_(0),
+    min_buf_processing_time_(0),
+    buf_processing_time_sum(0),
+    num_processed_bufs(0),
+    max_time_between_buf_processing_(0) {
+    // make sure no allocations are required in the main loop
+    // since std::deque has no reserve method for some reason, we
+    // have to use resize as a workaround 
+    this->messages.resize(MAX_NUM_LOG_ENTRIES);
+    this->messages.shrink_to_fit();
+    this->messages.resize(0);
+}
 
 void Log::error(std::string message) {
     auto now = HAL_GetTick();
