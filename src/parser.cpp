@@ -238,58 +238,6 @@ ParseResult Parser::parse(Cursor& cursor, Packet* packet) {
     }
 }
 
-InstructionPacket::InstructionPacket(const InstructionPacket& src) : instruction(src.instruction) {
-    switch (src.instruction) {
-        case Instruction::Ping: {
-            break;
-        }
-        case Instruction::Read: {
-            new (&this->read) ReadArgs(src.read);
-            break;
-        }
-        case Instruction::Write: {
-            new (&this->write) WriteArgs(src.write);
-            break;
-        }
-        case Instruction::RegWrite: {
-            new (&this->reg_write) WriteArgs(src.reg_write);
-            break;
-        }
-        case Instruction::Action: {
-            break;
-        }
-        case Instruction::FactoryReset: {
-            new (&this->factory_reset) FactoryResetArgs(src.factory_reset);
-            break;
-        }
-        case Instruction::Reboot: {
-            break;
-        }
-        case Instruction::Clear: {
-            break;
-        }
-        case Instruction::Status: {
-            break;
-        }
-        case Instruction::SyncRead: {
-            new (&this->sync_read) SyncReadArgs(src.sync_read);
-            break;
-        }
-        case Instruction::SyncWrite: {
-            new (&this->sync_write) SyncWriteArgs(src.sync_write);
-            break;
-        }
-        case Instruction::BulkRead: {
-            new (&this->bulk_read) BulkReadArgs(src.bulk_read);
-            break;
-        }
-        case Instruction::BulkWrite: {
-            new (&this->bulk_write) BulkWriteArgs(src.bulk_write);
-            break;
-        }
-    }
-}
-
 InstructionPacket::~InstructionPacket() {
     switch (this->instruction) {
         case Instruction::Ping: {
@@ -305,10 +253,11 @@ InstructionPacket::~InstructionPacket() {
             break;
         }
         case Instruction::RegWrite: {
-            this->reg_write.~WriteArgs();
+            this->reg_write.~RegWriteArgs();
             break;
         }
         case Instruction::Action: {
+            this->action.~ActionArgs();
             break;
         }
         case Instruction::FactoryReset: {
@@ -316,9 +265,11 @@ InstructionPacket::~InstructionPacket() {
             break;
         }
         case Instruction::Reboot: {
+            this->reboot.~RebootArgs();
             break;
         }
         case Instruction::Clear: {
+            this->clear.~ClearArgs();
             break;
         }
         case Instruction::Status: {
@@ -343,6 +294,67 @@ InstructionPacket::~InstructionPacket() {
     }
 }
 
+InstructionPacket& InstructionPacket::operator=(InstructionPacket&& rhs) noexcept {
+    this->~InstructionPacket();
+    this->instruction = rhs.instruction;
+
+    switch (rhs.instruction) {
+        case Instruction::Ping: {
+            new (&this->ping) PingArgs(std::move(rhs.ping));
+            break;
+        }
+        case Instruction::Read: {
+            new (&this->read) ReadArgs(std::move(rhs.read));
+            break;
+        }
+        case Instruction::Write: {
+            new (&this->write) WriteArgs(std::move(rhs.write));
+            break;
+        }
+        case Instruction::RegWrite: {
+            new (&this->reg_write) RegWriteArgs(std::move(rhs.reg_write));
+            break;
+        }
+        case Instruction::Action: {
+            new (&this->action) ActionArgs(std::move(rhs.action));
+            break;
+        }
+        case Instruction::FactoryReset: {
+            new (&this->factory_reset) FactoryResetArgs(std::move(rhs.factory_reset));
+            break;
+        }
+        case Instruction::Reboot: {
+            new (&this->reboot) RebootArgs(std::move(rhs.reboot));
+            break;
+        }
+        case Instruction::Clear: {
+            new (&this->clear) ClearArgs(std::move(rhs.clear));
+            break;
+        }
+        case Instruction::Status: {
+            break;
+        }
+        case Instruction::SyncRead: {
+            new (&this->sync_read) SyncReadArgs(std::move(rhs.sync_read));
+            break;
+        }
+        case Instruction::SyncWrite: {
+            new (&this->sync_write) SyncWriteArgs(std::move(rhs.sync_write));
+            break;
+        }
+        case Instruction::BulkRead: {
+            new (&this->bulk_read) BulkReadArgs(std::move(rhs.bulk_read));
+            break;
+        }
+        case Instruction::BulkWrite: {
+            new (&this->bulk_write) BulkWriteArgs(std::move(rhs.bulk_write));
+            break;
+        }
+    }
+
+    return *this;
+}
+
 InstructionParseResult
     parse_instruction_packet(const Packet& packet, InstructionPacket* instruction_packet) {
     switch (packet.instruction) {
@@ -351,9 +363,7 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::Ping;
-            new (&instruction_packet->ping.device_id) DeviceId(packet.device_id);
+            *instruction_packet = InstructionPacket(PingArgs{packet.device_id});
             break;
         }
         case Instruction::Read: {
@@ -361,11 +371,12 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::Read;
-            new (&instruction_packet->read.device_id) DeviceId(packet.device_id);
-            instruction_packet->read.start_addr = uint16_from_le(packet.data.data());
-            instruction_packet->read.len = uint16_from_le(packet.data.data() + 2);
+            *instruction_packet = InstructionPacket(ReadArgs{
+                packet.device_id,
+                uint16_from_le(packet.data.data()),
+                uint16_from_le(packet.data.data() + 2),
+            });
+
             break;
         }
         case Instruction::Write: {
@@ -373,18 +384,21 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::Write;
-            new (&instruction_packet->write.device_id) DeviceId(packet.device_id);
-            instruction_packet->write.start_addr = uint16_from_le(packet.data.data());
+            auto start_addr = uint16_from_le(packet.data.data());
 
-            auto dst_data = new (&instruction_packet->write.data) std::vector<uint8_t>;
-            dst_data->reserve(packet.data.size() - 2);
+            std::vector<uint8_t> dst_data;
+            dst_data.reserve(packet.data.size() - 2);
 
             std::copy(
                 packet.data.data() + 2,
                 packet.data.data() + packet.data.size(),
-                std::back_inserter(*dst_data));
+                std::back_inserter(dst_data));
+
+            *instruction_packet = InstructionPacket(WriteArgs{
+                packet.device_id,
+                start_addr,
+                std::move(dst_data),
+            });
 
             break;
         }
@@ -393,18 +407,21 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::RegWrite;
-            new (&instruction_packet->reg_write.device_id) DeviceId(packet.device_id);
-            instruction_packet->reg_write.start_addr = uint16_from_le(packet.data.data());
+            auto start_addr = uint16_from_le(packet.data.data());
 
-            auto dst_data = new (&instruction_packet->reg_write.data) std::vector<uint8_t>;
-            dst_data->reserve(packet.data.size() - 2);
+            std::vector<uint8_t> dst_data;
+            dst_data.reserve(packet.data.size() - 2);
 
             std::copy(
                 packet.data.data() + 2,
                 packet.data.data() + packet.data.size(),
-                std::back_inserter(*dst_data));
+                std::back_inserter(dst_data));
+
+            *instruction_packet = InstructionPacket(RegWriteArgs{
+                packet.device_id,
+                start_addr,
+                std::move(dst_data),
+            });
 
             break;
         }
@@ -413,8 +430,7 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::Action;
+            *instruction_packet = InstructionPacket(ActionArgs{});
             break;
         }
         case Instruction::FactoryReset: {
@@ -422,10 +438,11 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::FactoryReset;
-            new (&instruction_packet->factory_reset.device_id) DeviceId(packet.device_id);
-            instruction_packet->factory_reset.reset = FactoryReset(packet.data[0]);
+            *instruction_packet = InstructionPacket(FactoryResetArgs{
+                packet.device_id,
+                FactoryReset(packet.data[0]),
+            });
+
             break;
         }
         case Instruction::Reboot: {
@@ -433,8 +450,7 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::Reboot;
+            *instruction_packet = InstructionPacket(RebootArgs{});
             break;
         }
         case Instruction::Clear: {
@@ -442,8 +458,7 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::Clear;
+            *instruction_packet = InstructionPacket(ClearArgs{});
             break;
         }
         case Instruction::SyncRead: {
@@ -455,13 +470,11 @@ InstructionParseResult
                 return InstructionParseResult::InvalidDeviceId;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::SyncRead;
-            instruction_packet->sync_read.start_addr = uint16_from_le(packet.data.data());
-            instruction_packet->sync_read.len = uint16_from_le(packet.data.data() + 2);
+            auto start_addr = uint16_from_le(packet.data.data());
+            auto len = uint16_from_le(packet.data.data() + 2);
 
-            auto devices = new (&instruction_packet->sync_read.devices) std::vector<DeviceId>;
-            devices->reserve(packet.data.size() - 4);
+            std::vector<DeviceId> devices;
+            devices.reserve(packet.data.size() - 4);
 
             for (size_t i = 4; i < packet.data.size(); i++) {
                 DeviceId device_id(packet.data[i]);
@@ -470,8 +483,14 @@ InstructionParseResult
                     return InstructionParseResult::InvalidDeviceId;
                 }
 
-                devices->push_back(device_id);
+                devices.push_back(device_id);
             }
+
+            *instruction_packet = InstructionPacket(SyncReadArgs{
+                std::move(devices),
+                start_addr,
+                len,
+            });
 
             break;
         }
@@ -492,16 +511,12 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::SyncWrite;
-            auto devices = new (&instruction_packet->sync_write.devices) std::vector<DeviceId>;
-            instruction_packet->sync_write.start_addr = start_addr;
-            instruction_packet->sync_write.len = len;
-            auto dst_data = new (&instruction_packet->sync_write.data) std::vector<uint8_t>;
+            std::vector<DeviceId> devices;
+            std::vector<uint8_t> dst_data;
 
             auto num_devices = (packet.data.size() - 4) / (len + 1);
-            devices->reserve(num_devices);
-            dst_data->reserve(num_devices * len);
+            devices.reserve(num_devices);
+            dst_data.reserve(num_devices * len);
 
             for (size_t i = 4; i < packet.data.size(); i += len + 1) {
                 DeviceId device_id(packet.data[i]);
@@ -510,13 +525,20 @@ InstructionParseResult
                     return InstructionParseResult::InvalidDeviceId;
                 }
 
-                devices->push_back(device_id);
+                devices.push_back(device_id);
 
                 std::copy(
                     packet.data.data() + i + 1,
                     packet.data.data() + i + len + 1,
-                    std::back_inserter(*dst_data));
+                    std::back_inserter(dst_data));
             }
+
+            *instruction_packet = InstructionPacket(SyncWriteArgs{
+                std::move(devices),
+                start_addr,
+                len,
+                std::move(dst_data),
+            });
 
             break;
         }
@@ -529,11 +551,8 @@ InstructionParseResult
                 return InstructionParseResult::InvalidDeviceId;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::BulkRead;
-            auto reads = new (&instruction_packet->bulk_read.reads) std::vector<ReadArgs>;
-
-            reads->reserve(packet.data.size() / 5);
+            std::vector<ReadArgs> reads;
+            reads.reserve(packet.data.size() / 5);
 
             for (size_t i = 0; i < packet.data.size(); i += 5) {
                 DeviceId device_id(packet.data[i]);
@@ -545,13 +564,14 @@ InstructionParseResult
                 auto start_addr = uint16_from_le(packet.data.data() + i + 1);
                 auto len = uint16_from_le(packet.data.data() + i + 3);
 
-                reads->push_back(ReadArgs{
+                reads.push_back(ReadArgs{
                     device_id,
                     start_addr,
                     len,
                 });
             }
 
+            *instruction_packet = InstructionPacket(BulkReadArgs{std::move(reads)});
             break;
         }
         case Instruction::BulkWrite: {
@@ -559,9 +579,9 @@ InstructionParseResult
                 return InstructionParseResult::InvalidDeviceId;
             }
 
-            instruction_packet->~InstructionPacket();
-            instruction_packet->instruction = Instruction::BulkWrite;
-            auto writes = new (&instruction_packet->bulk_write.writes) std::vector<WriteArgs>;
+            // reservation is an upper bound since every write has 5 bytes of overhead
+            std::vector<WriteArgs> writes;
+            writes.reserve(packet.data.size() / 5);
 
             size_t i = 0;
             while (i + 5 <= packet.data.size()) {
@@ -586,7 +606,7 @@ InstructionParseResult
                     packet.data.data() + i + 5 + len,
                     std::back_inserter(data));
 
-                writes->push_back(WriteArgs{
+                writes.push_back(WriteArgs{
                     device_id,
                     start_addr,
                     data,
@@ -599,6 +619,7 @@ InstructionParseResult
                 return InstructionParseResult::InvalidPacketLen;
             }
 
+            *instruction_packet = InstructionPacket(BulkWriteArgs{std::move(writes)});
             break;
         }
         case Instruction::Status: {

@@ -61,7 +61,7 @@ struct ReceiveBuf {
 template <typename T>
 class Mutex {
   public:
-    Mutex() : obj(T()) {
+    Mutex() {
         this->mutex = xSemaphoreCreateMutex();
 
         if (!this->mutex) {

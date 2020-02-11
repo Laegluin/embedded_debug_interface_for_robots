@@ -207,6 +207,14 @@ struct WriteArgs {
     std::vector<uint8_t> data;
 };
 
+struct RegWriteArgs {
+    DeviceId device_id;
+    uint16_t start_addr;
+    std::vector<uint8_t> data;
+};
+
+struct ActionArgs {};
+
 enum class FactoryReset : uint8_t {
     ResetAll = 0xff,
     ResetAllExceptId = 0x01,
@@ -217,6 +225,10 @@ struct FactoryResetArgs {
     DeviceId device_id;
     FactoryReset reset;
 };
+
+struct RebootArgs {};
+
+struct ClearArgs {};
 
 struct SyncReadArgs {
     std::vector<DeviceId> devices;
@@ -240,19 +252,70 @@ struct BulkWriteArgs {
 };
 
 struct InstructionPacket {
-    InstructionPacket() : instruction(Instruction::Ping), ping(PingArgs{DeviceId(0)}) {}
+    InstructionPacket() noexcept : InstructionPacket(ClearArgs{}) {}
 
-    InstructionPacket(const InstructionPacket& src);
+    explicit InstructionPacket(PingArgs&& args) noexcept :
+        instruction(Instruction::Ping),
+        ping(std::move(args)) {}
+
+    explicit InstructionPacket(ReadArgs&& args) noexcept :
+        instruction(Instruction::Read),
+        read(std::move(args)) {}
+
+    explicit InstructionPacket(WriteArgs&& args) noexcept :
+        instruction(Instruction::Write),
+        write(std::move(args)) {}
+
+    explicit InstructionPacket(RegWriteArgs&& args) noexcept :
+        instruction(Instruction::RegWrite),
+        reg_write(std::move(args)) {}
+
+    explicit InstructionPacket(ActionArgs&& args) noexcept :
+        instruction(Instruction::Action),
+        action(std::move(args)) {}
+
+    explicit InstructionPacket(FactoryResetArgs&& args) noexcept :
+        instruction(Instruction::FactoryReset),
+        factory_reset(std::move(args)) {}
+
+    explicit InstructionPacket(RebootArgs&& args) noexcept :
+        instruction(Instruction::Reboot),
+        reboot(std::move(args)) {}
+
+    explicit InstructionPacket(ClearArgs&& args) noexcept :
+        instruction(Instruction::Clear),
+        clear(std::move(args)) {}
+
+    explicit InstructionPacket(SyncReadArgs&& args) noexcept :
+        instruction(Instruction::SyncRead),
+        sync_read(std::move(args)) {}
+
+    explicit InstructionPacket(SyncWriteArgs&& args) noexcept :
+        instruction(Instruction::SyncWrite),
+        sync_write(std::move(args)) {}
+
+    explicit InstructionPacket(BulkReadArgs&& args) noexcept :
+        instruction(Instruction::BulkRead),
+        bulk_read(std::move(args)) {}
+
+    explicit InstructionPacket(BulkWriteArgs&& args) noexcept :
+        instruction(Instruction::BulkWrite),
+        bulk_write(std::move(args)) {}
 
     ~InstructionPacket();
+
+    InstructionPacket& operator=(InstructionPacket&& rhs) noexcept;
 
     Instruction instruction;
     union {
         PingArgs ping;
         ReadArgs read;
         WriteArgs write;
-        WriteArgs reg_write;
+        RegWriteArgs reg_write;
+        ActionArgs action;
         FactoryResetArgs factory_reset;
+        RebootArgs reboot;
+        ClearArgs clear;
         SyncReadArgs sync_read;
         SyncWriteArgs sync_write;
         BulkReadArgs bulk_read;
