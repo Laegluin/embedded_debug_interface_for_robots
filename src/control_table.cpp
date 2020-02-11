@@ -356,11 +356,8 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
         }
         case Instruction::Read: {
             if (!this->last_instruction_packet.read.device_id.is_broadcast()) {
-                this->pending_responses =
-                    std::vector<DeviceId>{this->last_instruction_packet.read.device_id};
+                this->pending_responses.push_back(this->last_instruction_packet.read.device_id);
             } else {
-                this->pending_responses.reserve(this->control_tables.size());
-
                 for (auto& pair : this->control_tables) {
                     auto device_id = pair.first;
                     this->pending_responses.push_back(device_id);
@@ -450,8 +447,6 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
             break;
         }
         case Instruction::BulkRead: {
-            this->pending_responses.reserve(this->last_instruction_packet.bulk_read.reads.size());
-
             for (auto& read_arg : this->last_instruction_packet.bulk_read.reads) {
                 this->pending_responses.push_back(read_arg.device_id);
             }
@@ -499,7 +494,10 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
     // make sure that the correct amount of status packets are counted.
     for (size_t i = 0; i < this->pending_responses.size(); i++) {
         if (this->pending_responses[i] == status_packet.device_id) {
-            this->pending_responses.erase(this->pending_responses.begin() + i);
+            // use swap to avoid copying elements (we don't care about the order since this
+            // is just a really small set)
+            std::iter_swap(this->pending_responses.begin() + i, this->pending_responses.end() - 1);
+            this->pending_responses.pop_back();
             break;
         }
     }
