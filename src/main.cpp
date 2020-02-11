@@ -666,7 +666,7 @@ void poll_touch_state() {
     last_state = current_state;
 }
 
-__attribute__((noinline)) void on_error() {
+__attribute__((noreturn)) __attribute__((noinline)) void on_error() {
     GUI_Exit();
     reset_lcd_controller();
 

@@ -24,6 +24,6 @@ extern TIM_HandleTypeDef TIMER3;
 
 void poll_touch_state();
 
-void on_error();
+__attribute__((noreturn)) void on_error();
 
 #endif
