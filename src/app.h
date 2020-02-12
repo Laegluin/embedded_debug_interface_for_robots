@@ -2,6 +2,7 @@
 #define APP_H
 
 #include "cursor.h"
+#include "main.h"
 
 #include <deque>
 #include <memory>
@@ -65,7 +66,7 @@ class Mutex {
         this->mutex = xSemaphoreCreateMutex();
 
         if (!this->mutex) {
-            throw "cannot create mutex";
+            on_error();
         }
     }
 

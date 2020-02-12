@@ -121,12 +121,7 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
         [](void* args) {
             auto log = (Mutex<Log>*) ((void**) args)[0];
             auto control_table_map = (Mutex<ControlTableMap>*) ((void**) args)[1];
-
-            try {
-                run_ui(*log, *control_table_map);
-            } catch (...) {
-                on_error();
-            }
+            run_ui(*log, *control_table_map);
         },
         "ui",
         TASK_STACK_SIZE,

@@ -49,12 +49,8 @@ int main() {
 
     xTaskCreate(
         [](void* arg) {
-            try {
-                auto bufs = (std::vector<ReceiveBuf*>*) arg;
-                run(*bufs);
-            } catch (...) {
-                on_error();
-            }
+            auto bufs = (std::vector<ReceiveBuf*>*) arg;
+            run(*bufs);
         },
         "main",
         TASK_STACK_SIZE,

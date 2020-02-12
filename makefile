@@ -24,7 +24,7 @@ INCLUDE_FLAGS := \
 OPT_FLAGS := -O0
 ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard
 CFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) $(OPT_FLAGS) -std=c99 -g -Wall -Wextra
-CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) $(OPT_FLAGS) -std=c++14 -g -Wall -Wextra
+CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) $(OPT_FLAGS) -std=c++14 -fno-exceptions -g -Wall -Wextra
 LDFLAGS := $(ARCH_FLAGS)
 TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra
 TEST_LDFLAGS :=
