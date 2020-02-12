@@ -31,6 +31,10 @@ class DeviceId {
         return std::to_string(this->id);
     }
 
+    uint8_t to_byte() const {
+        return this->id;
+    }
+
     friend bool operator==(const DeviceId&, const DeviceId&);
 
     friend bool operator>(const DeviceId& lhs, const DeviceId& rhs);

@@ -133,7 +133,7 @@ void DeviceOverviewWindow::update() {
 
     auto& control_table_map = this->control_table_map->lock();
 
-    for (auto& id_and_table : control_table_map) {
+    for (auto id_and_table : control_table_map) {
         auto device_id = id_and_table.first;
         auto& control_table = id_and_table.second;
         bool is_disconnected = control_table_map.is_disconnected(device_id);

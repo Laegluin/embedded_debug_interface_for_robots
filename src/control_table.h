@@ -1,6 +1,7 @@
 #ifndef CONTROL_TABLE_H
 #define CONTROL_TABLE_H
 
+#include "device_id_map.h"
 #include "endian_convert.h"
 #include "parser.h"
 #include <limits>
@@ -9,7 +10,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <string>
-#include <unordered_map>
 
 class Segment {
   public:
@@ -296,10 +296,9 @@ class ControlTableMap {
 
     bool is_disconnected(DeviceId device_id) const;
 
-    /// Gets the `ControlTable` for `device_id`. Throws a `std::out_of_range` exception
-    /// if the element device does not exist.
-    const ControlTable& get(DeviceId device_id) const {
-        return *this->control_tables.at(device_id);
+    /// Gets the `ControlTable` entry for `device_id`.
+    const DeviceIdMap<std::unique_ptr<ControlTable>>::Entry& get(DeviceId device_id) const {
+        return this->control_tables.get(device_id);
     }
 
     ProtocolResult receive(const Packet& packet);
@@ -308,13 +307,11 @@ class ControlTableMap {
         return this->control_tables.size();
     }
 
-    std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>::const_iterator begin() const
-        noexcept {
+    DeviceIdMap<std::unique_ptr<ControlTable>>::const_iterator begin() const noexcept {
         return this->control_tables.begin();
     }
 
-    std::unordered_map<DeviceId, std::unique_ptr<ControlTable>>::const_iterator end() const
-        noexcept {
+    DeviceIdMap<std::unique_ptr<ControlTable>>::const_iterator end() const noexcept {
         return this->control_tables.end();
     }
 
@@ -328,8 +325,8 @@ class ControlTableMap {
     /// Gets the `ControlTable` for `device_id` or inserts an unknown table if it does not exist.
     ControlTable& get_or_insert(DeviceId device_id);
 
-    std::unordered_map<DeviceId, std::unique_ptr<ControlTable>> control_tables;
-    std::unordered_map<DeviceId, uint32_t> num_missed_packets;
+    DeviceIdMap<std::unique_ptr<ControlTable>> control_tables;
+    DeviceIdMap<uint32_t> num_missed_packets;
     InstructionPacket last_instruction_packet;
     bool is_last_instruction_packet_known;
     std::vector<DeviceId> pending_responses;

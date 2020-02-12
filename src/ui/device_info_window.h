@@ -8,6 +8,7 @@
 #include <GUI.h>
 #include <LISTBOX.h>
 #include <LISTVIEW.h>
+#include <unordered_map>
 
 class DeviceInfoWindow {
   public:

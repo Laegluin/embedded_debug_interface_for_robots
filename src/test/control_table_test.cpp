@@ -92,8 +92,14 @@ TEST_CASE("flow control for incoming packets", "[ControlTableMap]") {
     result = control_table_map.receive(dev_5_ping_resp);
     REQUIRE(result == ProtocolResult::Ok);
 
-    auto& dev_4 = control_table_map.get(DeviceId(4));
-    auto& dev_5 = control_table_map.get(DeviceId(5));
+    auto& dev_4_entry = control_table_map.get(DeviceId(4));
+    auto& dev_5_entry = control_table_map.get(DeviceId(5));
+    REQUIRE(dev_4_entry.is_present());
+    REQUIRE(dev_5_entry.is_present());
+    auto& dev_4 = *dev_4_entry.value();
+    auto& dev_5 = *dev_5_entry.value();
+    REQUIRE(!dev_4.is_unknown_model());
+    REQUIRE(!dev_5.is_unknown_model());
     REQUIRE(dev_4.model_number() == Mx64ControlTable::MODEL_NUMBER);
     REQUIRE(dev_5.model_number() == Mx106ControlTable::MODEL_NUMBER);
 

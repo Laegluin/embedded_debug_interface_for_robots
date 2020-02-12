@@ -308,19 +308,15 @@ std::vector<std::pair<const char*, std::string>> ControlTable::fmt_fields() cons
     return formatted_fields;
 }
 
-ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {
-    this->control_tables.reserve(DeviceId::num_values());
-    this->num_missed_packets.reserve(DeviceId::num_values());
-    this->pending_responses.reserve(DeviceId::num_values());
-}
+ControlTableMap::ControlTableMap() : is_last_instruction_packet_known(false) {}
 
 bool ControlTableMap::is_disconnected(DeviceId device_id) const {
-    auto iter = this->num_missed_packets.find(device_id);
-    if (iter == this->num_missed_packets.end()) {
+    auto& entry = this->num_missed_packets.get(device_id);
+    if (!entry.is_present()) {
         return false;
     }
 
-    return iter->second > MAX_ALLOWED_MISSED_PACKETS;
+    return entry.value() > MAX_ALLOWED_MISSED_PACKETS;
 }
 
 ProtocolResult ControlTableMap::receive(const Packet& packet) {
@@ -342,7 +338,7 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
 
     // check if there are any devices that did not respond to the last instruction
     for (auto device_id : this->pending_responses) {
-        this->num_missed_packets[device_id]++;
+        this->num_missed_packets.get(device_id).or_insert(0)++;
     }
 
     this->pending_responses.clear();
@@ -358,7 +354,7 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
             if (!this->last_instruction_packet.read.device_id.is_broadcast()) {
                 this->pending_responses.push_back(this->last_instruction_packet.read.device_id);
             } else {
-                for (auto& pair : this->control_tables) {
+                for (auto pair : this->control_tables) {
                     auto device_id = pair.first;
                     this->pending_responses.push_back(device_id);
                 }
@@ -383,7 +379,7 @@ ProtocolResult ControlTableMap::receive_instruction_packet(const Packet& instruc
                 }
             } else {
                 // since this is a broadcast, we write to all devices we know of
-                for (auto& pair : this->control_tables) {
+                for (auto pair : this->control_tables) {
                     auto device_id = pair.first;
                     auto& control_table = this->get_or_insert(device_id);
 
@@ -505,7 +501,7 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
     // All reset this counter for missed packets, since we just got one. Like above,
     // an error in the packet does not matter. We only want to know if the device is
     // actually connected to the bus, not if everything's working correctly.
-    this->num_missed_packets[status_packet.device_id] = 0;
+    this->num_missed_packets.get(status_packet.device_id).or_insert(0) = 0;
 
     if (!status_packet.error.is_ok()) {
         return ProtocolResult::StatusHasError;
@@ -648,49 +644,33 @@ ProtocolResult ControlTableMap::receive_status_packet(const Packet& status_packe
 }
 
 ControlTable& ControlTableMap::register_control_table(DeviceId device_id, uint16_t model_number) {
-    auto pair = this->control_tables.emplace(device_id, nullptr);
-    auto& table = pair.first->second;
+    auto& entry = this->control_tables.get(device_id);
 
-    // for a `ControlTable` implementation simply add another case
-    switch (model_number) {
-        case Mx64ControlTable::MODEL_NUMBER: {
-            if (!table || table->model_number() != Mx64ControlTable::MODEL_NUMBER) {
-                table = std::make_unique<Mx64ControlTable>();
+    if (!entry.is_present() || entry.value()->is_unknown_model()
+        || entry.value()->model_number() != model_number) {
+        // for a new `ControlTable` implementation simply add another case
+        switch (model_number) {
+            case Mx64ControlTable::MODEL_NUMBER: {
+                entry.set_value(std::make_unique<Mx64ControlTable>());
+                break;
             }
-
-            break;
-        }
-        case Mx106ControlTable::MODEL_NUMBER: {
-            if (!table || table->model_number() != Mx106ControlTable::MODEL_NUMBER) {
-                table = std::make_unique<Mx106ControlTable>();
+            case Mx106ControlTable::MODEL_NUMBER: {
+                entry.set_value(std::make_unique<Mx106ControlTable>());
+                break;
             }
-
-            break;
-        }
-        default: {
-            // don't know the model, so insert placeholder instead
-            // also replace an existing placeholder if we at least know that the
-            // model number changed
-            if (!table || (table->model_number() != model_number && table->is_unknown_model())) {
-                table = std::make_unique<UnknownControlTable>(model_number);
+            default: {
+                entry.set_value(std::make_unique<UnknownControlTable>(model_number));
+                break;
             }
-
-            break;
         }
     }
 
-    return *table;
+    return *entry.value();
 }
 
 ControlTable& ControlTableMap::get_or_insert(DeviceId device_id) {
-    auto iter = this->control_tables.find(device_id);
-
-    if (iter != this->control_tables.end()) {
-        return *iter->second;
-    } else {
-        return *this->control_tables.emplace(device_id, std::make_unique<UnknownControlTable>())
-                    .first->second;
-    }
+    return *this->control_tables.get(device_id).or_insert_with(
+        []() { return std::make_unique<UnknownControlTable>(); });
 }
 
 std::string to_string(const ProtocolResult& result) {
