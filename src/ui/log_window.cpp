@@ -130,7 +130,7 @@ void LogWindow::on_refresh_button_click() {
     fmt << "Max. time btw. buffers\n"
         << log_copy.max_time_between_buf_processing() << " ms\n"
         << "Avg. time btw. buffers\n"
-        << log_copy.avg_time_between_buf_processing() << "ms \n"
+        << log_copy.avg_time_between_buf_processing() << " ms \n"
         << "Max. time per buffer\n"
         << log_copy.max_buf_processing_time() << " ms\n"
         << "Avg. time per buffer\n"
