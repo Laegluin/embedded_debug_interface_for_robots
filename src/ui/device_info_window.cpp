@@ -180,9 +180,14 @@ void DeviceInfoWindow::update() {
 }
 
 int DeviceInfoWindow::update_device_list(DeviceId device_id, const char* device_name) {
+    std::stringstream fmt;
+    fmt << device_name << " (" << device_id << ")";
+    auto device_label = fmt.str();
+
     auto iter = this->device_to_idx.find(device_id);
     if (iter != this->device_to_idx.end()) {
         auto item_idx = iter->second;
+        LISTBOX_SetString(this->device_list, device_label.c_str(), item_idx);
         return item_idx;
     }
 
@@ -212,10 +217,7 @@ int DeviceInfoWindow::update_device_list(DeviceId device_id, const char* device_
         }
     }
 
-    std::stringstream stream;
-    stream << device_name << " (" << device_id << ")";
-
-    LISTBOX_InsertString(this->device_list, stream.str().c_str(), insert_idx);
+    LISTBOX_InsertString(this->device_list, device_label.c_str(), insert_idx);
     this->device_to_idx.emplace(device_id, insert_idx);
 
     return insert_idx;
