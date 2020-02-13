@@ -35,10 +35,11 @@ static void process_buffer(Mutex<Log>&, Connection&, Mutex<ControlTableMap>&);
 
 Log::Log() :
     max_buf_processing_time_(0),
-    min_buf_processing_time_(std::numeric_limits<uint32_t>::max()),
     buf_processing_time_sum(0),
     num_processed_bufs(0),
-    max_time_between_buf_processing_(0) {
+    max_time_between_buf_processing_(0),
+    time_between_buf_processing_sum(0),
+    num_times_between_buf_processing(0) {
     // make sure no allocations are required in the main loop
     // since std::deque has no reserve method for some reason, we
     // have to use resize as a workaround
@@ -66,13 +67,14 @@ void Log::error(std::string message) {
 
 void Log::buf_processing_time(uint32_t time) {
     this->max_buf_processing_time_ = std::max(time, this->max_buf_processing_time_);
-    this->min_buf_processing_time_ = std::min(time, this->min_buf_processing_time_);
     this->buf_processing_time_sum += time;
     this->num_processed_bufs++;
 }
 
 void Log::time_between_buf_processing(uint32_t time) {
     this->max_time_between_buf_processing_ = std::max(time, this->max_time_between_buf_processing_);
+    this->time_between_buf_processing_sum += time;
+    this->num_times_between_buf_processing++;
 }
 
 size_t Log::size() const {
@@ -95,12 +97,13 @@ float Log::avg_buf_processing_time() const {
     return (float) this->buf_processing_time_sum / (float) this->num_processed_bufs;
 }
 
-uint32_t Log::min_buf_processing_time() const {
-    return this->min_buf_processing_time_;
-}
-
 uint32_t Log::max_time_between_buf_processing() const {
     return this->max_time_between_buf_processing_;
+}
+
+float Log::avg_time_between_buf_processing() const {
+    return (float) this->time_between_buf_processing_sum
+        / (float) this->num_times_between_buf_processing;
 }
 
 void Log::push_message(std::string&& message) {

@@ -113,19 +113,20 @@ class Log {
 
     float avg_buf_processing_time() const;
 
-    uint32_t min_buf_processing_time() const;
-
     uint32_t max_time_between_buf_processing() const;
+
+    float avg_time_between_buf_processing() const;
 
   private:
     void push_message(std::string&& message);
 
     std::deque<std::shared_ptr<std::string>> messages;
     uint32_t max_buf_processing_time_;
-    uint32_t min_buf_processing_time_;
     uint32_t buf_processing_time_sum;
     uint32_t num_processed_bufs;
     uint32_t max_time_between_buf_processing_;
+    uint32_t time_between_buf_processing_sum;
+    uint32_t num_times_between_buf_processing;
 };
 
 void run(const std::vector<ReceiveBuf*>& bufs);
