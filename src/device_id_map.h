@@ -8,8 +8,6 @@
 template <typename V>
 class DeviceIdMapIter;
 
-// TODO: tests
-
 /// A map optimized for mapping `DeviceId`s to values. All possible entries are stored in a
 /// single vector. This makes iteration for sparse maps slow and access guaranteed O(1).
 template <typename V>
@@ -185,7 +183,9 @@ class DeviceIdMapIter {
         entries(entries),
         idx(idx) {
         // make sure we start with a valid index (or go all the way to the end if empty)
-        ++(*this);
+        if (!(*this->entries)[this->idx].is_present()) {
+            ++(*this);
+        }
     }
 
     const std::vector<typename DeviceIdMap<V>::Entry>* entries;
