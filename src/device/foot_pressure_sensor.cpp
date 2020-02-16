@@ -8,13 +8,13 @@ const std::vector<ControlTableField> FootPressureSensorControlTable::FIELDS{
         0,
         "Model Number",
         FootPressureSensorControlTable::MODEL_NUMBER,
-        to_string),
-    ControlTableField::new_uint8(2, "Firmware Version", 0, to_string),
+        fmt_number),
+    ControlTableField::new_uint8(2, "Firmware Version", 0, fmt_number),
 
-    ControlTableField::new_uint32(36, "Front Left", 0, to_string),
-    ControlTableField::new_uint32(40, "Front Right", 0, to_string),
-    ControlTableField::new_uint32(44, "Back Left", 0, to_string),
-    ControlTableField::new_uint32(48, "Back Right", 0, to_string),
+    ControlTableField::new_uint32(36, "Front Left", 0, fmt_number),
+    ControlTableField::new_uint32(40, "Front Right", 0, fmt_number),
+    ControlTableField::new_uint32(44, "Back Left", 0, fmt_number),
+    ControlTableField::new_uint32(48, "Back Right", 0, fmt_number),
 
 };
 
