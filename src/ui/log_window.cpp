@@ -18,7 +18,7 @@ LogWindow::LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overv
     auto title = TEXT_CreateEx(
         90,
         0,
-        300,
+        50,
         TITLE_BAR_HEIGHT,
         this->handle,
         WM_CF_SHOW,
@@ -27,6 +27,17 @@ LogWindow::LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overv
         "Log");
 
     TEXT_SetFont(title, GUI_FONT_24B_1);
+
+    this->last_update_label = TEXT_CreateEx(
+        140,
+        0,
+        200,
+        TITLE_BAR_HEIGHT,
+        this->handle,
+        WM_CF_SHOW,
+        TEXT_CF_LEFT | TEXT_CF_VCENTER,
+        NO_ID,
+        "last refresh: <none>");
 
     this->refresh_button = BUTTON_CreateEx(
         DISPLAY_WIDTH - (BUTTON_WIDTH + MARGIN),
@@ -122,11 +133,17 @@ void LogWindow::on_back_button_click() {
 }
 
 void LogWindow::on_refresh_button_click() {
+    auto now = HAL_GetTick();
+
     // make a copy to avoid holding the lock for a long time
     Log log_copy(this->log->lock());
     this->log->unlock();
 
     std::stringstream fmt;
+    fmt << "last refresh: " << Log::fmt_tick(now);
+    TEXT_SetText(this->last_update_label, fmt.str().c_str());
+
+    fmt.str("");
     fmt << "Max. time btw. buffers\n"
         << log_copy.max_time_between_buf_processing() << " ms\n"
         << "Avg. time btw. buffers\n"

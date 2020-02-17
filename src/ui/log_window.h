@@ -32,6 +32,7 @@ class LogWindow {
 
     const Mutex<Log>* log;
     WM_HWIN handle;
+    TEXT_Handle last_update_label;
     TEXT_Handle stats_label;
     LISTVIEW_Handle log_list;
     BUTTON_Handle back_button;

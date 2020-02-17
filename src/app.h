@@ -97,6 +97,8 @@ class Log {
   public:
     Log();
 
+    static std::string fmt_tick(uint32_t tick);
+
     void error(std::string message);
 
     void buf_processing_time(uint32_t time);

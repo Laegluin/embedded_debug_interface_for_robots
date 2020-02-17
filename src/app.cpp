@@ -48,19 +48,26 @@ Log::Log() :
     this->messages.resize(0);
 }
 
-void Log::error(std::string message) {
-    auto now = HAL_GetTick();
-
-    auto minutes = now / (60 * 1000);
-    auto remaining_millis = now % (60 * 1000);
+std::string Log::fmt_tick(uint32_t tick) {
+    auto minutes = tick / (60 * 1000);
+    auto remaining_millis = tick % (60 * 1000);
     auto seconds = remaining_millis / 1000;
     remaining_millis = remaining_millis % 1000;
     auto millis = remaining_millis;
 
     std::stringstream fmt;
-    fmt << "[+" << std::setfill('0') << std::setw(2) << minutes << ":" << std::setfill('0')
+    fmt << "+" << std::setfill('0') << std::setw(2) << minutes << ":" << std::setfill('0')
         << std::setw(2) << seconds << "." << std::setfill('0') << std::setw(3) << std::left
-        << millis << "] error: " << message;
+        << millis;
+    return fmt.str();
+}
+
+void Log::error(std::string message) {
+    auto now = HAL_GetTick();
+
+    std::stringstream fmt;
+    auto now_str = Log::fmt_tick(now);
+    fmt << "[" << now_str << "] error: " << message;
 
     this->push_message(fmt.str());
 }
