@@ -1,4 +1,7 @@
 #include "control_table.h"
+#include "device/core_board.h"
+#include "device/foot_pressure_sensor.h"
+#include "device/imu.h"
 #include "device/mx106.h"
 #include "device/mx64.h"
 #include <algorithm>
@@ -656,6 +659,18 @@ ControlTable& ControlTableMap::register_control_table(DeviceId device_id, uint16
             }
             case Mx106ControlTable::MODEL_NUMBER: {
                 entry.set_value(std::make_unique<Mx106ControlTable>());
+                break;
+            }
+            case ImuControlTable::MODEL_NUMBER: {
+                entry.set_value(std::make_unique<ImuControlTable>());
+                break;
+            }
+            case FootPressureSensorControlTable::MODEL_NUMBER: {
+                entry.set_value(std::make_unique<FootPressureSensorControlTable>());
+                break;
+            }
+            case CoreBoardControlTable::MODEL_NUMBER: {
+                entry.set_value(std::make_unique<CoreBoardControlTable>());
                 break;
             }
             default: {
