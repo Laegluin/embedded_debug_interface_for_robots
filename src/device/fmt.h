@@ -20,7 +20,8 @@ inline std::string fmt_number(uint32_t value) {
 
 inline std::string fmt_addr(uint16_t addr) {
     std::stringstream fmt;
-    fmt << "0x" << std::hex << std::setw(4) << std::setfill('0') << addr << " (" << addr << ")";
+    fmt << "0x" << std::hex << std::setw(4) << std::setfill('0') << addr << " (" << std::dec << addr
+        << ")";
     return fmt.str();
 }
 
@@ -74,7 +75,7 @@ inline std::string fmt_core_power_on(uint16_t power_on) {
 
 inline std::string fmt_imu_accel(uint16_t accel) {
     std::stringstream fmt;
-    fmt << accel << " m/s²";
+    fmt << accel << " m/s^2";
     return fmt.str();
 }
 
@@ -121,7 +122,7 @@ inline std::string fmt_mx_baud_rate(uint8_t baud_rate) {
 inline std::string fmt_mx_return_delay(uint8_t raw) {
     std::stringstream fmt;
     uint32_t return_delay = uint32_t(raw) * 2;
-    fmt << return_delay << " μs";
+    fmt << return_delay << " us";
     return fmt.str();
 }
 
@@ -164,7 +165,7 @@ inline std::string fmt_mx_operating_mode(uint8_t mode) {
 inline std::string fmt_mx_homing_offset(uint32_t offset) {
     std::stringstream fmt;
     float offset_deg = int32_t(offset) * 0.088f;
-    fmt << offset_deg << "°";
+    fmt << offset_deg << " deg";
     return fmt.str();
 }
 
@@ -177,7 +178,7 @@ inline std::string fmt_mx_moving_threshold(uint32_t threshold) {
 
 inline std::string fmt_mx_temp_limit(uint8_t limit) {
     std::stringstream fmt;
-    fmt << limit << "°C";
+    fmt << std::to_string(limit) << " deg C";
     return fmt.str();
 }
 
@@ -205,7 +206,7 @@ inline std::string fmt_mx_current_limit(uint16_t limit) {
 inline std::string fmt_mx_accel_limit(uint32_t limit) {
     std::stringstream fmt;
     float limit_rev = limit * 214.577f;
-    fmt << limit_rev << " rev/min²";
+    fmt << limit_rev << " rev/min^2";
     return fmt.str();
 }
 
@@ -219,7 +220,7 @@ inline std::string fmt_mx_velocity_limit(uint32_t limit) {
 inline std::string fmt_mx_position_limit(uint32_t limit) {
     std::stringstream fmt;
     float limit_deg = limit * 0.088f;
-    fmt << limit_deg << "°";
+    fmt << limit_deg << " deg";
     return fmt.str();
 }
 
@@ -330,7 +331,7 @@ inline std::string fmt_mx_profile_velocity(uint32_t velocity) {
 inline std::string fmt_mx_goal_position(uint32_t goal) {
     std::stringstream fmt;
     float goal_deg = goal * 0.088f;
-    fmt << goal_deg << "°";
+    fmt << goal_deg << " deg";
     return fmt.str();
 }
 
@@ -370,7 +371,7 @@ inline std::string fmt_mx_present_velocity(uint32_t present) {
 inline std::string fmt_mx_present_position(uint32_t present) {
     std::stringstream fmt;
     float present_deg = present * 0.088f;
-    fmt << present_deg << "°";
+    fmt << present_deg << " deg";
     return fmt.str();
 }
 
@@ -383,7 +384,7 @@ inline std::string fmt_mx_present_voltage(uint16_t present) {
 
 inline std::string fmt_mx_present_temp(uint8_t present) {
     std::stringstream fmt;
-    fmt << present << "°C";
+    fmt << std::to_string(present) << " deg C";
     return fmt.str();
 }
 
