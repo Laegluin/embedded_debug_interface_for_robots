@@ -30,7 +30,9 @@ const uint32_t LIST_ITEM_ALT_COLOR = 0xfff2f2f2;
 
 const uint32_t DEVICE_STATUS_TEXT_COLOR = 0xffffffff;
 const uint32_t DEVICE_CONNECTED_COLOR = 0xff3ad30b;
+const uint32_t DEVICE_CONNECTED_PRESSED_COLOR = 0xff26a300;
 const uint32_t DEVICE_DISCONNECTED_COLOR = 0xffed2525;
+const uint32_t DEVICE_DISCONNECTED_PRESSED_COLOR = 0xffb70000;
 
 const int MARGIN = 4;
 const int TITLE_BAR_HEIGHT = 44;

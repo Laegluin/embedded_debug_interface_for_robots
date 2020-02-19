@@ -10,7 +10,7 @@ DeviceInfoWindow::DeviceInfoWindow(
     control_table_map(control_table_map),
     handle(handle),
     device_overview_win(device_overview_win),
-    selected_item_idx(0) {
+    device_list(0, TITLE_BAR_HEIGHT, 150, DISPLAY_HEIGHT - TITLE_BAR_HEIGHT, handle) {
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
 
@@ -30,31 +30,6 @@ DeviceInfoWindow::DeviceInfoWindow(
         "Device Details");
 
     TEXT_SetFont(title, GUI_FONT_24B_1);
-
-    this->device_list = LISTBOX_CreateEx(
-        0,
-        TITLE_BAR_HEIGHT,
-        150,
-        DISPLAY_HEIGHT - TITLE_BAR_HEIGHT,
-        this->handle,
-        WM_CF_SHOW,
-        0,
-        NO_ID,
-        nullptr);
-
-    // TODO: replace listbox with something more sensible and less broken
-    LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_UNSEL, MENU_COLOR);
-    LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_SEL, MENU_PRESSED_COLOR);
-    LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_SELFOCUS, MENU_PRESSED_COLOR);
-    LISTBOX_SetBkColor(this->device_list, LISTBOX_CI_DISABLED, DEVICE_DISCONNECTED_COLOR);
-    LISTBOX_SetTextColor(this->device_list, LISTBOX_CI_DISABLED, DEVICE_STATUS_TEXT_COLOR);
-    LISTBOX_SetAutoScrollV(this->device_list, true);
-    LISTBOX_SetItemSpacing(this->device_list, 20);
-
-    WM_SetCallback(this->device_list, [](auto msg) {
-        static float state;
-        handle_touch_scroll(msg, 0.05, state, LISTBOX_Callback);
-    });
 
     this->field_list = LISTVIEW_CreateEx(
         150 + MARGIN,
@@ -100,8 +75,7 @@ void DeviceInfoWindow::on_message(WM_MESSAGE* msg) {
         case WM_NOTIFY_PARENT: {
             switch (msg->Data.v) {
                 case WM_NOTIFICATION_SEL_CHANGED: {
-                    if (msg->hWinSrc == this->device_list) {
-                        this->selected_item_idx = LISTBOX_GetSel(this->device_list);
+                    if (msg->hWinSrc == this->device_list.raw_handle()) {
                         this->update();
                     }
 
@@ -154,8 +128,8 @@ void DeviceInfoWindow::update() {
             control_table_map.is_disconnected(device_id),
         });
 
-        auto iter = this->device_to_idx.find(device_id);
-        if (iter != this->device_to_idx.end() && iter->second == this->selected_item_idx) {
+        if (this->device_list.is_item_selected()
+            && this->device_list.selected_item().id == device_id) {
             selected_control_table = control_table->clone();
         }
     }
@@ -163,13 +137,13 @@ void DeviceInfoWindow::update() {
     this->control_table_map->unlock();
 
     for (auto& device_info : device_infos) {
-        auto item_idx = this->update_device_list(device_info.id, device_info.name);
+        this->device_list.insert_or_modify(device_info.id, [&](auto& item) {
+            std::stringstream fmt;
+            fmt << device_info.name << " (" << device_info.id << ")";
 
-        if (device_info.is_disconnected) {
-            LISTBOX_SetItemDisabled(this->device_list, item_idx, true);
-        } else {
-            LISTBOX_SetItemDisabled(this->device_list, item_idx, false);
-        }
+            item.label = fmt.str();
+            item.is_disconnected = device_info.is_disconnected;
+        });
     }
 
     if (selected_control_table) {
@@ -177,50 +151,6 @@ void DeviceInfoWindow::update() {
     } else {
         this->clear_field_list();
     }
-}
-
-int DeviceInfoWindow::update_device_list(DeviceId device_id, const char* device_name) {
-    std::stringstream fmt;
-    fmt << device_name << " (" << device_id << ")";
-    auto device_label = fmt.str();
-
-    auto iter = this->device_to_idx.find(device_id);
-    if (iter != this->device_to_idx.end()) {
-        auto item_idx = iter->second;
-        LISTBOX_SetString(this->device_list, device_label.c_str(), item_idx);
-        return item_idx;
-    }
-
-    // find index for insertion while preserving order by id
-    int insert_idx = LISTBOX_GetNumItems(this->device_list);
-    bool is_last_device_id_set = false;
-    DeviceId last_device_id(0);
-
-    for (auto& device_and_idx : this->device_to_idx) {
-        auto current_device_id = device_and_idx.first;
-
-        // id should be greater (since it will be shifted to the right)
-        // and as small as possible (otherwise we're inserting with greater elements
-        // to the left)
-        if (current_device_id > device_id
-            && (!is_last_device_id_set || current_device_id < last_device_id)) {
-            insert_idx = device_and_idx.second;
-            is_last_device_id_set = true;
-            last_device_id = current_device_id;
-        }
-    }
-
-    // correct indices of items past the insertion point
-    for (auto& device_and_idx : this->device_to_idx) {
-        if (device_and_idx.second >= insert_idx) {
-            device_and_idx.second++;
-        }
-    }
-
-    LISTBOX_InsertString(this->device_list, device_label.c_str(), insert_idx);
-    this->device_to_idx.emplace(device_id, insert_idx);
-
-    return insert_idx;
 }
 
 void DeviceInfoWindow::clear_field_list() {
