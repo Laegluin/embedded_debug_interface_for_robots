@@ -176,6 +176,17 @@ bool ControlTableMemory::read_uint32(uint16_t addr, uint32_t* dst) const {
     }
 }
 
+bool ControlTableMemory::read_float32(uint16_t addr, float* dst) const {
+    uint8_t buf[4];
+
+    if (this->read(addr, buf, 4)) {
+        *dst = float32_from_le(buf);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool ControlTableMemory::read(uint16_t start_addr, uint8_t* dst, uint16_t len) const {
     for (uint16_t addr = start_addr; addr < start_addr + len; addr++) {
         uint16_t resolved_addr = this->resolve_addr(addr);
@@ -211,6 +222,12 @@ bool ControlTableMemory::write_uint16(uint16_t addr, uint16_t value) {
 bool ControlTableMemory::write_uint32(uint16_t addr, uint32_t value) {
     uint8_t bytes[4];
     uint32_to_le(bytes, value);
+    return this->write(addr, bytes, 4);
+}
+
+bool ControlTableMemory::write_float32(uint16_t addr, float value) {
+    uint8_t bytes[4];
+    float32_to_le(bytes, value);
     return this->write(addr, bytes, 4);
 }
 
@@ -300,6 +317,19 @@ std::vector<std::pair<const char*, std::string>> ControlTable::fmt_fields() cons
                 uint32_t value;
                 if (mem.read_uint32(field.addr, &value)) {
                     auto formatted_value = field.uint32.fmt(value);
+                    formatted_fields.emplace_back(field.name, std::move(formatted_value));
+                }
+
+                break;
+            }
+            case ControlTableField::FieldType::Float32: {
+                if (!field.float32.fmt) {
+                    continue;
+                }
+
+                float value;
+                if (mem.read_float32(field.addr, &value)) {
+                    auto formatted_value = field.float32.fmt(value);
                     formatted_fields.emplace_back(field.name, std::move(formatted_value));
                 }
 

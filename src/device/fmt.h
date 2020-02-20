@@ -18,6 +18,10 @@ inline std::string fmt_number(uint32_t value) {
     return std::to_string(value);
 }
 
+inline std::string fmt_number(float value) {
+    return std::to_string(value);
+}
+
 inline std::string fmt_addr(uint16_t addr) {
     std::stringstream fmt;
     fmt << "0x" << std::hex << std::setw(4) << std::setfill('0') << addr << " (" << std::dec << addr
@@ -81,16 +85,60 @@ inline std::string fmt_core_power_on(uint16_t power_on) {
     }
 }
 
-inline std::string fmt_imu_accel(uint16_t accel) {
+inline std::string fmt_imu_accel(float accel) {
     std::stringstream fmt;
     fmt << accel << " m/s^2";
     return fmt.str();
 }
 
-inline std::string fmt_imu_gyro(uint16_t gyro) {
+inline std::string fmt_imu_gyro(float gyro) {
     std::stringstream fmt;
     fmt << gyro << " deg/s";
     return fmt.str();
+}
+
+inline std::string fmt_imu_gyro_range(uint8_t range) {
+    switch (range) {
+        case 0: {
+            return "250 deg/s";
+        }
+        case 1: {
+            return "500 deg/s";
+        }
+        case 2: {
+            return "1000 deg/s";
+        }
+        case 3: {
+            return "2000 deg/s";
+        }
+        default: {
+            std::stringstream fmt;
+            fmt << "unknown (raw: " << range << ")";
+            return fmt.str();
+        }
+    }
+}
+
+inline std::string fmt_imu_accel_range(uint8_t range) {
+    switch (range) {
+        case 0: {
+            return "2 g";
+        }
+        case 1: {
+            return "4 g";
+        }
+        case 2: {
+            return "8 g";
+        }
+        case 3: {
+            return "16 g";
+        }
+        default: {
+            std::stringstream fmt;
+            fmt << "unknown (raw: " << range << ")";
+            return fmt.str();
+        }
+    }
 }
 
 inline std::string fmt_mx_baud_rate(uint8_t baud_rate) {

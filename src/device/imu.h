@@ -8,8 +8,7 @@ class ImuControlTable : public ControlTable {
     ImuControlTable();
 
     static const uint16_t MODEL_NUMBER = 0xbaff;
-    static const std::vector<ControlTableField> FIELDS_1;
-    static const std::vector<ControlTableField> FIELDS_2;
+    static const std::vector<ControlTableField> FIELDS;
 
     std::unique_ptr<ControlTable> clone() const final {
         return std::make_unique<ImuControlTable>(*this);
@@ -35,7 +34,9 @@ class ImuControlTable : public ControlTable {
         return this->mem;
     }
 
-    const std::vector<ControlTableField>& fields() const final;
+    const std::vector<ControlTableField>& fields() const final {
+        return FIELDS;
+    }
 
   private:
     ControlTableMemory mem;

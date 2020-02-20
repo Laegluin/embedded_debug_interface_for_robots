@@ -70,6 +70,8 @@ class ControlTableMemory {
 
     bool read_uint32(uint16_t addr, uint32_t* dst) const;
 
+    bool read_float32(uint16_t addr, float* dst) const;
+
     bool read(uint16_t start_addr, uint8_t* dst, uint16_t len) const;
 
     bool write_uint8(uint16_t addr, uint8_t value);
@@ -77,6 +79,8 @@ class ControlTableMemory {
     bool write_uint16(uint16_t addr, uint16_t value);
 
     bool write_uint32(uint16_t addr, uint32_t value);
+
+    bool write_float32(uint16_t addr, float value);
 
     bool write(uint16_t start_addr, const uint8_t* buf, uint16_t len);
 
@@ -95,6 +99,7 @@ struct ControlTableField {
         UInt8,
         UInt16,
         UInt32,
+        Float32,
     };
 
     static ControlTableField new_uint8(
@@ -139,6 +144,20 @@ struct ControlTableField {
         return field;
     }
 
+    static ControlTableField new_float32(
+        uint16_t addr,
+        const char* name,
+        float default_value,
+        std::string (*fmt)(float)) {
+        ControlTableField field;
+        field.addr = addr;
+        field.type = FieldType::Float32;
+        field.name = name;
+        field.float32.default_value = default_value;
+        field.float32.fmt = fmt;
+        return field;
+    }
+
     /// Initializes the field in `mem` with the configured default value.
     void init_memory(ControlTableMemory& mem) const {
         switch (this->type) {
@@ -152,6 +171,10 @@ struct ControlTableField {
             }
             case ControlTableField::FieldType::UInt32: {
                 mem.write_uint32(this->addr, this->uint32.default_value);
+                break;
+            }
+            case ControlTableField::FieldType::Float32: {
+                mem.write_float32(this->addr, this->float32.default_value);
                 break;
             }
         }
@@ -173,6 +196,10 @@ struct ControlTableField {
             uint32_t default_value;
             std::string (*fmt)(uint32_t);
         } uint32;
+        struct {
+            float default_value;
+            std::string (*fmt)(float);
+        } float32;
     };
 };
 
