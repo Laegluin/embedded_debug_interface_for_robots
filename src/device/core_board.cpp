@@ -11,7 +11,7 @@ const std::vector<ControlTableField> CoreBoardControlTable::FIELDS{
         fmt_number),
     ControlTableField::new_uint8(2, "Firmware Version", 0, fmt_number),
 
-    ControlTableField::new_uint16(10, "LED", 0, fmt_number),
+    ControlTableField::new_uint16(10, "LED", 0, fmt_bool),
     ControlTableField::new_uint16(12, "Power", 0, fmt_number),
     ControlTableField::new_uint32(14, "RGB LED 1", 0, fmt_core_rgb),
     ControlTableField::new_uint32(18, "RGB LED 2", 0, fmt_core_rgb),
