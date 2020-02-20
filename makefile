@@ -138,7 +138,7 @@ $(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/porta
 	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 $(object_dir)/%.o: $(STM_CUBE_DIR)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/%.c | $(object_dir) $(dep_dir)
-	@$(CC) $(CFLAGS) -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
+	@$(CC) $(CFLAGS) -Wno-unused-but-set-variable -Wno-unused-parameter -MT $@ -MD -MP -MF $(dep_dir)/$(basename $(notdir $@)).d -c $< -o $@
 
 # actual binary for mcu
 $(TARGET_DIR)/firmware.elf: $(objects) $(vendor_objects) $(archives) src/linker.ld | $(TARGET_DIR)
