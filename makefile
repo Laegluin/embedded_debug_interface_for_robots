@@ -20,12 +20,11 @@ INCLUDE_FLAGS := \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Device/ST/STM32F7xx/Include \
 	-I$(STM_CUBE_DIR)/Drivers/CMSIS/Core/Include
 
-# TODO: enable opt and lto
-OPT_FLAGS := -O0
+OPT_FLAGS := -O3
 ARCH_FLAGS := -mthumb -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard
 CFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) $(OPT_FLAGS) -std=c99 -g -Wall -Wextra
 CXXFLAGS := $(INCLUDE_FLAGS) $(ARCH_FLAGS) $(OPT_FLAGS) -std=c++14 -fno-exceptions -g -Wall -Wextra
-LDFLAGS := $(ARCH_FLAGS)
+LDFLAGS := $(ARCH_FLAGS) -flto
 TEST_CXXFLAGS := $(INCLUDE_FLAGS) -std=c++14 -g -Wall -Wextra
 TEST_LDFLAGS :=
 
