@@ -74,6 +74,14 @@ class Mutex {
 
     Mutex(Mutex&&) = delete;
 
+    ~Mutex() {
+        vSemaphoreDelete(this->mutex);
+    }
+
+    Mutex& operator=(const Mutex&) = delete;
+
+    Mutex& operator=(Mutex&&) = delete;
+
     T& lock() {
         xSemaphoreTake(this->mutex, portMAX_DELAY);
         return this->obj;
