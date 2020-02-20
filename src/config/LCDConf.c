@@ -155,7 +155,6 @@ void LCD_X_Config(void) {
     LCD_SetLUTEx(0, PALETTE);
   #endif
   
-  // TODO: use hardware accel
   //
   // Set custom functions for several operations to optimize native processes
   //

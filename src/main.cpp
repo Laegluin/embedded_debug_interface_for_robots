@@ -27,7 +27,6 @@ void init_sdram();
 void init_uarts(std::vector<ReceiveBuf*>&);
 void init_gui();
 
-// TODO: hardware accel for UI
 // TODO: clock selection in user application
 int main() {
     static std::vector<ReceiveBuf*> bufs;
