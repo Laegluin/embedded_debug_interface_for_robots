@@ -1,12 +1,15 @@
 #include "ui/device_overview_window.h"
 #include "main.h"
+#include "ui/model_overview_window.h"
 #include "ui/run_ui.h"
+#include <algorithm>
 #include <sstream>
 #include <unordered_map>
 
 DeviceOverviewWindow::DeviceOverviewWindow(
     const Mutex<ControlTableMap>* control_table_map,
     WM_HWIN handle,
+    WM_HWIN model_overview_win,
     WM_HWIN log_win,
     WM_HWIN device_info_win) :
     control_table_map(control_table_map),
@@ -17,6 +20,7 @@ DeviceOverviewWindow::DeviceOverviewWindow(
         DISPLAY_WIDTH,
         DISPLAY_HEIGHT - TITLE_BAR_HEIGHT - MARGIN - 60,
         handle),
+    model_overview_win(model_overview_win),
     device_info_win(device_info_win),
     log_win(log_win) {
     auto title = TEXT_CreateEx(
@@ -97,12 +101,24 @@ void DeviceOverviewWindow::on_message(WM_MESSAGE* msg) {
             break;
         }
         case WM_NOTIFY_PARENT: {
-            if (msg->Data.v == WM_NOTIFICATION_RELEASED) {
-                if (msg->hWinSrc == this->details_button) {
-                    this->on_details_button_click();
-                } else if (msg->hWinSrc == this->log_button) {
-                    this->on_log_button_click();
+            switch (msg->Data.v) {
+                case WM_NOTIFICATION_RELEASED: {
+                    if (msg->hWinSrc == this->details_button) {
+                        this->on_details_button_click();
+                    } else if (msg->hWinSrc == this->log_button) {
+                        this->on_log_button_click();
+                    }
+
+                    break;
                 }
+                case WM_NOTIFICATION_CLICKED: {
+                    if (msg->hWinSrc == this->model_list.raw_handle()) {
+                        this->on_model_list_click();
+                    }
+
+                    break;
+                }
+                default: { break; }
             }
 
             break;
@@ -119,12 +135,6 @@ void DeviceOverviewWindow::on_message(WM_MESSAGE* msg) {
 }
 
 void DeviceOverviewWindow::update() {
-    struct DeviceStatus {
-        const char* device_name;
-        uint16_t model_number;
-        bool is_disconnected;
-    };
-
     struct DeviceModelStatus {
         const char* model_name;
         size_t num_connected;
@@ -132,7 +142,7 @@ void DeviceOverviewWindow::update() {
     };
 
     // copy only the required data as quickly as possible
-    std::vector<DeviceStatus> device_statuses;
+    std::vector<ModelOverviewWindow::DeviceStatus> device_statuses;
     device_statuses.reserve(DeviceId::num_values());
     size_t num_connected = 0;
     size_t num_disconnected = 0;
@@ -148,7 +158,8 @@ void DeviceOverviewWindow::update() {
         num_disconnected += is_disconnected;
 
         if (!control_table->is_unknown_model()) {
-            device_statuses.push_back(DeviceStatus{
+            device_statuses.push_back(ModelOverviewWindow::DeviceStatus{
+                device_id,
                 control_table->device_name(),
                 control_table->model_number(),
                 is_disconnected,
@@ -158,8 +169,14 @@ void DeviceOverviewWindow::update() {
 
     this->control_table_map->unlock();
 
+    // update model overview
+    ModelOverviewWindow* model_overview_obj = ModelOverviewWindow::from_handle(model_overview_win);
+    model_overview_obj->update(device_statuses);
+
     // group by model; we're doing this here to avoid allocations while holding the lock
+    // also transform the data for updating the model overview
     std::unordered_map<uint16_t, DeviceModelStatus> model_to_status;
+    model_to_status.reserve(device_statuses.size());
 
     for (auto& device_status : device_statuses) {
         auto result = model_to_status.emplace(
@@ -171,12 +188,8 @@ void DeviceOverviewWindow::update() {
             });
 
         auto& model_status = result.first->second;
-
-        if (device_status.is_disconnected) {
-            model_status.num_disconnected++;
-        } else {
-            model_status.num_connected++;
-        }
+        model_status.num_connected += !device_status.is_disconnected;
+        model_status.num_disconnected += device_status.is_disconnected;
     }
 
     // update status label
@@ -218,6 +231,17 @@ void DeviceOverviewWindow::on_log_button_click() {
 void DeviceOverviewWindow::on_details_button_click() {
     WM_EnableWindow(this->device_info_win);
     WM_ShowWindow(this->device_info_win);
+    WM_HideWindow(this->handle);
+    WM_DisableWindow(this->handle);
+}
+
+void DeviceOverviewWindow::on_model_list_click() {
+    ModelOverviewWindow* model_overview_obj = ModelOverviewWindow::from_handle(model_overview_win);
+    model_overview_obj->select_model_number(this->model_list.clicked_item().model_number);
+    this->update();
+
+    WM_EnableWindow(this->model_overview_win);
+    WM_ShowWindow(this->model_overview_win);
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
 }

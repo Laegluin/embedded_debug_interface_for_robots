@@ -60,6 +60,14 @@ DeviceInfoWindow::DeviceInfoWindow(
     });
 }
 
+void DeviceInfoWindow::select_device(DeviceId id) {
+    this->device_list.select_device(id);
+}
+
+void DeviceInfoWindow::clear_selection() {
+    this->device_list.clear_selection();
+}
+
 void DeviceInfoWindow::on_message(WM_MESSAGE* msg) {
     switch (msg->MsgId) {
         case WM_USER_DATA: {

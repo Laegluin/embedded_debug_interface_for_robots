@@ -3,6 +3,7 @@
 #include "ui/device_info_window.h"
 #include "ui/device_overview_window.h"
 #include "ui/log_window.h"
+#include "ui/model_overview_window.h"
 #include <cmath>
 
 static void create_ui(const Mutex<Log>&, const Mutex<ControlTableMap>&);
@@ -21,6 +22,18 @@ void run_ui(Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map) {
 
 static void create_ui(const Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map) {
     set_ui_theme();
+
+    auto model_overview_win = WINDOW_CreateUser(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        0,
+        NO_ID,
+        ModelOverviewWindow::handle_message,
+        sizeof(void*));
 
     auto device_overview_win = WINDOW_CreateUser(
         0,
@@ -59,8 +72,12 @@ static void create_ui(const Mutex<Log>& log, const Mutex<ControlTableMap>& contr
         sizeof(void*));
 
     // create objects for widgets
-    auto device_overview_obj =
-        new DeviceOverviewWindow(&control_table_map, device_overview_win, log_win, device_info_win);
+    auto model_overview_obj =
+        new ModelOverviewWindow(model_overview_win, device_info_win, device_overview_win);
+    WINDOW_SetUserData(model_overview_win, &model_overview_obj, sizeof(void*));
+
+    auto device_overview_obj = new DeviceOverviewWindow(
+        &control_table_map, device_overview_win, model_overview_win, log_win, device_info_win);
     WINDOW_SetUserData(device_overview_win, &device_overview_obj, sizeof(void*));
 
     auto device_info_obj =

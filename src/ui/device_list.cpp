@@ -20,6 +20,20 @@ DeviceList::~DeviceList() {
     WM_DeleteWindow(this->handle);
 }
 
+void DeviceList::select_device(DeviceId id) {
+    ssize_t item_idx = -1;
+
+    for (size_t i = 0; i < this->items.size(); i++) {
+        if (this->items[i].id == id) {
+            item_idx = i;
+            break;
+        }
+    }
+
+    this->selected_item_idx = item_idx;
+    WM_NotifyParent(this->handle, WM_NOTIFICATION_SEL_CHANGED);
+}
+
 void DeviceList::on_message(WM_MESSAGE* msg) {
     switch (msg->MsgId) {
         case WM_TOUCH: {

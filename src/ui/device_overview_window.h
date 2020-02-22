@@ -12,15 +12,10 @@
 
 class DeviceOverviewWindow {
   public:
-    struct DeviceModelWidgets {
-        WM_HWIN window;
-        TEXT_Handle model_label;
-        TEXT_Handle status_label;
-    };
-
     DeviceOverviewWindow(
         const Mutex<ControlTableMap>* control_table_map,
         WM_HWIN handle,
+        WM_HWIN model_overview_win,
         WM_HWIN log_win,
         WM_HWIN device_info_win);
 
@@ -43,6 +38,8 @@ class DeviceOverviewWindow {
 
     void on_details_button_click();
 
+    void on_model_list_click();
+
     const Mutex<ControlTableMap>* control_table_map;
     WM_HWIN handle;
     TEXT_Handle status_label;
@@ -50,6 +47,7 @@ class DeviceOverviewWindow {
     BUTTON_Handle log_button;
     BUTTON_Handle details_button;
     ModelList model_list;
+    WM_HWIN model_overview_win;
     WM_HWIN device_info_win;
     WM_HWIN log_win;
 };

@@ -28,6 +28,10 @@ class DeviceInfoWindow {
         DeviceInfoWindow::from_handle(msg->hWin)->on_message(msg);
     }
 
+    void select_device(DeviceId id);
+
+    void clear_selection();
+
   private:
     void on_message(WM_MESSAGE* msg);
 
