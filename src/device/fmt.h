@@ -37,15 +37,15 @@ inline std::string fmt_bool(uint8_t value) {
     }
 }
 
-inline std::string fmt_bool(uint16_t value) {
+inline std::string fmt_bool_on_off(uint8_t value) {
     if (value) {
-        return "true";
+        return "on";
     } else {
-        return "false";
+        return "off";
     }
 }
 
-inline std::string fmt_bool_on_off(uint8_t value) {
+inline std::string fmt_bool_on_off(uint16_t value) {
     if (value) {
         return "on";
     } else {
