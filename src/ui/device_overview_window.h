@@ -3,6 +3,7 @@
 
 #include "app.h"
 #include "control_table.h"
+#include "ui/model_list.h"
 #include <BUTTON.h>
 #include <DIALOG.h>
 #include <GUI.h>
@@ -38,8 +39,6 @@ class DeviceOverviewWindow {
 
     void update();
 
-    void push_back_model_widgets();
-
     void on_log_button_click();
 
     void on_details_button_click();
@@ -50,7 +49,7 @@ class DeviceOverviewWindow {
     WM_HWIN status_label_win;
     BUTTON_Handle log_button;
     BUTTON_Handle details_button;
-    std::vector<DeviceModelWidgets> model_widgets;
+    ModelList model_list;
     WM_HWIN device_info_win;
     WM_HWIN log_win;
 };

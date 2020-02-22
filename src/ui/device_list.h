@@ -49,7 +49,6 @@ class DeviceList {
 
     template <typename F>
     void insert_or_modify(DeviceId id, F modify) {
-        bool has_selection_changed = false;
         size_t item_idx = 0;
 
         for (auto& item : this->items) {
@@ -59,7 +58,6 @@ class DeviceList {
                 this->items.insert(this->items.begin() + item_idx, Item{id, "", false});
 
                 if (this->selected_item_idx >= ssize_t(item_idx)) {
-                    has_selection_changed = true;
                     this->selected_item_idx++;
                 }
 
@@ -79,10 +77,6 @@ class DeviceList {
 
         modify(this->items[item_idx]);
         WM_InvalidateWindow(this->handle);
-
-        if (has_selection_changed) {
-            WM_NotifyParent(this->handle, WM_NOTIFICATION_SEL_CHANGED);
-        }
     }
 
     bool is_item_selected() const {

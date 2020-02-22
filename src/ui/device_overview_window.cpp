@@ -1,8 +1,8 @@
 #include "ui/device_overview_window.h"
 #include "main.h"
 #include "ui/run_ui.h"
-#include <map>
 #include <sstream>
+#include <unordered_map>
 
 DeviceOverviewWindow::DeviceOverviewWindow(
     const Mutex<ControlTableMap>* control_table_map,
@@ -11,6 +11,12 @@ DeviceOverviewWindow::DeviceOverviewWindow(
     WM_HWIN device_info_win) :
     control_table_map(control_table_map),
     handle(handle),
+    model_list(
+        0,
+        TITLE_BAR_HEIGHT + MARGIN + 60,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT - TITLE_BAR_HEIGHT - MARGIN - 60,
+        handle),
     device_info_win(device_info_win),
     log_win(log_win) {
     auto title = TEXT_CreateEx(
@@ -153,7 +159,7 @@ void DeviceOverviewWindow::update() {
     this->control_table_map->unlock();
 
     // group by model; we're doing this here to avoid allocations while holding the lock
-    std::map<uint16_t, DeviceModelStatus> model_to_status;
+    std::unordered_map<uint16_t, DeviceModelStatus> model_to_status;
 
     for (auto& device_status : device_statuses) {
         auto result = model_to_status.emplace(
@@ -186,77 +192,20 @@ void DeviceOverviewWindow::update() {
     }
 
     // update/create model widgets
-    size_t model_idx = 0;
-
     for (auto& model_and_status : model_to_status) {
+        auto model_number = model_and_status.first;
         auto& status = model_and_status.second;
 
-        while (model_idx >= this->model_widgets.size()) {
-            this->push_back_model_widgets();
-        }
+        this->model_list.insert_or_modify(model_number, [&](auto& item) {
+            std::stringstream fmt;
+            fmt << std::to_string(status.num_connected) << " connected\n"
+                << std::to_string(status.num_disconnected) << " disconnected";
 
-        auto widgets = this->model_widgets[model_idx];
-
-        if (status.num_disconnected > 0) {
-            WINDOW_SetBkColor(widgets.window, DEVICE_DISCONNECTED_COLOR);
-        } else {
-            WINDOW_SetBkColor(widgets.window, DEVICE_CONNECTED_COLOR);
-        }
-
-        TEXT_SetText(widgets.model_label, status.model_name);
-        std::stringstream fmt;
-        fmt << std::to_string(status.num_connected) << " connected\n"
-            << std::to_string(status.num_disconnected) << " disconnected";
-        TEXT_SetText(widgets.status_label, fmt.str().c_str());
-
-        model_idx++;
+            item.model_name = status.model_name;
+            item.label = fmt.str();
+            item.is_disconnected = status.num_disconnected > 0;
+        });
     }
-}
-
-void DeviceOverviewWindow::push_back_model_widgets() {
-    auto window = WINDOW_CreateEx(
-        MARGIN + this->model_widgets.size() * (MARGIN + 115),
-        116,
-        115,
-        115,
-        this->handle,
-        WM_CF_SHOW,
-        0,
-        NO_ID,
-        WM_DefaultProc);
-
-    auto model_label = TEXT_CreateEx(
-        MARGIN,
-        0,
-        115 - 2 * MARGIN,
-        25,
-        window,
-        WM_CF_SHOW,
-        TEXT_CF_LEFT | TEXT_CF_VCENTER,
-        NO_ID,
-        "");
-
-    TEXT_SetFont(model_label, GUI_FONT_20_1);
-    TEXT_SetTextColor(model_label, DEVICE_STATUS_TEXT_COLOR);
-
-    auto status_label = TEXT_CreateEx(
-        MARGIN,
-        25,
-        115 - 2 * MARGIN,
-        90,
-        window,
-        WM_CF_SHOW,
-        TEXT_CF_LEFT | TEXT_CF_TOP,
-        NO_ID,
-        "");
-
-    TEXT_SetTextColor(status_label, DEVICE_STATUS_TEXT_COLOR);
-
-    this->model_widgets.push_back(DeviceModelWidgets{
-        window,
-        model_label,
-        status_label,
-    });
 }
 
 void DeviceOverviewWindow::on_log_button_click() {
