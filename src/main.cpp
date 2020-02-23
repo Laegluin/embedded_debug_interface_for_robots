@@ -19,6 +19,7 @@ TIM_HandleTypeDef TIMER2;
 TIM_HandleTypeDef TIMER3;
 
 void init_mpu();
+void init_clocks();
 void init_tick_timer();
 void init_lcd_controller();
 void reset_lcd_controller();
@@ -27,17 +28,14 @@ void init_sdram();
 void init_uarts(std::vector<ReceiveBuf*>&);
 void init_gui();
 
-// TODO: clock selection in user application
 int main() {
     static std::vector<ReceiveBuf*> bufs;
-
-    // required since clocks have been preconfigured by bootloader
-    SystemCoreClockUpdate();
 
     if (HAL_Init() != HAL_OK) {
         on_error();
     }
 
+    init_clocks();
     init_mpu();
     init_tick_timer();
     init_sdram();
@@ -58,6 +56,40 @@ int main() {
         nullptr);
 
     vTaskStartScheduler();
+}
+
+void init_clocks() {
+    // Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 clocks dividers
+    RCC_ClkInitTypeDef rcc_config;
+    rcc_config.ClockType =
+        RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    rcc_config.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    rcc_config.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    rcc_config.APB1CLKDivider = RCC_HCLK_DIV4;
+    rcc_config.APB2CLKDivider = RCC_HCLK_DIV2;
+
+    if (HAL_RCC_ClockConfig(&rcc_config, FLASH_LATENCY_7) != HAL_OK) {
+        on_error();
+    }
+
+    // LTDC -> PLLSAI1 (9.6 MHz)
+    // USART6 -> SYSCLK (216 Mhz)
+    // I2C3 -> PCLK1 (54 MHz)
+    RCC_PeriphCLKInitTypeDef peripheral_clock_config;
+    peripheral_clock_config.PeriphClockSelection =
+        RCC_PERIPHCLK_LTDC | RCC_PERIPHCLK_USART6 | RCC_PERIPHCLK_I2C3;
+    peripheral_clock_config.Usart6ClockSelection = RCC_USART6CLKSOURCE_SYSCLK;
+    peripheral_clock_config.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
+    peripheral_clock_config.PLLSAI.PLLSAIN = 192;
+    peripheral_clock_config.PLLSAI.PLLSAIR = 5;
+    peripheral_clock_config.PLLSAI.PLLSAIQ = 2;
+    peripheral_clock_config.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2;
+    peripheral_clock_config.PLLSAIDivQ = 1;
+    peripheral_clock_config.PLLSAIDivR = RCC_PLLSAIDIVR_4;
+
+    if (HAL_RCCEx_PeriphCLKConfig(&peripheral_clock_config) != HAL_OK) {
+        on_error();
+    }
 }
 
 void init_mpu() {

@@ -75,15 +75,9 @@ static void init_clocks(void) {
     }
 
     // USB -> PLLQ (48 MHz)
-    // LTDC -> PLLSAI1 (9.6 MHz)
-    // USART6 -> SYSCLK (216 Mhz)
-    // I2C3 -> PCLK1 (54 MHz)
     RCC_PeriphCLKInitTypeDef peripheral_clock_config;
-    peripheral_clock_config.PeriphClockSelection =
-        RCC_PERIPHCLK_CLK48 | RCC_PERIPHCLK_LTDC | RCC_PERIPHCLK_USART6 | RCC_PERIPHCLK_I2C3;
+    peripheral_clock_config.PeriphClockSelection = RCC_PERIPHCLK_CLK48;
     peripheral_clock_config.Clk48ClockSelection = RCC_CLK48SOURCE_PLL;
-    peripheral_clock_config.Usart6ClockSelection = RCC_USART6CLKSOURCE_SYSCLK;
-    peripheral_clock_config.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
     peripheral_clock_config.PLLSAI.PLLSAIN = 192;
     peripheral_clock_config.PLLSAI.PLLSAIR = 5;
     peripheral_clock_config.PLLSAI.PLLSAIQ = 2;
