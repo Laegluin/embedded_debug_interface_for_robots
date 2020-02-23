@@ -4,6 +4,7 @@
 #include "app.h"
 #include "control_table.h"
 #include "ui/device_list.h"
+#include "ui/window_registry.h"
 #include <BUTTON.h>
 #include <DIALOG.h>
 #include <GUI.h>
@@ -14,9 +15,9 @@
 class DeviceInfoWindow {
   public:
     DeviceInfoWindow(
+        WindowRegistry* registry,
         const Mutex<ControlTableMap>* control_table_map,
-        WM_HWIN handle,
-        WM_HWIN device_overview_win);
+        WM_HWIN handle);
 
     static DeviceInfoWindow* from_handle(WM_HWIN handle) {
         DeviceInfoWindow* self;
@@ -43,9 +44,9 @@ class DeviceInfoWindow {
 
     void on_back_button_click();
 
+    WindowRegistry* registry;
     const Mutex<ControlTableMap>* control_table_map;
     WM_HWIN handle;
-    WM_HWIN device_overview_win;
     BUTTON_Handle back_button;
     DeviceList device_list;
     LISTVIEW_Handle field_list;

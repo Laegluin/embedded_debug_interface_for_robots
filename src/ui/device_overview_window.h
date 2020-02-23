@@ -4,6 +4,7 @@
 #include "app.h"
 #include "control_table.h"
 #include "ui/model_list.h"
+#include "ui/window_registry.h"
 #include <BUTTON.h>
 #include <DIALOG.h>
 #include <GUI.h>
@@ -13,11 +14,9 @@
 class DeviceOverviewWindow {
   public:
     DeviceOverviewWindow(
+        WindowRegistry* registry,
         const Mutex<ControlTableMap>* control_table_map,
-        WM_HWIN handle,
-        WM_HWIN model_overview_win,
-        WM_HWIN log_win,
-        WM_HWIN device_info_win);
+        WM_HWIN handle);
 
     static DeviceOverviewWindow* from_handle(WM_HWIN handle) {
         DeviceOverviewWindow* self;
@@ -40,6 +39,7 @@ class DeviceOverviewWindow {
 
     void on_model_list_click();
 
+    WindowRegistry* registry;
     const Mutex<ControlTableMap>* control_table_map;
     WM_HWIN handle;
     TEXT_Handle status_label;
@@ -47,9 +47,6 @@ class DeviceOverviewWindow {
     BUTTON_Handle log_button;
     BUTTON_Handle details_button;
     ModelList model_list;
-    WM_HWIN model_overview_win;
-    WM_HWIN device_info_win;
-    WM_HWIN log_win;
 };
 
 #endif

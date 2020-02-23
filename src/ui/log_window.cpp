@@ -4,11 +4,11 @@
 #include <FreeRTOS.h>
 #include <sstream>
 
-LogWindow::LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overview_win) :
+LogWindow::LogWindow(WindowRegistry* registry, const Mutex<Log>* log, WM_HWIN handle) :
+    registry(registry),
     log(log),
     last_refresh(0),
-    handle(handle),
-    device_overview_win(device_overview_win) {
+    handle(handle) {
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
 
@@ -155,10 +155,7 @@ void LogWindow::update_last_refresh() {
 }
 
 void LogWindow::on_back_button_click() {
-    WM_EnableWindow(this->device_overview_win);
-    WM_ShowWindow(this->device_overview_win);
-    WM_HideWindow(this->handle);
-    WM_DisableWindow(this->handle);
+    this->registry->navigate_back();
 }
 
 void LogWindow::on_refresh_button_click() {

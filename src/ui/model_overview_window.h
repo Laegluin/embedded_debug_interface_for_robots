@@ -2,6 +2,7 @@
 #define MODEL_OVERVIEW_WINDOW_H
 
 #include "ui/device_list.h"
+#include "ui/window_registry.h"
 #include <BUTTON.h>
 #include <DIALOG.h>
 #include <GUI.h>
@@ -17,7 +18,7 @@ class ModelOverviewWindow {
         bool is_disconnected;
     };
 
-    ModelOverviewWindow(WM_HWIN handle, WM_HWIN device_info_win, WM_HWIN device_overview_win);
+    ModelOverviewWindow(WindowRegistry* registry, WM_HWIN handle);
 
     static ModelOverviewWindow* from_handle(WM_HWIN handle) {
         ModelOverviewWindow* self;
@@ -40,15 +41,14 @@ class ModelOverviewWindow {
 
     void on_device_list_selection();
 
+    WindowRegistry* registry;
+    uint16_t selected_model_number;
     WM_HWIN handle;
     TEXT_Handle title_label;
     TEXT_Handle status_label;
     WM_HWIN status_label_win;
     BUTTON_Handle back_button;
     DeviceList device_list;
-    WM_HWIN device_info_win;
-    WM_HWIN device_overview_win;
-    uint16_t selected_model_number;
 };
 
 #endif

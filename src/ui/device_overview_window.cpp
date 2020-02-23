@@ -1,5 +1,7 @@
 #include "ui/device_overview_window.h"
 #include "main.h"
+#include "ui/device_info_window.h"
+#include "ui/log_window.h"
 #include "ui/model_overview_window.h"
 #include "ui/run_ui.h"
 #include <algorithm>
@@ -7,11 +9,10 @@
 #include <unordered_map>
 
 DeviceOverviewWindow::DeviceOverviewWindow(
+    WindowRegistry* registry,
     const Mutex<ControlTableMap>* control_table_map,
-    WM_HWIN handle,
-    WM_HWIN model_overview_win,
-    WM_HWIN log_win,
-    WM_HWIN device_info_win) :
+    WM_HWIN handle) :
+    registry(registry),
     control_table_map(control_table_map),
     handle(handle),
     model_list(
@@ -19,10 +20,10 @@ DeviceOverviewWindow::DeviceOverviewWindow(
         TITLE_BAR_HEIGHT + MARGIN + 60,
         DISPLAY_WIDTH,
         DISPLAY_HEIGHT - TITLE_BAR_HEIGHT - MARGIN - 60,
-        handle),
-    model_overview_win(model_overview_win),
-    device_info_win(device_info_win),
-    log_win(log_win) {
+        handle) {
+    WM_HideWindow(this->handle);
+    WM_DisableWindow(this->handle);
+
     auto title = TEXT_CreateEx(
         6,
         0,
@@ -170,8 +171,7 @@ void DeviceOverviewWindow::update() {
     this->control_table_map->unlock();
 
     // update model overview
-    ModelOverviewWindow* model_overview_obj = ModelOverviewWindow::from_handle(model_overview_win);
-    model_overview_obj->update(device_statuses);
+    this->registry->get_window<ModelOverviewWindow>()->update(device_statuses);
 
     // group by model; we're doing this here to avoid allocations while holding the lock
     // also transform the data for updating the model overview
@@ -222,26 +222,17 @@ void DeviceOverviewWindow::update() {
 }
 
 void DeviceOverviewWindow::on_log_button_click() {
-    WM_EnableWindow(this->log_win);
-    WM_ShowWindow(this->log_win);
-    WM_HideWindow(this->handle);
-    WM_DisableWindow(this->handle);
+    this->registry->navigate_to<LogWindow>();
 }
 
 void DeviceOverviewWindow::on_details_button_click() {
-    WM_EnableWindow(this->device_info_win);
-    WM_ShowWindow(this->device_info_win);
-    WM_HideWindow(this->handle);
-    WM_DisableWindow(this->handle);
+    this->registry->navigate_to<DeviceInfoWindow>();
 }
 
 void DeviceOverviewWindow::on_model_list_click() {
-    ModelOverviewWindow* model_overview_obj = ModelOverviewWindow::from_handle(model_overview_win);
-    model_overview_obj->select_model_number(this->model_list.clicked_item().model_number);
+    ModelOverviewWindow* model_overview_win = this->registry->get_window<ModelOverviewWindow>();
+    model_overview_win->select_model_number(this->model_list.clicked_item().model_number);
     this->update();
 
-    WM_EnableWindow(this->model_overview_win);
-    WM_ShowWindow(this->model_overview_win);
-    WM_HideWindow(this->handle);
-    WM_DisableWindow(this->handle);
+    this->registry->navigate_to<ModelOverviewWindow>();
 }

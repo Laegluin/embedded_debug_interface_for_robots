@@ -4,6 +4,7 @@
 #include "ui/device_overview_window.h"
 #include "ui/log_window.h"
 #include "ui/model_overview_window.h"
+#include "ui/window_registry.h"
 #include <LISTVIEW.h>
 #include <cmath>
 
@@ -72,21 +73,28 @@ static void create_ui(const Mutex<Log>& log, const Mutex<ControlTableMap>& contr
         LogWindow::handle_message,
         sizeof(void*));
 
+    // register windows
+    WindowRegistry* registry = new WindowRegistry();
+    registry->register_window<ModelOverviewWindow>(model_overview_win);
+    registry->register_window<DeviceOverviewWindow>(device_overview_win);
+    registry->register_window<DeviceInfoWindow>(device_info_win);
+    registry->register_window<LogWindow>(log_win);
+
     // create objects for widgets
-    auto model_overview_obj =
-        new ModelOverviewWindow(model_overview_win, device_info_win, device_overview_win);
+    auto model_overview_obj = new ModelOverviewWindow(registry, model_overview_win);
     WINDOW_SetUserData(model_overview_win, &model_overview_obj, sizeof(void*));
 
-    auto device_overview_obj = new DeviceOverviewWindow(
-        &control_table_map, device_overview_win, model_overview_win, log_win, device_info_win);
+    auto device_overview_obj =
+        new DeviceOverviewWindow(registry, &control_table_map, device_overview_win);
     WINDOW_SetUserData(device_overview_win, &device_overview_obj, sizeof(void*));
 
-    auto device_info_obj =
-        new DeviceInfoWindow(&control_table_map, device_info_win, device_overview_win);
+    auto device_info_obj = new DeviceInfoWindow(registry, &control_table_map, device_info_win);
     WINDOW_SetUserData(device_info_win, &device_info_obj, sizeof(void*));
 
-    auto log_obj = new LogWindow(&log, log_win, device_overview_win);
+    auto log_obj = new LogWindow(registry, &log, log_win);
     WINDOW_SetUserData(log_win, &log_obj, sizeof(void*));
+
+    registry->navigate_to<DeviceOverviewWindow>();
 }
 
 static void set_ui_theme() {

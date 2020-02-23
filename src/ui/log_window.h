@@ -3,6 +3,7 @@
 
 #include "app.h"
 #include "control_table.h"
+#include "ui/window_registry.h"
 #include <BUTTON.h>
 #include <DIALOG.h>
 #include <GUI.h>
@@ -11,7 +12,7 @@
 
 class LogWindow {
   public:
-    LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overview_win);
+    LogWindow(WindowRegistry* registry, const Mutex<Log>* log, WM_HWIN handle);
 
     static LogWindow* from_handle(WM_HWIN handle) {
         LogWindow* self;
@@ -32,6 +33,7 @@ class LogWindow {
 
     void on_refresh_button_click();
 
+    WindowRegistry* registry;
     const Mutex<Log>* log;
     uint32_t last_refresh;
     WM_HWIN handle;
@@ -40,7 +42,6 @@ class LogWindow {
     LISTVIEW_Handle log_list;
     BUTTON_Handle back_button;
     BUTTON_Handle refresh_button;
-    WM_HWIN device_overview_win;
 };
 
 #endif

@@ -4,12 +4,12 @@
 #include <sstream>
 
 DeviceInfoWindow::DeviceInfoWindow(
+    WindowRegistry* registry,
     const Mutex<ControlTableMap>* control_table_map,
-    WM_HWIN handle,
-    WM_HWIN device_overview_win) :
+    WM_HWIN handle) :
+    registry(registry),
     control_table_map(control_table_map),
     handle(handle),
-    device_overview_win(device_overview_win),
     device_list(0, TITLE_BAR_HEIGHT, 150, DISPLAY_HEIGHT - TITLE_BAR_HEIGHT, handle) {
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
@@ -199,8 +199,5 @@ void DeviceInfoWindow::update_field_list(const ControlTable& control_table) {
 }
 
 void DeviceInfoWindow::on_back_button_click() {
-    WM_EnableWindow(this->device_overview_win);
-    WM_ShowWindow(this->device_overview_win);
-    WM_HideWindow(this->handle);
-    WM_DisableWindow(this->handle);
+    this->registry->navigate_back();
 }

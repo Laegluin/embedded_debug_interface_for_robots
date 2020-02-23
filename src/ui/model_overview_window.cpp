@@ -4,20 +4,16 @@
 #include "ui/device_info_window.h"
 #include <sstream>
 
-ModelOverviewWindow::ModelOverviewWindow(
-    WM_HWIN handle,
-    WM_HWIN device_info_win,
-    WM_HWIN device_overview_win) :
+ModelOverviewWindow::ModelOverviewWindow(WindowRegistry* registry, WM_HWIN handle) :
+    registry(registry),
+    selected_model_number(0),
     handle(handle),
     device_list(
         0,
         TITLE_BAR_HEIGHT + 2 * MARGIN + 60,
         DISPLAY_WIDTH,
         DISPLAY_HEIGHT - TITLE_BAR_HEIGHT - 2 * MARGIN - 60,
-        handle),
-    device_info_win(device_info_win),
-    device_overview_win(device_overview_win),
-    selected_model_number(0) {
+        handle) {
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
 
@@ -157,25 +153,18 @@ void ModelOverviewWindow::on_message(WM_MESSAGE* msg) {
 }
 
 void ModelOverviewWindow::on_back_button_click() {
-    WM_EnableWindow(this->device_overview_win);
-    WM_ShowWindow(this->device_overview_win);
-    WM_HideWindow(this->handle);
-    WM_DisableWindow(this->handle);
+    this->registry->navigate_back();
 }
 
 void ModelOverviewWindow::on_device_list_selection() {
-    DeviceInfoWindow* device_info_obj = DeviceInfoWindow::from_handle(this->device_info_win);
+    DeviceInfoWindow* device_info_win = this->registry->get_window<DeviceInfoWindow>();
 
     if (this->device_list.is_item_selected()) {
-        device_info_obj->select_device(this->device_list.selected_item().id);
+        device_info_win->select_device(this->device_list.selected_item().id);
     } else {
-        device_info_obj->clear_selection();
+        device_info_win->clear_selection();
     }
 
-    WM_EnableWindow(this->device_info_win);
-    WM_ShowWindow(this->device_info_win);
-    WM_HideWindow(this->handle);
-    WM_DisableWindow(this->handle);
-
+    this->registry->navigate_to<DeviceInfoWindow>();
     this->device_list.clear_selection();
 }
