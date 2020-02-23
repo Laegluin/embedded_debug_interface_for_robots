@@ -6,6 +6,7 @@
 
 LogWindow::LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overview_win) :
     log(log),
+    last_refresh(0),
     handle(handle),
     device_overview_win(device_overview_win) {
     WM_HideWindow(this->handle);
@@ -103,6 +104,16 @@ LogWindow::LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overv
 
 void LogWindow::on_message(WM_MESSAGE* msg) {
     switch (msg->MsgId) {
+        case WM_USER_DATA: {
+            this->update_last_refresh();
+            WM_CreateTimer(msg->hWin, 0, 1000, 0);
+            break;
+        }
+        case WM_TIMER: {
+            this->update_last_refresh();
+            WM_RestartTimer(msg->Data.v, 0);
+            break;
+        }
         case WM_NOTIFY_PARENT: {
             if (msg->Data.v == WM_NOTIFICATION_RELEASED) {
                 if (msg->hWinSrc == this->back_button) {
@@ -125,6 +136,24 @@ void LogWindow::on_message(WM_MESSAGE* msg) {
     }
 }
 
+void LogWindow::update_last_refresh() {
+    auto now = HAL_GetTick();
+    auto delta = now - this->last_refresh;
+
+    auto minutes = delta / (60 * 1000);
+    auto seconds = delta % (60 * 1000) / 1000;
+
+    std::stringstream fmt;
+
+    if (minutes > 0) {
+        fmt << "last refresh: " << minutes << "min " << seconds << "s ago";
+    } else {
+        fmt << "last refresh: " << seconds << "s ago";
+    }
+
+    TEXT_SetText(this->last_update_label, fmt.str().c_str());
+}
+
 void LogWindow::on_back_button_click() {
     WM_EnableWindow(this->device_overview_win);
     WM_ShowWindow(this->device_overview_win);
@@ -133,17 +162,14 @@ void LogWindow::on_back_button_click() {
 }
 
 void LogWindow::on_refresh_button_click() {
-    auto now = HAL_GetTick();
+    this->last_refresh = HAL_GetTick();
+    this->update_last_refresh();
 
     // make a copy to avoid holding the lock for a long time
     Log log_copy(this->log->lock());
     this->log->unlock();
 
     std::stringstream fmt;
-    fmt << "last refresh: " << Log::fmt_tick(now);
-    TEXT_SetText(this->last_update_label, fmt.str().c_str());
-
-    fmt.str("");
     fmt << "Max. time btw. buffers\n"
         << log_copy.max_time_between_buf_processing() << " ms\n"
         << "Avg. time btw. buffers\n"
