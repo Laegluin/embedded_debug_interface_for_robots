@@ -18,15 +18,15 @@ DMA_HandleTypeDef DMA2_STREAM1;
 TIM_HandleTypeDef TIMER2;
 TIM_HandleTypeDef TIMER3;
 
-void init_mpu();
-void init_clocks();
-void init_tick_timer();
-void init_lcd_controller();
-void reset_lcd_controller();
-void init_touch_controller();
-void init_sdram();
-void init_uarts(std::vector<ReceiveBuf*>&);
-void init_gui();
+static void init_mpu();
+static void init_clocks();
+static void init_tick_timer();
+static void init_lcd_controller();
+static void reset_lcd_controller();
+static void init_touch_controller();
+static void init_sdram();
+static void init_uarts(std::vector<ReceiveBuf*>&);
+static void init_gui();
 
 int main() {
     static std::vector<ReceiveBuf*> bufs;
@@ -58,7 +58,7 @@ int main() {
     vTaskStartScheduler();
 }
 
-void init_clocks() {
+static void init_clocks() {
     // Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 clocks dividers
     RCC_ClkInitTypeDef rcc_config;
     rcc_config.ClockType =
@@ -92,7 +92,7 @@ void init_clocks() {
     }
 }
 
-void init_mpu() {
+static void init_mpu() {
     HAL_MPU_Disable();
 
     // complete sdram address space:
@@ -194,7 +194,7 @@ void init_mpu() {
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 
-void init_tick_timer() {
+static void init_tick_timer() {
     // configure timer for incrementing the HAL tick counter (1000 Hz)
     // cannot use systick because FreeRTOS uses it and requires it to be lowest priority
     // equation: freq = (Clock / (Prescaler + 1)) / (Period + 1)
@@ -218,7 +218,7 @@ void init_tick_timer() {
     HAL_NVIC_EnableIRQ(TIM3_IRQn);
 }
 
-void init_lcd_controller() {
+static void init_lcd_controller() {
     // GPIO and clock init
     __HAL_RCC_LTDC_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -325,7 +325,7 @@ void init_lcd_controller() {
     }
 }
 
-void reset_lcd_controller() {
+static void reset_lcd_controller() {
     HAL_LTDC_DeInit(&LCD_CONTROLLER);
     __HAL_RCC_LTDC_CLK_DISABLE();
 
@@ -346,7 +346,7 @@ void reset_lcd_controller() {
             | GPIO_PIN_7);
 }
 
-void init_touch_controller() {
+static void init_touch_controller() {
     __HAL_RCC_GPIOH_CLK_ENABLE();
 
     GPIO_InitTypeDef gpio_config;
@@ -406,7 +406,7 @@ void init_touch_controller() {
     HAL_NVIC_EnableIRQ(TIM2_IRQn);
 }
 
-void init_sdram() {
+static void init_sdram() {
     // GPIO and clock init
     __HAL_RCC_FMC_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -549,7 +549,7 @@ void init_sdram() {
     }
 }
 
-void init_uarts(std::vector<ReceiveBuf*>& bufs) {
+static void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     // init dma stream
     __HAL_RCC_DMA2_CLK_ENABLE();
     HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 1, 0);
@@ -654,7 +654,7 @@ void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     bufs.push_back(&buf);
 }
 
-void init_gui() {
+static void init_gui() {
     // CRC is required by the ST implementation
     __HAL_RCC_CRC_CLK_ENABLE();
 
