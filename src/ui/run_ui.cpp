@@ -4,6 +4,7 @@
 #include "ui/device_overview_window.h"
 #include "ui/log_window.h"
 #include "ui/model_overview_window.h"
+#include <LISTVIEW.h>
 #include <cmath>
 
 static void create_ui(const Mutex<Log>&, const Mutex<ControlTableMap>&);
@@ -202,11 +203,7 @@ static void set_button_skin() {
     BUTTON_SetSkinFlexProps(&props, BUTTON_SKINFLEX_PI_PRESSED);
 }
 
-void handle_touch_scroll(
-    WM_MESSAGE* msg,
-    float inc_per_pixel,
-    float& state,
-    void (*default_handler)(WM_MESSAGE*)) {
+void handle_listview_touch_scroll(WM_MESSAGE* msg, float inc_per_pixel, float& state) {
     switch (msg->MsgId) {
         case WM_MOTION: {
             SCROLLBAR_Handle scrollbar = WM_GetScrollbarV(msg->hWin);
@@ -235,7 +232,7 @@ void handle_touch_scroll(
             break;
         }
         default: {
-            default_handler(msg);
+            LISTVIEW_Callback(msg);
             break;
         }
     }

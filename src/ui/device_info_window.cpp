@@ -56,7 +56,7 @@ DeviceInfoWindow::DeviceInfoWindow(
 
     WM_SetCallback(this->field_list, [](auto msg) {
         static float state;
-        handle_touch_scroll(msg, 0.15, state, LISTVIEW_Callback);
+        handle_listview_touch_scroll(msg, 0.15, state);
     });
 }
 

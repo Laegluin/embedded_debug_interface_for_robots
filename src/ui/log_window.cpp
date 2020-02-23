@@ -97,7 +97,7 @@ LogWindow::LogWindow(const Mutex<Log>* log, WM_HWIN handle, WM_HWIN device_overv
 
     WM_SetCallback(this->log_list, [](auto msg) {
         static float state;
-        handle_touch_scroll(msg, 0.15, state, LISTVIEW_Callback);
+        handle_listview_touch_scroll(msg, 0.15, state);
     });
 }
 

@@ -10,10 +10,6 @@ const int NO_ID = GUI_ID_USER + 0;
 
 void run_ui(Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map);
 
-void handle_touch_scroll(
-    WM_MESSAGE* msg,
-    float inc_per_pixel,
-    float& state,
-    void (*default_handler)(WM_MESSAGE*));
+void handle_listview_touch_scroll(WM_MESSAGE* msg, float inc_per_pixel, float& state);
 
 #endif
