@@ -32,6 +32,19 @@ void DeviceList::select_device(DeviceId id) {
 
     this->selected_item_idx = item_idx;
     WM_NotifyParent(this->handle, WM_NOTIFICATION_SEL_CHANGED);
+
+    // make sure the new selection is visible, scroll to it otherwise
+    if (item_idx != -1) {
+        uint32_t height = WM_GetWindowSizeY(this->handle);
+        uint32_t start_y = this->item_margin + item_idx * (this->item_height + this->item_margin);
+        uint32_t end_y = start_y + this->item_height;
+
+        if (this->scroll_pos_y > start_y || this->scroll_pos_y + height < end_y) {
+            this->scroll_pos_y = start_y - this->item_margin;
+        }
+    }
+
+    WM_InvalidateWindow(this->handle);
 }
 
 void DeviceList::on_message(WM_MESSAGE* msg) {

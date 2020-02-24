@@ -84,12 +84,14 @@ class DeviceList {
         this->selected_item_idx = -1;
         this->pressed_item_idx = -1;
         this->scroll_pos_y = 0;
+        WM_InvalidateWindow(this->handle);
     }
 
     void select_device(DeviceId id);
 
     void clear_selection() {
         this->selected_item_idx = -1;
+        WM_InvalidateWindow(this->handle);
     }
 
     bool is_item_selected() const {
