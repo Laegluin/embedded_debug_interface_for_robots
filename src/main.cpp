@@ -664,6 +664,7 @@ static void init_gui() {
 
     WM_MOTION_Enable(true);
     WM_MULTIBUF_Enable(true);
+    WM_EnableMemdev(0);
 }
 
 void poll_touch_state() {
