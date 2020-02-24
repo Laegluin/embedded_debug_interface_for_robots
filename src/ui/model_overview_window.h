@@ -18,7 +18,13 @@ class ModelOverviewWindow {
         bool is_disconnected;
     };
 
-    ModelOverviewWindow(WindowRegistry* registry, WM_HWIN handle);
+    ModelOverviewWindow(WindowRegistry* registry);
+
+    ModelOverviewWindow(const ModelOverviewWindow&) = delete;
+
+    ModelOverviewWindow(ModelOverviewWindow&&) = delete;
+
+    ~ModelOverviewWindow();
 
     static ModelOverviewWindow* from_handle(WM_HWIN handle) {
         ModelOverviewWindow* self;
@@ -29,6 +35,10 @@ class ModelOverviewWindow {
     static void handle_message(WM_MESSAGE* msg) {
         ModelOverviewWindow::from_handle(msg->hWin)->on_message(msg);
     }
+
+    ModelOverviewWindow& operator=(const ModelOverviewWindow&) = delete;
+
+    ModelOverviewWindow& operator=(ModelOverviewWindow&&) = delete;
 
     void update(const std::vector<DeviceStatus>& statuses);
 

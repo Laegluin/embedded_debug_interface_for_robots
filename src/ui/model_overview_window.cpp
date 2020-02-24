@@ -4,18 +4,31 @@
 #include "ui/device_info_window.h"
 #include <sstream>
 
-ModelOverviewWindow::ModelOverviewWindow(WindowRegistry* registry, WM_HWIN handle) :
+ModelOverviewWindow::ModelOverviewWindow(WindowRegistry* registry) :
     registry(registry),
     selected_model_number(0),
-    handle(handle),
+    handle(WINDOW_CreateUser(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        0,
+        NO_ID,
+        ModelOverviewWindow::handle_message,
+        sizeof(void*))),
     device_list(
         0,
         TITLE_BAR_HEIGHT + 2 * MARGIN + 60,
         DISPLAY_WIDTH,
         DISPLAY_HEIGHT - TITLE_BAR_HEIGHT - 2 * MARGIN - 60,
-        handle) {
+        this->handle) {
+    ModelOverviewWindow* self = this;
+    WINDOW_SetUserData(this->handle, &self, sizeof(void*));
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
+    this->registry->register_window<ModelOverviewWindow>(this->handle);
 
     this->back_button = BUTTON_CreateEx(
         MARGIN, MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
@@ -60,13 +73,10 @@ ModelOverviewWindow::ModelOverviewWindow(WindowRegistry* registry, WM_HWIN handl
 
     TEXT_SetFont(this->status_label, GUI_FONT_20_1);
     TEXT_SetTextColor(this->status_label, GUI_WHITE);
+}
 
-    this->device_list.insert_or_modify(DeviceId(0), [](auto& item) { item.label = "0 blabla"; });
-    this->device_list.insert_or_modify(DeviceId(1), [](auto& item) { item.label = "1 ahaha"; });
-    this->device_list.insert_or_modify(DeviceId(2), [](auto& item) { item.label = "2 ahaha"; });
-    this->device_list.insert_or_modify(DeviceId(3), [](auto& item) { item.label = "3 ahaha"; });
-    this->device_list.insert_or_modify(DeviceId(4), [](auto& item) { item.label = "4 ahaha"; });
-    this->device_list.insert_or_modify(DeviceId(5), [](auto& item) { item.label = "5 ahaha"; });
+ModelOverviewWindow::~ModelOverviewWindow() {
+    WM_DeleteWindow(this->handle);
 }
 
 void ModelOverviewWindow::update(const std::vector<DeviceStatus>& statuses) {
@@ -139,10 +149,6 @@ void ModelOverviewWindow::on_message(WM_MESSAGE* msg) {
                 default: { break; }
             }
 
-            break;
-        }
-        case WM_DELETE: {
-            delete this;
             break;
         }
         default: {

@@ -13,10 +13,13 @@
 
 class DeviceOverviewWindow {
   public:
-    DeviceOverviewWindow(
-        WindowRegistry* registry,
-        const Mutex<ControlTableMap>* control_table_map,
-        WM_HWIN handle);
+    DeviceOverviewWindow(WindowRegistry* registry, const Mutex<ControlTableMap>* control_table_map);
+
+    DeviceOverviewWindow(const DeviceOverviewWindow&) = delete;
+
+    DeviceOverviewWindow(DeviceOverviewWindow&&) = delete;
+
+    ~DeviceOverviewWindow();
 
     static DeviceOverviewWindow* from_handle(WM_HWIN handle) {
         DeviceOverviewWindow* self;
@@ -27,6 +30,10 @@ class DeviceOverviewWindow {
     static void handle_message(WM_MESSAGE* msg) {
         DeviceOverviewWindow::from_handle(msg->hWin)->on_message(msg);
     }
+
+    DeviceOverviewWindow& operator=(const DeviceOverviewWindow&) = delete;
+
+    DeviceOverviewWindow& operator=(DeviceOverviewWindow&&) = delete;
 
   private:
     void on_message(WM_MESSAGE* msg);

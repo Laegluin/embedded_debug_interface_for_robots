@@ -14,10 +14,13 @@
 
 class DeviceInfoWindow {
   public:
-    DeviceInfoWindow(
-        WindowRegistry* registry,
-        const Mutex<ControlTableMap>* control_table_map,
-        WM_HWIN handle);
+    DeviceInfoWindow(WindowRegistry* registry, const Mutex<ControlTableMap>* control_table_map);
+
+    DeviceInfoWindow(const DeviceInfoWindow&) = delete;
+
+    DeviceInfoWindow(DeviceInfoWindow&&) = delete;
+
+    ~DeviceInfoWindow();
 
     static DeviceInfoWindow* from_handle(WM_HWIN handle) {
         DeviceInfoWindow* self;
@@ -28,6 +31,10 @@ class DeviceInfoWindow {
     static void handle_message(WM_MESSAGE* msg) {
         DeviceInfoWindow::from_handle(msg->hWin)->on_message(msg);
     }
+
+    DeviceInfoWindow& operator=(const DeviceInfoWindow&) = delete;
+
+    DeviceInfoWindow& operator=(DeviceInfoWindow&&) = delete;
 
     void select_device(DeviceId id);
 

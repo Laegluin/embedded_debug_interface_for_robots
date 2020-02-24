@@ -12,7 +12,13 @@
 
 class LogWindow {
   public:
-    LogWindow(WindowRegistry* registry, const Mutex<Log>* log, WM_HWIN handle);
+    LogWindow(WindowRegistry* registry, const Mutex<Log>* log);
+
+    LogWindow(const LogWindow&) = delete;
+
+    LogWindow(LogWindow&&) = delete;
+
+    ~LogWindow();
 
     static LogWindow* from_handle(WM_HWIN handle) {
         LogWindow* self;
@@ -23,6 +29,10 @@ class LogWindow {
     static void handle_message(WM_MESSAGE* msg) {
         LogWindow::from_handle(msg->hWin)->on_message(msg);
     }
+
+    LogWindow& operator=(const LogWindow&) = delete;
+
+    LogWindow& operator=(LogWindow&&) = delete;
 
   private:
     void on_message(WM_MESSAGE* msg);

@@ -4,13 +4,26 @@
 #include <FreeRTOS.h>
 #include <sstream>
 
-LogWindow::LogWindow(WindowRegistry* registry, const Mutex<Log>* log, WM_HWIN handle) :
+LogWindow::LogWindow(WindowRegistry* registry, const Mutex<Log>* log) :
     registry(registry),
     log(log),
     last_refresh(0),
-    handle(handle) {
+    handle(WINDOW_CreateUser(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        0,
+        NO_ID,
+        LogWindow::handle_message,
+        sizeof(void*))) {
+    LogWindow* self = this;
+    WINDOW_SetUserData(this->handle, &self, sizeof(void*));
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
+    this->registry->register_window<LogWindow>(this->handle);
 
     this->back_button = BUTTON_CreateEx(
         MARGIN, MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
@@ -102,16 +115,19 @@ LogWindow::LogWindow(WindowRegistry* registry, const Mutex<Log>* log, WM_HWIN ha
     });
 }
 
+LogWindow::~LogWindow() {
+    WM_DeleteWindow(this->handle);
+}
+
 void LogWindow::on_message(WM_MESSAGE* msg) {
     switch (msg->MsgId) {
         case WM_USER_DATA: {
-            this->update_last_refresh();
-            WM_CreateTimer(msg->hWin, 0, 1000, 0);
+            WM_CreateTimer(msg->hWin, 0, 0, 0);
             break;
         }
         case WM_TIMER: {
             this->update_last_refresh();
-            WM_RestartTimer(msg->Data.v, 0);
+            WM_RestartTimer(msg->Data.v, 1000);
             break;
         }
         case WM_NOTIFY_PARENT: {
@@ -123,10 +139,6 @@ void LogWindow::on_message(WM_MESSAGE* msg) {
                 }
             }
 
-            break;
-        }
-        case WM_DELETE: {
-            delete this;
             break;
         }
         default: {

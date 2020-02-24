@@ -10,19 +10,31 @@
 
 DeviceOverviewWindow::DeviceOverviewWindow(
     WindowRegistry* registry,
-    const Mutex<ControlTableMap>* control_table_map,
-    WM_HWIN handle) :
+    const Mutex<ControlTableMap>* control_table_map) :
     registry(registry),
     control_table_map(control_table_map),
-    handle(handle),
+    handle(WINDOW_CreateUser(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        0,
+        NO_ID,
+        DeviceOverviewWindow::handle_message,
+        sizeof(void*))),
     model_list(
         0,
         TITLE_BAR_HEIGHT + MARGIN + 60,
         DISPLAY_WIDTH,
         DISPLAY_HEIGHT - TITLE_BAR_HEIGHT - MARGIN - 60,
-        handle) {
+        this->handle) {
+    DeviceOverviewWindow* self = this;
+    WINDOW_SetUserData(this->handle, &self, sizeof(void*));
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
+    this->registry->register_window<DeviceOverviewWindow>(this->handle);
 
     auto title = TEXT_CreateEx(
         6,
@@ -89,16 +101,19 @@ DeviceOverviewWindow::DeviceOverviewWindow(
     TEXT_SetTextColor(this->status_label, GUI_WHITE);
 }
 
+DeviceOverviewWindow::~DeviceOverviewWindow() {
+    WM_DeleteWindow(this->handle);
+}
+
 void DeviceOverviewWindow::on_message(WM_MESSAGE* msg) {
     switch (msg->MsgId) {
         case WM_USER_DATA: {
-            this->update();
-            WM_CreateTimer(msg->hWin, 0, 500, 0);
+            WM_CreateTimer(msg->hWin, 0, 0, 0);
             break;
         }
         case WM_TIMER: {
             this->update();
-            WM_RestartTimer(msg->Data.v, 0);
+            WM_RestartTimer(msg->Data.v, 500);
             break;
         }
         case WM_NOTIFY_PARENT: {
@@ -122,10 +137,6 @@ void DeviceOverviewWindow::on_message(WM_MESSAGE* msg) {
                 default: { break; }
             }
 
-            break;
-        }
-        case WM_DELETE: {
-            delete this;
             break;
         }
         default: {

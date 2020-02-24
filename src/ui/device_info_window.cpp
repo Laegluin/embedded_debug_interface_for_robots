@@ -5,14 +5,26 @@
 
 DeviceInfoWindow::DeviceInfoWindow(
     WindowRegistry* registry,
-    const Mutex<ControlTableMap>* control_table_map,
-    WM_HWIN handle) :
+    const Mutex<ControlTableMap>* control_table_map) :
     registry(registry),
     control_table_map(control_table_map),
-    handle(handle),
-    device_list(0, TITLE_BAR_HEIGHT, 150, DISPLAY_HEIGHT - TITLE_BAR_HEIGHT, handle) {
+    handle(WINDOW_CreateUser(
+        0,
+        0,
+        DISPLAY_WIDTH,
+        DISPLAY_HEIGHT,
+        0,
+        WM_CF_SHOW,
+        0,
+        NO_ID,
+        DeviceInfoWindow::handle_message,
+        sizeof(void*))),
+    device_list(0, TITLE_BAR_HEIGHT, 150, DISPLAY_HEIGHT - TITLE_BAR_HEIGHT, this->handle) {
+    DeviceInfoWindow* self = this;
+    WINDOW_SetUserData(this->handle, &self, sizeof(void*));
     WM_HideWindow(this->handle);
     WM_DisableWindow(this->handle);
+    this->registry->register_window<DeviceInfoWindow>(this->handle);
 
     this->back_button = BUTTON_CreateEx(
         MARGIN, MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT, this->handle, WM_CF_SHOW, 0, NO_ID);
@@ -60,6 +72,10 @@ DeviceInfoWindow::DeviceInfoWindow(
     });
 }
 
+DeviceInfoWindow::~DeviceInfoWindow() {
+    WM_DeleteWindow(this->handle);
+}
+
 void DeviceInfoWindow::select_device(DeviceId id) {
     this->device_list.select_device(id);
 }
@@ -71,13 +87,12 @@ void DeviceInfoWindow::clear_selection() {
 void DeviceInfoWindow::on_message(WM_MESSAGE* msg) {
     switch (msg->MsgId) {
         case WM_USER_DATA: {
-            this->update();
-            WM_CreateTimer(msg->hWin, 0, 500, 0);
+            WM_CreateTimer(msg->hWin, 0, 0, 0);
             break;
         }
         case WM_TIMER: {
             this->update();
-            WM_RestartTimer(msg->Data.v, 0);
+            WM_RestartTimer(msg->Data.v, 500);
             break;
         }
         case WM_NOTIFY_PARENT: {
@@ -99,10 +114,6 @@ void DeviceInfoWindow::on_message(WM_MESSAGE* msg) {
                 default: { break; }
             }
 
-            break;
-        }
-        case WM_DELETE: {
-            delete this;
             break;
         }
         default: {

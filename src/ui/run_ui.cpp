@@ -25,74 +25,13 @@ void run_ui(Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map) {
 static void create_ui(const Mutex<Log>& log, const Mutex<ControlTableMap>& control_table_map) {
     set_ui_theme();
 
-    auto model_overview_win = WINDOW_CreateUser(
-        0,
-        0,
-        DISPLAY_WIDTH,
-        DISPLAY_HEIGHT,
-        0,
-        WM_CF_SHOW,
-        0,
-        NO_ID,
-        ModelOverviewWindow::handle_message,
-        sizeof(void*));
-
-    auto device_overview_win = WINDOW_CreateUser(
-        0,
-        0,
-        DISPLAY_WIDTH,
-        DISPLAY_HEIGHT,
-        0,
-        WM_CF_SHOW,
-        0,
-        NO_ID,
-        DeviceOverviewWindow::handle_message,
-        sizeof(void*));
-
-    auto device_info_win = WINDOW_CreateUser(
-        0,
-        0,
-        DISPLAY_WIDTH,
-        DISPLAY_HEIGHT,
-        0,
-        WM_CF_SHOW,
-        0,
-        NO_ID,
-        DeviceInfoWindow::handle_message,
-        sizeof(void*));
-
-    auto log_win = WINDOW_CreateUser(
-        0,
-        0,
-        DISPLAY_WIDTH,
-        DISPLAY_HEIGHT,
-        0,
-        WM_CF_SHOW,
-        0,
-        NO_ID,
-        LogWindow::handle_message,
-        sizeof(void*));
-
-    // register windows
+    // we're leaking all allocation since the UI task will never exit anyway
     WindowRegistry* registry = new WindowRegistry();
-    registry->register_window<ModelOverviewWindow>(model_overview_win);
-    registry->register_window<DeviceOverviewWindow>(device_overview_win);
-    registry->register_window<DeviceInfoWindow>(device_info_win);
-    registry->register_window<LogWindow>(log_win);
 
-    // create objects for widgets
-    auto model_overview_obj = new ModelOverviewWindow(registry, model_overview_win);
-    WINDOW_SetUserData(model_overview_win, &model_overview_obj, sizeof(void*));
-
-    auto device_overview_obj =
-        new DeviceOverviewWindow(registry, &control_table_map, device_overview_win);
-    WINDOW_SetUserData(device_overview_win, &device_overview_obj, sizeof(void*));
-
-    auto device_info_obj = new DeviceInfoWindow(registry, &control_table_map, device_info_win);
-    WINDOW_SetUserData(device_info_win, &device_info_obj, sizeof(void*));
-
-    auto log_obj = new LogWindow(registry, &log, log_win);
-    WINDOW_SetUserData(log_win, &log_obj, sizeof(void*));
+    new DeviceOverviewWindow(registry, &control_table_map);
+    new ModelOverviewWindow(registry);
+    new DeviceInfoWindow(registry, &control_table_map);
+    new LogWindow(registry, &log);
 
     registry->navigate_to<DeviceOverviewWindow>();
 }
