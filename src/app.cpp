@@ -167,14 +167,12 @@ static void process_buffer(
     Mutex<ControlTableMap>& control_table_map) {
     Cursor* cursor;
 
-    if (connection.buf->is_front_ready) {
+    if (connection.buf->ready == ReceiveBuf::Ready::Front) {
         connection.buf->back.reset();
         cursor = &connection.buf->front;
-    } else if (connection.buf->is_back_ready) {
+    } else {
         connection.buf->front.reset();
         cursor = &connection.buf->back;
-    } else {
-        on_error();
     }
 
     auto processing_start = HAL_GetTick();

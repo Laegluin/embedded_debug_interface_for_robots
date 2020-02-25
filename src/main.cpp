@@ -627,14 +627,11 @@ static void init_uarts(std::vector<ReceiveBuf*>& bufs) {
     static ReceiveBuf buf __attribute__((section(".dtcm_data")));
 
     HAL_DMA_RegisterCallback(&DMA2_STREAM1, HAL_DMA_XFER_HALFCPLT_CB_ID, [](auto) {
-        buf.is_front_ready = true;
-        buf.is_back_ready = false;
+        buf.ready = ReceiveBuf::Ready::Front;
     });
 
-    HAL_DMA_RegisterCallback(&DMA2_STREAM1, HAL_DMA_XFER_CPLT_CB_ID, [](auto) {
-        buf.is_front_ready = false;
-        buf.is_back_ready = true;
-    });
+    HAL_DMA_RegisterCallback(
+        &DMA2_STREAM1, HAL_DMA_XFER_CPLT_CB_ID, [](auto) { buf.ready = ReceiveBuf::Ready::Back; });
 
     HAL_DMA_RegisterCallback(&DMA2_STREAM1, HAL_DMA_XFER_ERROR_CB_ID, [](auto) { on_error(); });
 

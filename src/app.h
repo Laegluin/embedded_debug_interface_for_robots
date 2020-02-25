@@ -43,22 +43,25 @@ const size_t MAX_NUM_LOG_ENTRIES = 50;
 
 struct ReceiveBuf {
   public:
+    enum class Ready : uint8_t {
+        Front,
+        Back,
+    };
+
     static const size_t LEN = 8192;
     static_assert(LEN % 2 == 0);
 
     ReceiveBuf() :
         front(Cursor(this->bytes, LEN / 2)),
         back(Cursor(this->bytes + LEN / 2, LEN / 2)),
-        is_front_ready(false),
-        is_back_ready(true) {
+        ready(Ready::Back) {
         this->back.set_empty();
     }
 
     volatile uint8_t bytes[LEN];
     Cursor front;
     Cursor back;
-    volatile bool is_front_ready;
-    volatile bool is_back_ready;
+    volatile Ready ready;
 };
 
 template <typename T>
