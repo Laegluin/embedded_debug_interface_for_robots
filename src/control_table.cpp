@@ -28,6 +28,12 @@ Segment
     return segment;
 }
 
+Segment Segment::new_unknown() {
+    Segment segment;
+    segment.type = Type::Unknown;
+    return segment;
+}
+
 uint16_t Segment::start_addr() const {
     switch (this->type) {
         case Type::DataSegment: {
@@ -35,6 +41,9 @@ uint16_t Segment::start_addr() const {
         }
         case Type::IndirectAddressSegment: {
             return this->indirect_address.map_start_addr;
+        }
+        case Type::Unknown: {
+            return 0x0000;
         }
         default: { return 0; }
     }
@@ -47,6 +56,9 @@ uint16_t Segment::len() const {
         }
         case Type::IndirectAddressSegment: {
             return this->indirect_address.len;
+        }
+        case Type::Unknown: {
+            return 0;
         }
         default: { return 0; }
     }
@@ -79,10 +91,18 @@ void Segment::set_backing_storage(uint8_t* buf) {
             this->indirect_address.map = buf;
             break;
         }
+        case Type::Unknown: {
+            // nothing to set
+            break;
+        }
     }
 }
 
 bool Segment::read(uint16_t addr, uint8_t* byte) const {
+    if (this->type == Type::Unknown) {
+        return false;
+    }
+
     if (addr < this->start_addr() || addr >= this->start_addr() + this->len()) {
         return false;
     }
@@ -101,6 +121,10 @@ bool Segment::read(uint16_t addr, uint8_t* byte) const {
 }
 
 bool Segment::write(uint16_t addr, uint8_t byte) {
+    if (this->type == Type::Unknown) {
+        return true;
+    }
+
     if (addr < this->start_addr() || addr >= this->start_addr() + this->len()) {
         return false;
     }

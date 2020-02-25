@@ -29,12 +29,16 @@ class Segment {
     enum class Type {
         DataSegment,
         IndirectAddressSegment,
+        Unknown,
     };
 
     static Segment new_data(uint16_t start_addr, uint16_t len);
 
     static Segment
         new_indirect_address(uint16_t data_start_addr, uint16_t map_start_addr, uint16_t len);
+
+    /// Creates a new `Segment` that accepts any writes and does not allow any reads.
+    static Segment new_unknown();
 
     uint16_t start_addr() const;
 
@@ -237,11 +241,17 @@ class ControlTable {
 class UnknownControlTable : public ControlTable {
   public:
     UnknownControlTable() :
-        mem(ControlTableMemory({Segment::new_data(0, 3)})),
+        mem(ControlTableMemory({
+            Segment::new_data(0, 3),
+            Segment::new_unknown(),
+        })),
         is_unknown_model_(true) {}
 
     UnknownControlTable(uint16_t model_number) :
-        mem(ControlTableMemory({Segment::new_data(0, 3)})),
+        mem(ControlTableMemory({
+            Segment::new_data(0, 3),
+            Segment::new_unknown(),
+        })),
         is_unknown_model_(false) {
         this->mem.write_uint16(0, model_number);
     }
