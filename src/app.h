@@ -1,11 +1,12 @@
 #ifndef APP_H
 #define APP_H
 
+#include "control_table.h"
 #include "cursor.h"
 #include "main.h"
+#include "parser.h"
 
 #include <deque>
-#include <memory>
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -108,11 +109,42 @@ class Mutex {
 
 class Log {
   public:
+    enum class ErrorType {
+        Parser,
+        Protocol,
+    };
+
+    class Record {
+      public:
+        Record(ParseResult parse_error) :
+            tick(HAL_GetTick()),
+            error_type(ErrorType::Parser),
+            parse_error(parse_error) {}
+
+        Record(ProtocolResult protocol_error) :
+            tick(HAL_GetTick()),
+            error_type(ErrorType::Protocol),
+            protocol_error(protocol_error) {}
+
+        ~Record() {
+            static_assert(std::is_trivially_destructible<ParseResult>());
+            static_assert(std::is_trivially_destructible<ProtocolResult>());
+        }
+
+        friend std::string to_string(const Record&);
+
+      private:
+        uint32_t tick;
+        ErrorType error_type;
+        union {
+            ParseResult parse_error;
+            ProtocolResult protocol_error;
+        };
+    };
+
     Log();
 
-    static std::string fmt_tick(uint32_t tick);
-
-    void error(std::string message);
+    void log(Record record);
 
     void buf_processing_time(uint32_t time);
 
@@ -120,9 +152,9 @@ class Log {
 
     size_t size() const;
 
-    std::deque<std::shared_ptr<std::string>>::const_iterator begin() const;
+    std::deque<Record>::const_iterator begin() const;
 
-    std::deque<std::shared_ptr<std::string>>::const_iterator end() const;
+    std::deque<Record>::const_iterator end() const;
 
     uint32_t max_buf_processing_time() const;
 
@@ -133,9 +165,7 @@ class Log {
     float avg_time_between_buf_processing() const;
 
   private:
-    void push_message(std::string&& message);
-
-    std::deque<std::shared_ptr<std::string>> messages;
+    std::deque<Record> records;
     uint32_t max_buf_processing_time_;
     uint32_t buf_processing_time_sum;
     uint32_t num_processed_bufs;
@@ -143,6 +173,8 @@ class Log {
     uint32_t time_between_buf_processing_sum;
     uint32_t num_times_between_buf_processing;
 };
+
+std::string to_string(const Log::Record& record);
 
 void run(const std::vector<ReceiveBuf*>& bufs);
 

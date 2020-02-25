@@ -213,8 +213,8 @@ void LogWindow::on_refresh_button_click() {
 
     size_t item_idx = 0;
 
-    for (auto& log_entry : log_copy) {
-        LISTVIEW_SetItemText(this->log_list, 0, item_idx, log_entry->c_str());
+    for (auto& record : log_copy) {
+        LISTVIEW_SetItemText(this->log_list, 0, item_idx, to_string(record).c_str());
         item_idx++;
     }
 }

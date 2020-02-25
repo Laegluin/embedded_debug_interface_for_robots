@@ -43,33 +43,17 @@ Log::Log() :
     // make sure no allocations are required in the main loop
     // since std::deque has no reserve method for some reason, we
     // have to use resize as a workaround
-    this->messages.resize(MAX_NUM_LOG_ENTRIES);
-    this->messages.shrink_to_fit();
-    this->messages.resize(0);
+    this->records.resize(MAX_NUM_LOG_ENTRIES, Record(ParseResult::PacketAvailable));
+    this->records.shrink_to_fit();
+    this->records.resize(0, Record(ParseResult::PacketAvailable));
 }
 
-std::string Log::fmt_tick(uint32_t tick) {
-    auto minutes = tick / (60 * 1000);
-    auto remaining_millis = tick % (60 * 1000);
-    auto seconds = remaining_millis / 1000;
-    remaining_millis = remaining_millis % 1000;
-    auto millis = remaining_millis;
+void Log::log(Record record) {
+    if (records.size() >= MAX_NUM_LOG_ENTRIES) {
+        this->records.pop_back();
+    }
 
-    std::stringstream fmt;
-    fmt << "+" << std::setfill('0') << std::setw(2) << minutes << ":" << std::setfill('0')
-        << std::setw(2) << seconds << "." << std::setfill('0') << std::setw(3) << std::left
-        << millis;
-    return fmt.str();
-}
-
-void Log::error(std::string message) {
-    auto now = HAL_GetTick();
-
-    std::stringstream fmt;
-    auto now_str = Log::fmt_tick(now);
-    fmt << "[" << now_str << "] error: " << message;
-
-    this->push_message(fmt.str());
+    this->records.push_front(record);
 }
 
 void Log::buf_processing_time(uint32_t time) {
@@ -85,15 +69,15 @@ void Log::time_between_buf_processing(uint32_t time) {
 }
 
 size_t Log::size() const {
-    return this->messages.size();
+    return this->records.size();
 }
 
-std::deque<std::shared_ptr<std::string>>::const_iterator Log::begin() const {
-    return this->messages.begin();
+std::deque<Log::Record>::const_iterator Log::begin() const {
+    return this->records.begin();
 }
 
-std::deque<std::shared_ptr<std::string>>::const_iterator Log::end() const {
-    return this->messages.end();
+std::deque<Log::Record>::const_iterator Log::end() const {
+    return this->records.end();
 }
 
 uint32_t Log::max_buf_processing_time() const {
@@ -113,12 +97,30 @@ float Log::avg_time_between_buf_processing() const {
         / (float) this->num_times_between_buf_processing;
 }
 
-void Log::push_message(std::string&& message) {
-    if (messages.size() >= MAX_NUM_LOG_ENTRIES) {
-        this->messages.pop_back();
+std::string to_string(const Log::Record& record) {
+    auto minutes = record.tick / (60 * 1000);
+    auto remaining_millis = record.tick % (60 * 1000);
+    auto seconds = remaining_millis / 1000;
+    remaining_millis = remaining_millis % 1000;
+    auto millis = remaining_millis;
+
+    std::stringstream fmt;
+    fmt << "[+" << std::setfill('0') << std::setw(2) << minutes << ":" << std::setfill('0')
+        << std::setw(2) << seconds << "." << std::setfill('0') << std::setw(3) << std::left
+        << millis << "] error: ";
+
+    switch (record.error_type) {
+        case Log::ErrorType::Parser: {
+            fmt << to_string(record.parse_error);
+            break;
+        }
+        case Log::ErrorType::Protocol: {
+            fmt << to_string(record.protocol_error);
+            break;
+        }
     }
 
-    this->messages.push_front(std::make_shared<std::string>(std::move(message)));
+    return fmt.str();
 }
 
 void run(const std::vector<ReceiveBuf*>& bufs) {
@@ -177,8 +179,7 @@ static void process_buffer(
 
     auto processing_start = HAL_GetTick();
     auto is_buf_empty = cursor->remaining_bytes() == 0;
-    std::vector<ParseResult> parse_errors;
-    std::vector<ProtocolResult> protocol_errors;
+    std::vector<Log::Record> log_records;
 
     auto& control_table_map_ref = control_table_map.lock();
 
@@ -190,14 +191,14 @@ static void process_buffer(
                 break;
             }
 
-            parse_errors.push_back(parse_result);
+            log_records.push_back(Log::Record(parse_result));
             continue;
         }
 
         auto result = control_table_map_ref.receive(connection.last_packet);
 
         if (result != ProtocolResult::Ok) {
-            protocol_errors.push_back(result);
+            log_records.push_back(Log::Record(result));
         }
     }
 
@@ -211,12 +212,8 @@ static void process_buffer(
         log_ref.buf_processing_time(processing_end - processing_start);
     }
 
-    for (auto parse_error : parse_errors) {
-        log_ref.error(to_string(parse_error));
-    }
-
-    for (auto protocol_error : protocol_errors) {
-        log_ref.error(to_string(protocol_error));
+    for (auto& record : log_records) {
+        log_ref.log(record);
     }
 
     log_ref.time_between_buf_processing(processing_start - connection.last_processing_start);
