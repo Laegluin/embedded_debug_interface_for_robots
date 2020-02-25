@@ -128,28 +128,39 @@ struct Packet {
 
 class Receiver {
   public:
+    enum class ReadState {
+        Ok,
+        NeedMoreData,
+        FoundHeader,
+    };
+
+    struct Result {
+        ReadState state;
+        bool is_data_byte;
+        uint8_t byte;
+    };
+
+    enum class Crc {
+        Enable,
+        Disable,
+    };
+
     Receiver() : last_bytes({0, 0, 0}), crc(0) {}
 
     bool wait_for_header(Cursor& cursor);
 
-    /// Reads at most `num_bytes` from `cursor` into `dst` and returns the number of bytes read.
-    /// Bytes are counted and returned after stuffing has been removed. All read bytes (including
-    /// stuffing are used to update the crc checksum).
-    size_t read(Cursor& cursor, uint8_t* dst, size_t num_bytes);
-
-    /// Like `Receiver::read` but uses and returns the number of bytes before stuffing has been
-    /// removed. The bytes written to `dst` have all stuffing removed and the length of `dst` is
-    /// written to `dst_len`.
-    size_t read_raw_num_bytes(Cursor& cursor, uint8_t* dst, size_t* dst_len, size_t raw_num_bytes);
-
-    /// Reads `num_bytes` from `cursor` into `dst` and returns the number of bytes read. Does not
-    /// remove stuffing. __Does not update the crc checksum__.
-    size_t read_raw(Cursor& cursor, uint8_t* dst, size_t num_bytes);
+    Result read_byte(Cursor& cursor, Crc crc_mode);
 
     uint16_t current_crc() const;
 
   private:
-    bool is_stuffing_byte(uint8_t byte) const;
+    enum class ByteType {
+        Data,
+        Stuffing,
+        HeaderEnd,
+    };
+
+    ByteType byte_type(uint8_t byte) const;
 
     void push_last_byte(uint8_t byte);
 
@@ -167,6 +178,7 @@ enum class ParseResult {
     BufferOverflow,
     MismatchedChecksum,
     UnknownState,
+    UnexpectedHeader,
 };
 
 std::string to_string(const ParseResult& result);

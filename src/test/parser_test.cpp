@@ -214,12 +214,13 @@ TEST_CASE("parse invalid packets", "[Parser]") {
     };
 
     SECTION("buffer overflow") {
-        uint8_t raw_packet[]{
-            0xff, 0xff, 0xfd, 0x00, 0x01, 0xff, 0xff, 0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
-        Cursor cursor(raw_packet, sizeof(raw_packet));
+        std::vector<uint8_t> raw_packet{0xff, 0xff, 0xfd, 0x00, 0x01, 0xff, 0xff, 0x02};
+        raw_packet.resize(raw_packet.size() + MAX_PACKET_DATA_LEN + 10, 0x00);
+
+        Cursor cursor(raw_packet.data(), raw_packet.size());
         auto result = parser.parse(cursor, &packet);
 
-        REQUIRE(cursor.remaining_bytes() == 6);
+        REQUIRE(cursor.remaining_bytes() == 9);
         REQUIRE(result == ParseResult::BufferOverflow);
     }
 
@@ -234,15 +235,15 @@ TEST_CASE("parse invalid packets", "[Parser]") {
     }
 
     SECTION("successful parse after error") {
-        uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0xff, 0xff, 0x02, 0x84, 0x00,
-                             0x04, 0x00, 0x1d, 0x15, 0xff, 0xff, 0xfd, 0x00, 0x01, 0x07,
+        uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0x05, 0x00, 0x02, 0x84, 0x00,
+                             0x04, 0x00, 0x11, 0x15, 0xff, 0xff, 0xfd, 0x00, 0x01, 0x07,
                              0x00, 0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
 
         Cursor cursor(raw_packet, sizeof(raw_packet));
         auto result = parser.parse(cursor, &packet);
 
-        REQUIRE(cursor.remaining_bytes() == 20);
-        REQUIRE(result == ParseResult::BufferOverflow);
+        REQUIRE(cursor.remaining_bytes() == 16);
+        REQUIRE(result == ParseResult::MismatchedChecksum);
 
         result = parser.parse(cursor, &packet);
 
@@ -254,19 +255,23 @@ TEST_CASE("parse invalid packets", "[Parser]") {
         REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
     }
 
-    // TODO: detect header and start parsing a new packet instead
-    SECTION("allow unescaped header with reserved byte in data") {
-        uint8_t raw_packet[]{
-            0xff, 0xff, 0xfd, 0x00, 0x01, 0x07, 0x00, 0x02, 0xff, 0xff, 0xfd, 0x00, 0x0a, 0xd3};
+    SECTION("detect unescaped header in data") {
+        uint8_t raw_packet[]{0xff, 0xff, 0xfd, 0x00, 0x01, 0x07, 0x00, 0x02, 0xff, 0xff, 0xfd,
+                             0x00, 0x01, 0x07, 0x00, 0x02, 0x84, 0x00, 0x04, 0x00, 0x1d, 0x15};
         Cursor cursor(raw_packet, sizeof(raw_packet));
         auto result = parser.parse(cursor, &packet);
+
+        REQUIRE(cursor.remaining_bytes() == 10);
+        REQUIRE(result == ParseResult::UnexpectedHeader);
+
+        result = parser.parse(cursor, &packet);
 
         REQUIRE(cursor.remaining_bytes() == 0);
         REQUIRE(result == ParseResult::PacketAvailable);
         REQUIRE(packet.device_id == DeviceId(1));
         REQUIRE(packet.instruction == Instruction::Read);
         REQUIRE(packet.error == Error());
-        REQUIRE(packet.data == std::vector<uint8_t>{0xff, 0xff, 0xfd, 0x00});
+        REQUIRE(packet.data == std::vector<uint8_t>{0x84, 0x00, 0x04, 0x00});
     }
 
     // this is technically not allowed by the spec but since it would not be the start of a packet

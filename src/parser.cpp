@@ -7,13 +7,52 @@ const uint8_t STUFFING_BYTE = 0xfd;
 const uint8_t HEADER_TRAILING_BYTE = 0x00;
 
 bool Receiver::wait_for_header(Cursor& cursor) {
-    uint8_t current_byte;
+    while (true) {
+        auto result = this->read_byte(cursor, Receiver::Crc::Disable);
 
-    while (cursor.read(&current_byte, 1) != 0) {
-        auto is_header = current_byte == HEADER_TRAILING_BYTE && this->last_bytes == HEADER;
-        this->push_last_byte(current_byte);
+        switch (result.state) {
+            case Receiver::ReadState::Ok: {
+                break;
+            }
+            case Receiver::ReadState::NeedMoreData: {
+                return false;
+            }
+            case Receiver::ReadState::FoundHeader: {
+                return true;
+            }
+        }
+    }
+}
 
-        if (is_header) {
+Receiver::Result Receiver::read_byte(Cursor& cursor, Receiver::Crc crc_mode) {
+    Receiver::Result result;
+
+    if (cursor.read(&result.byte, 1) == 0) {
+        result.state = Receiver::ReadState::NeedMoreData;
+        return result;
+    }
+
+    auto byte_type = this->byte_type(result.byte);
+    this->push_last_byte(result.byte);
+
+    if (crc_mode == Receiver::Crc::Enable) {
+        this->update_crc(result.byte);
+    }
+
+    switch (byte_type) {
+        case Receiver::ByteType::Data: {
+            result.state = Receiver::ReadState::Ok;
+            result.is_data_byte = true;
+            return result;
+        }
+        case Receiver::ByteType::Stuffing: {
+            result.state = Receiver::ReadState::Ok;
+            result.is_data_byte = false;
+            return result;
+        }
+        case Receiver::ByteType::HeaderEnd: {
+            result.state = Receiver::ReadState::FoundHeader;
+
             // reset crc for new packet, then add the header
             this->reset_crc();
             this->update_crc(HEADER[0]);
@@ -21,68 +60,26 @@ bool Receiver::wait_for_header(Cursor& cursor) {
             this->update_crc(HEADER[2]);
             this->update_crc(HEADER_TRAILING_BYTE);
 
-            return true;
+            return result;
+        }
+        default: {
+            result.state = Receiver::ReadState::Ok;
+            result.is_data_byte = true;
+            return result;
         }
     }
-
-    return false;
 }
 
-size_t Receiver::read(Cursor& cursor, uint8_t* dst, size_t num_bytes) {
-    size_t bytes_read = 0;
-    uint8_t current_byte;
-
-    while (bytes_read < num_bytes && cursor.read(&current_byte, 1) != 0) {
-        if (!this->is_stuffing_byte(current_byte)) {
-            dst[bytes_read] = current_byte;
-            bytes_read++;
-        }
-
-        this->push_last_byte(current_byte);
-        this->update_crc(current_byte);
+Receiver::ByteType Receiver::byte_type(uint8_t byte) const {
+    if (this->last_bytes != HEADER) {
+        return Receiver::ByteType::Data;
+    } else if (byte == STUFFING_BYTE) {
+        return Receiver::ByteType::Stuffing;
+    } else if (byte == HEADER_TRAILING_BYTE) {
+        return Receiver::ByteType::HeaderEnd;
+    } else {
+        return Receiver::ByteType::Data;
     }
-
-    return bytes_read;
-}
-
-size_t Receiver::read_raw_num_bytes(
-    Cursor& cursor,
-    uint8_t* dst,
-    size_t* dst_len,
-    size_t raw_num_bytes) {
-    *dst_len = 0;
-    size_t raw_bytes_read = 0;
-    uint8_t current_byte;
-
-    while (raw_bytes_read < raw_num_bytes && cursor.read(&current_byte, 1) != 0) {
-        if (!this->is_stuffing_byte(current_byte)) {
-            dst[*dst_len] = current_byte;
-            (*dst_len)++;
-        }
-
-        this->push_last_byte(current_byte);
-        this->update_crc(current_byte);
-        raw_bytes_read++;
-    }
-
-    return raw_bytes_read;
-}
-
-size_t Receiver::read_raw(Cursor& cursor, uint8_t* dst, size_t num_bytes) {
-    size_t bytes_read = 0;
-    uint8_t current_byte;
-
-    while (bytes_read < num_bytes && cursor.read(&current_byte, 1) != 0) {
-        this->push_last_byte(current_byte);
-        dst[bytes_read] = current_byte;
-        bytes_read++;
-    }
-
-    return bytes_read;
-}
-
-bool Receiver::is_stuffing_byte(uint8_t byte) const {
-    return byte == STUFFING_BYTE && this->last_bytes == HEADER;
 }
 
 void Receiver::push_last_byte(uint8_t byte) {
@@ -144,14 +141,27 @@ ParseResult Parser::parse(Cursor& cursor, Packet* packet) {
         }
         // fallthrough
         case ParserState::CommonFields: {
-            auto needed_bytes = 4 - this->buf_len;
+            while (this->buf_len < 4) {
+                auto result = this->receiver.read_byte(cursor, Receiver::Crc::Enable);
 
-            uint8_t* dst = this->buf + this->buf_len;
-            auto bytes_read = this->receiver.read(cursor, dst, needed_bytes);
-            this->buf_len += bytes_read;
+                switch (result.state) {
+                    case Receiver::ReadState::Ok: {
+                        if (result.is_data_byte) {
+                            this->buf[this->buf_len] = result.byte;
+                            this->buf_len++;
+                        }
 
-            if (this->buf_len < 4) {
-                return ParseResult::NeedMoreData;
+                        break;
+                    }
+                    case Receiver::ReadState::NeedMoreData: {
+                        return ParseResult::NeedMoreData;
+                    }
+                    case Receiver::ReadState::FoundHeader: {
+                        this->buf_len = 0;
+                        this->current_state = ParserState::CommonFields;
+                        return ParseResult::UnexpectedHeader;
+                    }
+                }
             }
 
             packet->device_id = DeviceId(this->buf[0]);
@@ -164,7 +174,7 @@ ParseResult Parser::parse(Cursor& cursor, Packet* packet) {
             // clang-format off
             this->raw_remaining_data_len = uint16_from_le(buf + 1) 
                 - 1                                                     // instruction field
-                - (packet->instruction == Instruction::Status)           // error field (only present on status packets)
+                - (packet->instruction == Instruction::Status)          // error field (only present on status packets)
                 - 2;                                                    // crc checksum
             // clang-format on
 
@@ -174,12 +184,30 @@ ParseResult Parser::parse(Cursor& cursor, Packet* packet) {
         // fallthrough
         case ParserState::ErrorField: {
             if (packet->instruction == Instruction::Status) {
-                uint8_t error;
-                if (this->receiver.read(cursor, &error, 1) == 0) {
-                    return ParseResult::NeedMoreData;
-                }
+                bool is_data_byte = false;
 
-                packet->error = Error(error);
+                while (!is_data_byte) {
+                    auto result = this->receiver.read_byte(cursor, Receiver::Crc::Enable);
+
+                    switch (result.state) {
+                        case Receiver::ReadState::Ok: {
+                            if (result.is_data_byte) {
+                                packet->error = Error(result.byte);
+                                is_data_byte = true;
+                            }
+
+                            break;
+                        }
+                        case Receiver::ReadState::NeedMoreData: {
+                            return ParseResult::NeedMoreData;
+                        }
+                        case Receiver::ReadState::FoundHeader: {
+                            this->buf_len = 0;
+                            this->current_state = ParserState::CommonFields;
+                            return ParseResult::UnexpectedHeader;
+                        }
+                    }
+                }
             }
 
             packet->data.clear();
@@ -187,41 +215,61 @@ ParseResult Parser::parse(Cursor& cursor, Packet* packet) {
         }
         // fallthrough
         case ParserState::Data: {
-            auto prev_size = packet->data.size();
+            while (this->raw_remaining_data_len > 0) {
+                auto result = this->receiver.read_byte(cursor, Receiver::Crc::Enable);
 
-            // since there may be stuffing, this length is actually only an upper bound on the
-            // number of bytes; it should be close enough though
-            if (prev_size + this->raw_remaining_data_len > MAX_PACKET_DATA_LEN) {
-                this->current_state = ParserState::Header;
-                return ParseResult::BufferOverflow;
+                switch (result.state) {
+                    case Receiver::ReadState::Ok: {
+                        if (result.is_data_byte) {
+                            if (packet->data.size() >= MAX_PACKET_DATA_LEN) {
+                                this->current_state = ParserState::Header;
+                                return ParseResult::BufferOverflow;
+                            }
+
+                            packet->data.push_back(result.byte);
+                        }
+
+                        this->raw_remaining_data_len--;
+                        break;
+                    }
+                    case Receiver::ReadState::NeedMoreData: {
+                        return ParseResult::NeedMoreData;
+                    }
+                    case Receiver::ReadState::FoundHeader: {
+                        this->buf_len = 0;
+                        this->current_state = ParserState::CommonFields;
+                        return ParseResult::UnexpectedHeader;
+                    }
+                }
             }
 
-            packet->data.resize(prev_size + this->raw_remaining_data_len);
-            uint8_t* dst = packet->data.data() + prev_size;
-
-            size_t bytes_read;
-            auto raw_bytes_read = this->receiver.read_raw_num_bytes(
-                cursor, dst, &bytes_read, this->raw_remaining_data_len);
-
-            packet->data.resize(prev_size + bytes_read);
-            this->raw_remaining_data_len -= raw_bytes_read;
-
-            if (this->raw_remaining_data_len > 0) {
-                return ParseResult::NeedMoreData;
-            }
-
+            this->buf_len = 0;
             this->current_state = ParserState::Checksum;
         }
         // fallthrough
         case ParserState::Checksum: {
-            auto needed_bytes = 2 - this->buf_len;
+            while (this->buf_len < 2) {
+                auto result = this->receiver.read_byte(cursor, Receiver::Crc::Disable);
 
-            uint8_t* dst = this->buf + buf_len;
-            auto bytes_read = this->receiver.read_raw(cursor, dst, needed_bytes);
-            this->buf_len += bytes_read;
-
-            if (this->buf_len < 2) {
-                return ParseResult::NeedMoreData;
+                switch (result.state) {
+                    case Receiver::ReadState::Ok: {
+                        // Always assume the last two bytes are the checksum, even if one of them
+                        // would normally be stuffing. Documentation is not very clear on this, but
+                        // this seems to be the way packets are generated (simply attach the
+                        // checksum, ignoring what came before it).
+                        this->buf[this->buf_len] = result.byte;
+                        this->buf_len++;
+                        break;
+                    }
+                    case Receiver::ReadState::NeedMoreData: {
+                        return ParseResult::NeedMoreData;
+                    }
+                    case Receiver::ReadState::FoundHeader: {
+                        this->buf_len = 0;
+                        this->current_state = ParserState::CommonFields;
+                        return ParseResult::UnexpectedHeader;
+                    }
+                }
             }
 
             auto checksum = uint16_from_le(this->buf);
@@ -647,6 +695,9 @@ std::string to_string(const ParseResult& result) {
         }
         case ParseResult::UnknownState: {
             return "unknown parser state";
+        }
+        case ParseResult::UnexpectedHeader: {
+            return "unexpected packet header";
         }
         default: { return "unknown parse error"; }
     }
