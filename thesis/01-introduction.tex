@@ -1,0 +1,70 @@
+\chapter{Introduction}
+\label{introduction}
+
+As robots become cheaper and more popular for common tasks, they are frequently used as independent
+platforms without significant supporting infrastructure or personnel. Because of this, it is
+important that robots are equipped with easy to use interfaces to control them and diagnose problems.
+Touchscreen displays are ideal for this use case, as they can be attached to any even surface and do
+not require any specialized input devices.
+
+This thesis implements an example of such an interface as a standalone microcontroller board
+that can be directly attached to a robot built on the \textit{Wolfgang} robot platform (see section
+\ref{introduction/motivation} for more details). It can be used to debug common issues with the devices
+used by the robot.
+
+Chapter \ref{related-work} presents related work in robot interface design, focusing on robots
+designed for frequent interaction with humans. Chapter \ref{basics} explains some basics as well
+as the bus and protocol used by the implementation. Chapter \ref{implementation} describes the
+actual implementation and rationale behind important design decisions. Chapter \ref{evaluation}
+provides a short overview of the usability of the finished work and relevant benchmarks while chapter
+\ref{discussion} discusses these results. Chapter \ref{conclusion-and-future-work} summarizes the
+findings and lists possible improvements to the current implementation.
+
+This introduction gives a brief motivation for this bachelor thesis in section \ref{introduction/motivation}
+and defines the goals in section \ref{introduction/thesis-goal}.
+
+\section{Motivation}
+\label{introduction/motivation}
+
+% TODO: better robocup explanation?
+The work done in this thesis is primarily intended for use with \textit{Wolfgang} robot platform
+used by the \href{https://www.robocup.org/}{\textit{RoboCup}} team \textit{Hamburg Bit-Bots}.
+It consists of various devices~\cite{bit-bots-specs} that communicate using the 
+\textit{ROBOTIS Dynamixel Protocol 2.0}~\cite{dynamixel-protocol-2} over an \textit{RS-485} bus.
+
+Without a computer connected to the robot, it is not possible to monitor the status of the connected
+devices. Devices may be unreachable for different reasons:
+
+\begin{itemize}
+    \item the device is physically disconnected
+    \item the device is powered off or otherwise malfunctioning
+    \item the device's packets are lost, either due to interference or a misbehaving bus participant
+    \item the device never sends any packet because it is waiting for another device that is not sending
+          for one of the reasons above
+\end{itemize}
+
+While it is always possible to connect a computer in case of an obvious malfunction, this is a
+significant amount of overhead. It does not allow for quick detection of disconnected devices
+or anomalous readings of a single device.
+
+Due to the extensible nature of the protocol, other robot platforms using the same protocol and
+a bus compatible with a \textit{UART (Universal Asynchronous Receiver Transmitter)} interface will
+also work, with code changes only required for adding support for new device models.
+
+\section{Thesis Goal}
+\label{introduction/thesis-goal}
+
+The goal of this thesis is to determine a suitable microcontroller board and develop
+the required firmware for it that
+
+\begin{itemize}
+    \item collects status information of the connected devices by passively listening on the bus
+    \item displays this information on an integrated touchscreen display
+    \item allows navigating between detailed views for each device/model using the touchscreen
+    \item allows adding support for new device models with minimal effort
+\end{itemize}
+
+In particular, it should be possible to identify unreachable or disconnected devices at a glance.
+
+Both display and microcontroller should be compact enough to be able to attach and detach them
+from a robot quickly.

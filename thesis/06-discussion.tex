@@ -1,0 +1,31 @@
+\chapter{Discussion}
+\label{discussion}
+
+This chapter discusses the results gathered from the experiments that were presented and evaluated in
+chapter \ref{evaluation}.
+\bigbreak
+
+All of the experiments except for \ref{evaluation/results/synthetic-ping-instructions-no-delay} and
+\ref{evaluation/results/synthetic-ping-instructions-100us-delay} showed a maximum \textit{time between buffers}
+of below or slightly above \SI{16}{\milli\second}. This means that in practice, the implementation is
+performant enough to not lose any data, especially considering that a bus load of \SI{100}{\percent}
+is not possible in reality.
+
+It is clear that there is a constant overhead of about \SI{4}{\milli\second} in the
+\textit{time between buffers}. This overhead could be seen as the median \textit{time between buffers}
+in all experiments. This overhead is not small; compared to the approximate maximum of \SI{16}{\milli\second},
+it is \SI{25}{\percent} of the entire time spent.
+
+From both experiments that used synthetic \textit{Ping} instructions as data it is apparent that
+\textit{Ping} instructions are the absolute worst case when it comes to processing time. This is
+not surprising considering that \textit{Ping} instructions may require allocating a new
+\lstinline{ControlTable} object. However, these allocations are only necessary when the model number
+changes constantly as was the case in these two experiments. This is simply not a realistic scenario;
+in practice, \textit{Ping} instructions are incredible rare, usually only sent when the master
+connects to the bus for the first time. Thus, the number of \textit{Ping} instructions in the other
+experiments was already higher than to be expected, yet it did not impact performance in any
+meaningful way.
+
+Generally, the amount of load on the bus was noticeable when interacting with the UI but this did
+become a problem before incoming data started to get lost, at which point the system could not perform
+its intended task anyway. Nevertheless, there certainly is room for improvement.

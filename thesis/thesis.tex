@@ -1,0 +1,183 @@
+% tamsTemplate.tex
+% version:	02-nov-2010
+
+\documentclass[12pt,DIV=13,BCOR=1.5cm,a4paper,twoside,bibliography=totoc,headings=small,headinclude,headsepline,numbers=noenddot]{scrbook}
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{scrhack}
+\usepackage{graphicx}
+\usepackage{todonotes}
+\usepackage{wrapfig}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage[toc,page]{appendix}
+
+% ----------------------------------------------------------------------------
+% optional packages, see LaTeX documentation
+% ----------------------------------------------------------------------------
+
+% \usepackage{tabularx}		% self-adjusting tabulars
+\usepackage{color}			% colors
+\usepackage{colortbl}
+\usepackage{xcolor}
+\usepackage{soul}
+\usepackage{siunitx}
+
+\usepackage{subcaption}
+\captionsetup[subfigure]{position=top}
+
+\usepackage{listings}		% code samples
+
+\definecolor{comment-green}{HTML}{008000}
+\definecolor{string-orange}{HTML}{a31515}
+\definecolor{keyword-blue}{HTML}{0000ff}
+
+\lstset {
+    basicstyle=\footnotesize\ttfamily,
+    breaklines=true,
+    language=C++,
+    frame=tb,
+    tabsize=4,
+    showstringspaces=false,
+    numbers=left,
+    commentstyle=\color{comment-green},
+    keywordstyle=\color{keyword-blue},
+    stringstyle=\color{string-orange},
+    emph={int,char,double,float,unsigned,void,bool},
+    emphstyle={\color{keyword-blue}},
+    otherkeywords={>,<,::,*,&},
+}
+
+% \usepackage{pgfplots}													% pgfplots
+% \usepackage{pgfpages}													% 2-on-1, 4-on-1 printing
+% \pgfpagesuselayout{4 on 1}[a4paper,border shrink = 5mm, landscape]
+% \pgfpagesuselayout{2 on 1}[a4paper,border shrink = 5mm]
+% \usepackage{pdfpages}													% insert external pdf-documents
+% \usepackage{amsmath}													% advanced math
+% \usepackage{array}													% math environment
+% \usepackage[small, normal, bf, up]{caption}							% caption modifications
+
+% ----------------------------------------------------------------------------
+% hyperref setup
+% ----------------------------------------------------------------------------
+
+\usepackage[hidelinks]{hyperref}
+
+\usepackage{pdfpages}
+\usepackage[resetlabels]{multibib}
+
+\setlength{\parindent}{0cm}
+
+\hypersetup{
+    pdftitle={Embedded Debug Interface for Robots},
+    pdfauthor={Robin Mirow},
+    pdfsubject={Universität Hamburg, MIN-Fakultät,
+    Fachbereich Informatik, Bachelor Thesis 2019/20}, 
+    pdfkeywords={},
+}
+
+\title{Embedded Debug Interface for Robots}
+\author{Robin Mirow}
+
+
+% ----------------------------------------------------------------------------
+% start of document
+% ----------------------------------------------------------------------------
+
+\begin{document}
+
+\sloppy
+\pagenumbering{roman}
+\pagestyle{empty}
+
+\newgeometry{centering,left=2cm,right=2cm,top=2cm,bottom=2cm}
+\begin{titlepage}
+	\definecolor{uhh-red}{cmyk}{0,100,100,0}
+
+	\KOMAoptions{fontsize=11pt}
+	\sffamily
+
+    \includegraphics[scale=0.3]{img/uhh_logo.pdf}
+    \vspace*{2cm}\Large
+    \begin{center}
+        {\color{uhh-red}\textbf{\so{BACHELORTHESIS}}}
+        \vspace*{2.0cm} \\
+        {\LARGE \textbf{Embedded Debug Interface for Robots}}
+        \vspace*{2.0cm} \\
+        vorgelegt von \vspace*{0.4cm} \\
+        Robin Mirow 
+    \end{center}
+    \vspace*{3.9cm}
+    \noindent
+    MIN-Fakultät \vspace*{0.4cm} \\
+    Fachbereich Informatik \vspace*{0.4cm} \\
+    Technische Aspekte Multimodaler Systeme \vspace*{0.4cm} \\
+    Studiengang: Informatik \vspace*{0.4cm} \\
+    Matrikelnummer: 6946287 \vspace*{0.8cm} \\
+    Erstgutachter: 	Dr. Andreas Mäder \vspace*{0.4cm} \\
+    Zweitgutachter: M. Sc. Marc Bestmann
+\end{titlepage}
+\restoregeometry
+
+\linespread{1}\selectfont
+\cleardoublepage
+
+\include{abstract}
+\cleardoublepage
+
+\pagestyle{headings}
+\setcounter{tocdepth}{1}
+\tableofcontents
+\listoffigures
+\addcontentsline{toc} {chapter}{List of Figures}
+\cleardoublepage
+\pagenumbering{arabic}
+
+\include{01-introduction}
+\include{02-related-work}
+\include{03-basics}
+\include{04-implementation}
+\include{05-evaluation}
+\include{06-discussion}
+\include{07-conclusion-and-future-work}
+
+\bibliographystyle{alpha}
+\bibliography{literature}
+\cleardoublepage
+
+\newpage
+\null\thispagestyle{empty}
+\newpage
+
+\pagestyle{empty}{
+	\normalsize
+	\begin{center}\textbf{Eidesstattliche Erklärung}\end{center}
+
+	Hiermit versichere ich an Eides statt, dass ich die vorliegende Arbeit im Bachelorstudiengang Informatik selbstständig verfasst
+	und keine anderen als die angegebenen Hilfsmittel – insbesondere keine im Quellenverzeichnis nicht benannten Internet-Quellen – benutzt habe.
+	Alle Stellen, die wörtlich oder sinngemäß aus Veröffentlichungen entnommen wurden, sind als solche kenntlich gemacht. Ich versichere
+	weiterhin, dass ich die Arbeit vorher nicht in einem anderen Prüfungsverfahren eingereicht habe und die eingereichte schriftliche
+	Fassung der auf dem elektronischen Speichermedium entspricht.
+
+	\vspace*{1cm}
+	Hamburg, den 18.03.2020		% TODO: date
+	\hspace*{\fill}
+	\begin{tabular}{@{}l@{}}\hline
+		\makebox[5cm]{Robin Mirow}
+	\end{tabular}
+	\vspace*{3cm}
+
+	\begin{center}\textbf{Veröffentlichung}\end{center}
+	Ich stimme der Einstellung der Arbeit in die Bibliothek des Fachbereichs Informatik zu.
+	\vspace*{1cm} \\
+	Hamburg, den 18.03.2020 \\	% TODO: date
+	\hspace*{\fill}\begin{tabular}{@{}l@{}}\hline
+		\makebox[5cm]{Robin Mirow}
+	\end{tabular}
+}
+\vspace*{\fill}
+
+\end{document}
