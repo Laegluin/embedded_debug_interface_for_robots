@@ -144,6 +144,9 @@ void run(const std::vector<ReceiveBuf*>& bufs) {
     std::vector<Connection> connections;
     connections.reserve(bufs.size());
 
+    // zero out memory used to store benchmark data points (4 MiB)
+    memset(reinterpret_cast<void*>(0xc0400000), 0, 4194304);
+
     for (auto buf : bufs) {
         connections.push_back(Connection(buf));
     }
@@ -167,6 +170,12 @@ static void process_buffer(
     Mutex<Log>& log,
     Connection& connection,
     Mutex<ControlTableMap>& control_table_map) {
+    // store data points in second half of SDRAM (2 MiB each)
+    auto per_buffer_data_points = reinterpret_cast<volatile uint32_t*>(0xc0400000);
+    static size_t per_buffer_data_points_len = 0;
+    auto between_buffer_data_points = reinterpret_cast<volatile uint32_t*>(0xc0600000);
+    static size_t between_buffer_data_points_len = 0;
+
     Cursor* cursor;
 
     if (connection.buf->ready == ReceiveBuf::Ready::Front) {
@@ -182,6 +191,13 @@ static void process_buffer(
     std::vector<Log::Record> log_records;
 
     auto& control_table_map_ref = control_table_map.lock();
+
+    // for benchmarking
+    auto high_res_processing_start = HIGH_RES_TICK;
+    between_buffer_data_points[between_buffer_data_points_len++] = high_res_processing_start;
+    if (!is_buf_empty) {
+        per_buffer_data_points[per_buffer_data_points_len++] = high_res_processing_start;
+    }
 
     while (cursor->remaining_bytes() > 0) {
         auto parse_result = connection.parser.parse(*cursor, &connection.last_packet);
@@ -200,6 +216,12 @@ static void process_buffer(
         if (result != ProtocolResult::Ok) {
             log_records.push_back(Log::Record(result));
         }
+    }
+
+    // for benchmarking
+    if (!is_buf_empty) {
+        auto high_res_processing_end = HIGH_RES_TICK;
+        per_buffer_data_points[per_buffer_data_points_len++] = high_res_processing_end;
     }
 
     // never lock both at the same time to prevent deadlocks

@@ -16,11 +16,13 @@ const uintptr_t FRAME_BUF_1_ADDR = 0xc0000000;
 const uintptr_t FRAME_BUF_2_ADDR = 0xc005fa00;
 const uintptr_t QSPI_START_ADDR = 0x90000000;
 
+extern volatile uint32_t HIGH_RES_TICK;
 extern LTDC_HandleTypeDef LCD_CONTROLLER;
 extern I2C_HandleTypeDef I2C_BUS3;
 extern DMA_HandleTypeDef DMA2_STREAM1;
 extern TIM_HandleTypeDef TIMER2;
 extern TIM_HandleTypeDef TIMER3;
+extern TIM_HandleTypeDef TIMER4;
 
 void poll_touch_state();
 

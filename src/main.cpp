@@ -12,15 +12,18 @@
 
 #include <vector>
 
+uint32_t volatile HIGH_RES_TICK = 0;
 LTDC_HandleTypeDef LCD_CONTROLLER;
 I2C_HandleTypeDef I2C_BUS3;
 DMA_HandleTypeDef DMA2_STREAM1;
 TIM_HandleTypeDef TIMER2;
 TIM_HandleTypeDef TIMER3;
+TIM_HandleTypeDef TIMER4;
 
 static void init_mpu();
 static void init_clocks();
 static void init_tick_timer();
+static void init_high_res_tick_timer();
 static void init_lcd_controller();
 static void reset_lcd_controller();
 static void init_touch_controller();
@@ -38,6 +41,7 @@ int main() {
     init_clocks();
     init_mpu();
     init_tick_timer();
+    init_high_res_tick_timer();
     init_sdram();
     init_uarts(bufs);
     init_lcd_controller();
@@ -216,6 +220,28 @@ static void init_tick_timer() {
 
     HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(TIM3_IRQn);
+}
+
+static void init_high_res_tick_timer() {
+    // for benchmarking, 10 KHz (0.1 ms)
+    __TIM4_CLK_ENABLE();
+    TIMER4.Instance = TIM4;
+    TIMER4.Init.Prescaler = 400 - 1;
+    TIMER4.Init.CounterMode = TIM_COUNTERMODE_UP;
+    TIMER4.Init.Period = 27 - 1;
+    TIMER4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    TIMER4.Init.RepetitionCounter = 0;
+
+    if (HAL_TIM_Base_Init(&TIMER4) != HAL_OK) {
+        on_error();
+    }
+
+    if (HAL_TIM_Base_Start_IT(&TIMER4) != HAL_OK) {
+        on_error();
+    }
+
+    HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
 
 static void init_lcd_controller() {

@@ -31,6 +31,14 @@ extern "C" void TIM3_IRQHandler() {
     HAL_TIM_IRQHandler(&TIMER3);
 }
 
+extern "C" void TIM4_IRQHandler() {
+    if (__HAL_TIM_GET_FLAG(&TIMER4, TIM_FLAG_UPDATE) != RESET
+        && __HAL_TIM_GET_IT_SOURCE(&TIMER4, TIM_IT_UPDATE) != RESET) {
+        __HAL_TIM_CLEAR_IT(&TIMER4, TIM_IT_UPDATE);
+        HIGH_RES_TICK++;
+    }
+}
+
 extern "C" void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* timer) {
     if (timer == &TIMER2) {
         poll_touch_state();
