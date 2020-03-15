@@ -41,10 +41,8 @@ def process_data(data, start_at_sec, max_duration_secs):
 
         times_per_buffer.append(
             Delta(
-                start_secs=max(tick_to_second(start_tick), start_at_sec),
-                end_secs=min(
-                    tick_to_second(end_tick), start_at_sec + max_duration_secs
-                ),
+                start_secs=tick_to_second(start_tick),
+                end_secs=tick_to_second(end_tick),
             )
         )
 
@@ -62,10 +60,8 @@ def process_data(data, start_at_sec, max_duration_secs):
 
         times_between_buffers.append(
             Delta(
-                start_secs=max(tick_to_second(prev_start_tick), start_at_sec),
-                end_secs=min(
-                    tick_to_second(start_tick), start_at_sec + max_duration_secs
-                ),
+                start_secs=tick_to_second(prev_start_tick),
+                end_secs=tick_to_second(start_tick),
             )
         )
 
@@ -101,6 +97,22 @@ if plot_type == "per-buffer-scatter":
     plt.xlabel("time (s)")
     plt.ylabel("time per buffer (ms)")
     plt.legend(loc="lower right")
+    plt.show()
+elif plot_type == "per-buffer-hist":
+    deltas = np.array([delta.delta_millis() for delta in times_per_buffer])
+    plt.hist(deltas, color="green")
+
+    plt.text(
+        0.95,
+        0.95,
+        f"total count: {len(deltas)}",
+        verticalalignment="top",
+        horizontalalignment="right",
+        transform=plt.gca().transAxes,
+    )
+
+    plt.xlabel("time per buffer (ms)")
+    plt.ylabel("count")
     plt.show()
 elif plot_type == "between-buffers-scatter":
     plt.scatter(
