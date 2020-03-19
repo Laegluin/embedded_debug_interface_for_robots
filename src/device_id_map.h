@@ -13,6 +13,8 @@ class DeviceIdMapIter;
 template <typename V>
 class DeviceIdMap {
   public:
+    /// An entry in a `DeviceIdMap`. An entry can be empty or contain a value. It can
+    /// be used to update or set the value for the entry.
     class Entry {
       public:
         Entry(DeviceIdMap<V>* map) : is_present_(false), map(map) {}
@@ -35,18 +37,24 @@ class DeviceIdMap {
 
         Entry& operator=(Entry&&) = delete;
 
+        /// Determines if the `Entry` contains a value.
         bool is_present() const {
             return this->is_present_;
         }
 
+        /// Returns a reference to the value. If the value is not present, the behaviour
+        /// is __undefined__.
         const V& value() const {
             return this->value_;
         }
 
+        /// Returns a reference to the value. If the value is not present, the behaviour
+        /// is __undefined__.
         V& value() {
             return this->value_;
         }
 
+        /// Inserts `default_value` the entry is currently empty.
         template <typename D>
         V& or_insert(D&& default_value) {
             if (!this->is_present_) {
@@ -58,6 +66,8 @@ class DeviceIdMap {
             return this->value_;
         }
 
+        /// Inserts the value returned by `create_value` if the entry is currently empty.
+        /// If possible, `V`s move constructor is used.
         template <typename F>
         V& or_insert_with(F create_value) {
             if (!this->is_present_) {
@@ -69,6 +79,7 @@ class DeviceIdMap {
             return this->value_;
         }
 
+        /// Sets the value of the entry to `new_value`.
         template <typename N>
         V& set_value(N&& new_value) {
             if (this->is_present_) {
@@ -82,6 +93,8 @@ class DeviceIdMap {
             return this->value_;
         }
 
+        /// Clears the value of entry by calling the destructor of `V`. After this call,
+        /// the entry is empty.
         void clear_value() {
             if (this->is_present_) {
                 this->is_present_ = false;
@@ -107,14 +120,17 @@ class DeviceIdMap {
         }
     }
 
+    /// Gets the entry for `id`.
     Entry& get(DeviceId id) {
         return this->entries[id.to_byte()];
     }
 
+    /// Gets the entry for `id`.
     const Entry& get(DeviceId id) const {
         return this->entries[id.to_byte()];
     }
 
+    /// Returns the size of the map (the number of present values).
     size_t size() const {
         return this->size_;
     }
@@ -127,6 +143,8 @@ class DeviceIdMap {
         return DeviceIdMapIter<V>::end(&this->entries);
     }
 
+    /// Clears all the present values, calling their destructors. After this call,
+    /// the size of the map is 0.
     void clear() {
         this->size_ = 0;
 

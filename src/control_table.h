@@ -11,6 +11,7 @@
 #include <string.h>
 #include <string>
 
+/// Describes a segment of memory in a device's `ControlTableMemory`.
 class Segment {
   public:
     struct DataSegment {
@@ -32,8 +33,12 @@ class Segment {
         Unknown,
     };
 
+    /// Creates a new `Segment` that simply stores `len` bytes of data starting at `start_addr`.
     static Segment new_data(uint16_t start_addr, uint16_t len);
 
+    /// Creates a new `Segment` that stores addresses starting at `map_start_addr`. Addresses
+    /// starting at `data_start_addr` and ending at `data_start_addr + len` are resolved to
+    /// these addresses.
     static Segment
         new_indirect_address(uint16_t data_start_addr, uint16_t map_start_addr, uint16_t len);
 
@@ -46,6 +51,9 @@ class Segment {
 
     bool resolve_addr(uint16_t addr, uint16_t* resolved_addr) const;
 
+    /// Sets the buffer that is used to store the data for this `Segment`. Exactly `len` bytes
+    /// will be used. This method is called by the `ControlTableMemory` object the segment
+    /// belongs to.
     void set_backing_storage(uint8_t* buf);
 
     bool read(uint16_t addr, uint8_t* byte) const;
@@ -60,6 +68,9 @@ class Segment {
     };
 };
 
+/// Stores all data of a control table. The memory consists of one or more `Segment`s that
+/// describe at which addresses values are stored. Segments may overlap but the first one
+/// that matches a given address is always used.
 class ControlTableMemory {
   public:
     /// Creates a new `ControlTableMemory` consisting of the given `Segment`s.
@@ -207,6 +218,7 @@ struct ControlTableField {
     };
 };
 
+/// Represents the control table of a single device. This is where data from packets is stored.
 class ControlTable {
   public:
     virtual ~ControlTable() = default;
@@ -225,21 +237,35 @@ class ControlTable {
     /// Sets the firmware version of the device (usually obtained through a ping response).
     virtual void set_firmware_version(uint8_t version) = 0;
 
+    /// Returns the human readable name for the model of the device.
     virtual const char* device_name() const = 0;
 
+    /// Returns a reference to the control table's memory.
     virtual ControlTableMemory& memory() = 0;
 
+    /// Returns a reference to the control table's memory.
     virtual const ControlTableMemory& memory() const = 0;
 
+    /// Returns a reference to the field definitions of the control table.
     virtual const std::vector<ControlTableField>& fields() const = 0;
 
+    /// Writes `len` bytes from `buf` to the control table, starting at `start_addr`.
+    /// Returns `false` if parts of the write were not in bounds. In this case, some data
+    /// may have been written already.
     bool write(uint16_t start_addr, const uint8_t* buf, uint16_t len);
 
+    /// Returns pairs of field name and value for every field of the control table. The values
+    /// are formatted using the formatting function specified by the field definition. They are
+    /// read from the `ControlTableMemory` returned by the `memory` method.
     std::vector<std::pair<const char*, std::string>> fmt_fields() const;
 };
 
+/// Represents the control table of an unknown or unsupported device model. Ignores any writes to
+/// it but does not return an error.
 class UnknownControlTable : public ControlTable {
   public:
+    /// Creates the control table for an unknown model. This can happen when the no ping
+    /// instructions for the device have been received.
     UnknownControlTable() :
         mem(ControlTableMemory({
             Segment::new_data(0, 3),
@@ -247,6 +273,8 @@ class UnknownControlTable : public ControlTable {
         })),
         is_unknown_model_(true) {}
 
+    /// Creates the control table for an unsupported device model. `model_number` is the
+    /// model number that was part of the response to a ping instruction.
     UnknownControlTable(uint16_t model_number) :
         mem(ControlTableMemory({
             Segment::new_data(0, 3),
@@ -311,26 +339,49 @@ class UnknownControlTable : public ControlTable {
     bool is_unknown_model_;
 };
 
+/// Result returned when processing packets.
 enum class ProtocolResult {
     Ok,
+
+    /// Packet is an instruction packet but a status packet was expected.
     StatusIsInstruction,
+
+    /// The status packet has an error set in its error field.
     StatusHasError,
+
+    /// Packet is a status packet but an instruction packet was expected.
     InstructionIsStatus,
+
+    /// The packet contains an unknown instruction.
     UnknownInstruction,
+
+    /// The packet length is not valid for the current instruction/status packet.
     InvalidPacketLen,
+
+    /// The device id is not valid for the packet.
     InvalidDeviceId,
+
+    /// A packet contained data that is not in bounds of the device's control table.
     InvalidWrite,
+
+    /// The payload of an instruction packet could not be parsed.
     InvalidInstructionPacket,
 };
 
 std::string to_string(const ProtocolResult& result);
 
+/// Maps `DeviceId`s to `ControlTable`s. The control tables are updated with every
+/// call to `receive`.
 class ControlTableMap {
   public:
+    /// The number of times a device is allowed to not respond before it is
+    /// considered disconnected.
     static const uint32_t MAX_ALLOWED_MISSED_PACKETS = 4;
 
     ControlTableMap();
 
+    /// Determines if the device identified by `device_id` is disconnected. If
+    /// the device was not encountered before, `false` is returned.
     bool is_disconnected(DeviceId device_id) const;
 
     /// Gets the `ControlTable` entry for `device_id`.
@@ -338,6 +389,8 @@ class ControlTableMap {
         return this->control_tables.get(device_id);
     }
 
+    /// Processes the next packet and updates the control tables and disconnected state
+    /// of the affected devices.
     ProtocolResult receive(const Packet& packet);
 
     size_t size() const {
@@ -357,6 +410,9 @@ class ControlTableMap {
 
     ProtocolResult receive_status_packet(const Packet& status_packet);
 
+    /// Creates the correct control table for the given `model_number` and inserts it for
+    /// the `device_id`. If a control table already existed for the id it is only replaced
+    /// if the model number is different or unknown.
     ControlTable& register_control_table(DeviceId device_id, uint16_t model_number);
 
     /// Gets the `ControlTable` for `device_id` or inserts an unknown table if it does not exist.

@@ -5,8 +5,10 @@
 #include <stdint.h>
 #include <string.h>
 
+/// Wraps a buffer to allow tracking the number of bytes that have been read from it.
 class Cursor {
   public:
+    /// Creates a new `Cursor` that wraps `buf_len` bytes stored at `buf`.
     Cursor(const volatile uint8_t* buf, size_t buf_len) :
         buf(buf),
         buf_len(buf_len),
@@ -26,14 +28,18 @@ class Cursor {
         return bytes_read;
     }
 
+    /// Resets the current position to 0 (start at the beginning again).
     void reset() {
         this->current_pos = 0;
     }
 
+    /// Discards any bytes that have not been read yet by setting the position
+    /// past the last byte.
     void set_empty() {
         this->current_pos = this->buf_len;
     }
 
+    /// Returns the number of bytes remaining.
     size_t remaining_bytes() const {
         return this->buf_len - this->current_pos;
     }

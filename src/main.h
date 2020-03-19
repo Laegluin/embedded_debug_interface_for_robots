@@ -22,8 +22,12 @@ extern DMA_HandleTypeDef DMA2_STREAM1;
 extern TIM_HandleTypeDef TIMER2;
 extern TIM_HandleTypeDef TIMER3;
 
+/// Polls the touch controller and updates emWin's input queue.
 void poll_touch_state();
 
+/// Enters an infinite loop (technically undefined behaviour). The function
+/// will not be inlined to preserve the stacktrace. Call this function when an
+/// unrecoverable error occurs.
 __attribute__((noreturn)) void on_error();
 
 #endif

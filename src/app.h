@@ -42,6 +42,9 @@ const int BUTTON_HEIGHT = 36;
 
 const size_t MAX_NUM_LOG_ENTRIES = 50;
 
+/// The buffer that stores data received from a UART. Data is transferred by the DMA
+/// controller. Either the front or the back buffer can be ready, the one that is not
+/// ready is currently used for the transfer.
 struct ReceiveBuf {
   public:
     enum class Ready : uint8_t {
@@ -65,6 +68,10 @@ struct ReceiveBuf {
     volatile Ready ready;
 };
 
+/// A quick and dirty wrapper for FreeRTOSs mutex. Stores the value it protects and
+/// only hands out references to it when locking the mutex. Must be unlocked manually
+/// at the moment (this should probably be replaced by a separate type similar to
+/// `std::scoped_lock`).
 template <typename T>
 class Mutex {
   public:
@@ -107,6 +114,9 @@ class Mutex {
     SemaphoreHandle_t mutex;
 };
 
+/// Stores errors and profiling information. Errors are not converted to strings
+/// to save time while in the packet processing task. Only the last `MAX_NUM_LOG_ENTRIES`
+/// are stored.
 class Log {
   public:
     enum class ErrorType {
@@ -144,10 +154,14 @@ class Log {
 
     Log();
 
+    /// Logs a new record.
     void log(Record record);
 
+    /// Logs the time spent processing the last buffer.
     void buf_processing_time(uint32_t time);
 
+    /// Logs the time between the last two points in time where a buffer could be
+    /// processed.
     void time_between_buf_processing(uint32_t time);
 
     size_t size() const;

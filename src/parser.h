@@ -9,28 +9,37 @@
 #include <stdint.h>
 #include <vector>
 
+/// The maximum length of the packet payload. Packets with a larger payload are
+/// rejected by the parser.
 const uint32_t MAX_PACKET_DATA_LEN = 256;
 
+/// The Id of a device.
 class DeviceId {
   public:
+    /// Constructs a new `DeviceId` from a raw value.
     constexpr explicit DeviceId(uint8_t id) : id(id) {}
 
+    /// Constructs the `DeviceId` used for broadcasts.
     constexpr static DeviceId broadcast() {
         return DeviceId(254);
     }
 
+    /// Returns the number of different possible `DeviceId`s.
     constexpr static size_t num_values() {
         return std::numeric_limits<uint8_t>::max() + 1;
     }
 
+    /// Returns `true` when the `DeviceId` indicates a broadcast, `false` otherwise.
     bool is_broadcast() const {
         return *this == DeviceId::broadcast();
     }
 
+    /// Converts the `DeviceId` to a string.
     std::string to_string() const {
         return std::to_string(this->id);
     }
 
+    /// Returns the byte representation of this `DeviceId`.
     uint8_t to_byte() const {
         return this->id;
     }
@@ -79,6 +88,7 @@ inline std::ostream& operator<<(std::ostream& out, const DeviceId& device_id) {
     return out;
 }
 
+/// An instruction in the Dynamixel protocol.
 enum class Instruction : uint8_t {
     Ping = 0x01,
     Read = 0x02,
@@ -95,6 +105,7 @@ enum class Instruction : uint8_t {
     BulkWrite = 0x93,
 };
 
+/// Represents the error field of a `Packet`.
 class Error {
   public:
     Error() : code(0) {}
@@ -119,13 +130,23 @@ inline bool operator==(const Error& lhs, const Error& rhs) {
     return lhs.code == rhs.code;
 }
 
+/// A generic packet (instruction or a status).
 struct Packet {
+    /// The Id of the sender/receiver of the packet.
     DeviceId device_id;
+
+    /// The instruction.
     Instruction instruction;
+
+    /// Can indicate an error if the packet is an instruction packet. Is always
+    /// ok otherwise.
     Error error;
+
+    /// The payload of the packet.
     std::vector<uint8_t> data;
 };
 
+/// Stores enough previously encountered bytes to detect packet headers and byte stuffing.
 class Receiver {
   public:
     enum class ReadState {
@@ -147,6 +168,8 @@ class Receiver {
 
     Receiver() : last_bytes({0, 0, 0}), crc(0) {}
 
+    /// Consumes bytes from the `cursor` until a packet header is found. Returns
+    /// `true` if a header was found or `false` if there are no more bytes left.
     bool wait_for_header(Cursor& cursor);
 
     Result read_byte(Cursor& cursor, Crc crc_mode);
@@ -172,12 +195,24 @@ class Receiver {
     uint16_t crc;
 };
 
+/// The result of a call to `Parser::parse`.
 enum class ParseResult {
+    /// A packet was parsed successfully.
     PacketAvailable,
+
+    /// More data is required to parse a packet.
     NeedMoreData,
+
+    /// The packet's payload is too large.
     BufferOverflow,
+
+    /// The packet's checksum did not match the calculated one.
     MismatchedChecksum,
+
+    /// The parser is in an unknown state.
     UnknownState,
+
+    /// A packet header was found while parsing another packet.
     UnexpectedHeader,
 };
 
@@ -191,10 +226,13 @@ enum class ParserState {
     Checksum,
 };
 
+/// Stores the state required for parsing packets.
 class Parser {
   public:
     Parser() : buf_len(0), current_state(ParserState::Header), raw_remaining_data_len(0) {}
 
+    /// Parses the next packet into `packet`. If only parts of a packet were parsed,
+    /// a pointer to the same packet must be passed for the next call.
     ParseResult parse(Cursor& cursor, Packet* packet);
 
   private:
@@ -347,6 +385,8 @@ enum class InstructionParseResult {
     UnknownInstruction,
 };
 
+/// Parses a generic packet into an `InstructionPacket`. The result is constructed at
+/// `instruction_packet`.
 InstructionParseResult
     parse_instruction_packet(const Packet& packet, InstructionPacket* instruction_packet);
 
