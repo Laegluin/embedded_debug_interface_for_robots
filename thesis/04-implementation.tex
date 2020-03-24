@@ -17,9 +17,9 @@ its \textit{RS-485} bus running at a speed of \SI{2000000}{Bd}.
 The following hardware is used:
 
 \begin{itemize}
-    \item STM32F7508-DK development board
-    \item MAX485 RS-485/RS-422 transceiver
-    \item FT232R USB to UART converter (for testing)
+    \item STM32F7508-DK development board\footnote{\url{https://www.st.com/resource/en/user_manual/dm00537062-discovery-kit-for-stm32f7-series-with-stm32f750n8-mcu-stmicroelectronics.pdf}}
+    \item MAX485 RS-485/RS-422 transceiver\footnote{\url{https://datasheets.maximintegrated.com/en/ds/MAX1487-MAX491.pdf}}
+    \item FT232R USB to UART converter (for testing)\footnote{\url{https://www.ftdichip.com/Support/Documents/DataSheets/ICs/DS_FT232R.pdf}}
 \end{itemize}
 
 The MAX485 transceiver is used to connect the \textit{RS-485} bus to the STM32F7508-DK board. It
@@ -96,17 +96,6 @@ When the bootloader starts, it initializes the USB controller and the Quad-SPI m
 also blinks the board's LED at regular intervals to indicate that it is running. It then listens on
 the USB interface as a communication class device.
 
-The bytes received are interpreted according to a custom, packet based protocol. The packet layout
-can be seen in figure \ref{implementation/software/bootloader/packet-layout}. Packets start with a
-start sequence that makes it possible to identify the beginning of a packet even if it is preceded
-by unrelated bytes. To prevent unwanted start sequences in the packet itself, all bytes following
-the start sequence must be escaped by adding \textit{byte stuffing}: whenever a byte that is not
-\lstinline{0xff} is followed by a \lstinline{0xff} byte, another \lstinline{0xff} byte must be added.
-For example, the bytes \lstinline{0x00 0xff 0xff} must be sent as \lstinline{0x00 0xff 0xff 0xff}.
-The bootloader simply removes the added bytes before processing the rest. Values of more than one
-byte are encoded as \textit{little-endian} and lengths are always given as the length before any
-\textit{byte stuffing} was applied.
-
 \begin{figure}[h]
     \centering
 
@@ -125,9 +114,30 @@ byte are encoded as \textit{little-endian} and lengths are always given as the l
     \label{implementation/software/bootloader/packet-layout}
 \end{figure}
 
+The bytes received are interpreted according to a custom, packet based protocol. The packet layout
+can be seen in figure \ref{implementation/software/bootloader/packet-layout}. Packets start with a
+start sequence that makes it possible to identify the beginning of a packet even if it is preceded
+by unrelated bytes. To prevent unwanted start sequences in the packet itself, all bytes following
+the start sequence must be escaped by adding \textit{byte stuffing}: whenever a byte that is not
+\lstinline{0xff} is followed by a \lstinline{0xff} byte, another \lstinline{0xff} byte must be added.
+For example, the bytes \lstinline{0x00 0xff 0xff} must be sent as \lstinline{0x00 0xff 0xff 0xff}.
+The bootloader simply removes the added bytes before processing the rest. Values of more than one
+byte are encoded as \textit{little-endian} and lengths are always given as the length before any
+\textit{byte stuffing} was applied.
+
 A \textit{flash} packet instructs the bootloader to erase and then program the Quad-SPI flash memory
 with all the bytes in the \textit{Image} field, beginning at the start address of the Quad-SPI flash
 memory.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=1.0]{img/bootloader_flowchart.pdf}
+    \caption[Bootloader program flow]{
+        After reset, the microcontroller starts the program in internal flash memory (the bootloader).
+        It then waits for packets to arrive over USB. If a \textit{start} packet has been received or
+        the button was pressed, it starts the application in Quad-SPI flash memory.
+    }
+\end{figure}
 
 The \textit{start} packet instructs the bootloader to start an application previously flashed. It
 disables all (pending) interrupts, exits interrupt handler mode if necessary and enables the
@@ -138,12 +148,6 @@ when it boots from internal flash memory. The bootloader assumes that the applic
 starts at the beginning of the Quad-SPI flash memory space (\lstinline{0x90000000}~\cite{mcu-ref-manual}).
 The application can also be started by pressing the board's programmable button (next to the reset
 button). The procedure is identical to the one described above.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[scale=0.7]{img/bootloader_flowchart.png}
-    \caption{Bootloader program flow}
-\end{figure}
 
 The bootloader only has to be flashed to internal flash memory once. Afterwards, it can be used to
 program the Quad-SPI flash memory and start an application from it using the board's micro-USB port.
@@ -156,11 +160,13 @@ sent over the \textit{Wolfgang} robot platform's \textit{RS-485} bus.
 The following software libraries were used to aid development of the firmware:
 
 \begin{itemize}
-    \item STM32F7 HAL and Low-layer drivers (part of STM32CubeF7 1.15.0)
-    \item STM32F7508-Discovery board support package (part of STM32CubeF7 1.15.0)
+    \item STM32F7 HAL and Low-layer drivers\footnote{\url{https://www.st.com/resource/en/user_manual/dm00189702-description-of-stm32f7-hal-and-lowlayer-drivers-stmicroelectronics.pdf}}
+          (part of STM32CubeF7 1.15.0)
+    \item STM32F7508-Discovery board support package\footnote{\url{https://github.com/STMicroelectronics/STM32CubeF7/tree/master/Drivers/BSP/STM32F7508-Discovery}}
+          (part of STM32CubeF7 1.15.0)
     \item STemWin version 5.44 (part of STM32CubeF7 1.15.0)
-    \item FreeRTOS version 10.0.1 (part of STM32CubeF7 1.15.0)
-    \item Catch2 version 2.10.2
+    \item FreeRTOS\footnote{\url{https://www.freertos.org/}} version 10.0.1 (part of STM32CubeF7 1.15.0)
+    \item Catch2\footnote{\url{https://github.com/catchorg/Catch2}} version 2.10.2
 \end{itemize}
 
 The STM32F7 HAL and Low-layer drivers are various independent drivers for peripherals found on
@@ -313,7 +319,13 @@ disconnected devices are immediately visible. The view is updated every \SI{500}
     \centering
     \setlength{\fboxsep}{0mm}
     \fbox{\includegraphics[scale=0.75]{img/device_overview.png}}
-    \caption{Screenshot of the device overview}
+    \caption[Screenshot of the device overview]{
+        Screenshot of the device overview. The top bar is red because at least one device (two in
+        this case) is disconnected. The squares below the bar show the status of the devices of a
+        specific model. They also turn red if at least one device is disconnected. The list containing
+        them is horizontally scrollable. Each square can be clicked and will open the model overview
+        for the corresponding model.
+    }
 \end{figure}
 
 \paragraph{Model overview}
@@ -327,7 +339,13 @@ the exact device that is disconnected. The view is updated every \SI{500}{\milli
     \centering
     \setlength{\fboxsep}{0mm}
     \fbox{\includegraphics[scale=0.75]{img/model_overview.png}}
-    \caption{Screenshot of the model overview}
+    \caption[Screenshot of the model overview]{
+        Screenshot of the model overview. The top bar is red because at least one device for the
+        selected model (MX-106) is disconnected. Below the bar is a scrollable list with an item for
+        each device of the selected model. The device's ID is shown in parentheses and the item is
+        colored red when it is disconnected. Clicking an item will navigate to the device details view
+        and select the clicked device.
+    }
 \end{figure}
 
 \paragraph{Device details view}
@@ -341,7 +359,12 @@ but makes it harder to determine the status of all connected devices at once. Th
     \centering
     \setlength{\fboxsep}{0mm}
     \fbox{\includegraphics[scale=0.75]{img/device_details_view.png}}
-    \caption{Screenshot of the device details view}
+    \caption[Screenshot of the device details view]{
+        Screenshot of the device details view. The list on the left hand side contains an item for
+        each connected device that is colored green when the device is connected and red otherwise.
+        Clicking an item will select that device and show all values of its \textit{control table}
+        in the table on the right hand side.
+    }
 \end{figure}
 
 \paragraph{Log view}
@@ -355,7 +378,12 @@ to actually read an individual error message.
     \centering
     \setlength{\fboxsep}{0mm}
     \fbox{\includegraphics[scale=0.75]{img/log_view.png}}
-    \caption{Screenshot of the log view}
+    \caption[Screenshot of the log view]{
+        Screenshot of the log view. The left hand side contains profiling information like processing
+        times and free memory, the right hand side shows the 50 most recent error messages. The
+        timestamps in the error log are relative to the start of the application. The view is only
+        refreshed when the \textit{Refresh} button is clicked.
+    }
 \end{figure}
 
 All of the views have to regularly access data shared with the packet processing task. While they
@@ -404,8 +432,13 @@ by the CRC checksums that are part of the ROBOTIS Dynamixel protocol.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[scale=0.75]{img/dma_buffer.png}
-    \caption{Layout of the DMA buffer}
+    \includegraphics[scale=1.0]{img/dma_buffer.pdf}
+    \caption[Layout of the DMA buffer]{
+        After more than half of the DMA buffer has been filled, the front of it is ready and can be
+        read. At the same time, the back of it is now invalid because the DMA controller is writing
+        to it. The situation is reversed when the DMA controller has finished writing to the back
+        and starts at the front again.
+    }
 \end{figure}
 
 The size of the buffer has a significant impact on the maximum time allowed before data is lost. A
@@ -677,6 +710,7 @@ the following device models are supported:
 \begin{itemize}
     \item ROBOTIS MX-64 servos (\url{http://emanual.robotis.com/docs/en/dxl/mx/mx-64-2/})
     \item ROBOTIS MX-106 servos (\url{http://emanual.robotis.com/docs/en/dxl/mx/mx-106-2/})
-    \item Rhoban DXL Board (\url{https://github.com/Rhoban/DXLBoard})
-    \item TODO: foot pressure and IMU
+    \item Rhoban DXL Boards (\url{https://github.com/Rhoban/DXLBoard})
+    \item BitFoot foot pressure sensors (\url{https://github.com/bit-bots/bit_foot})
+    \item \textit{Hamburg Bit-Bots} IMU modules (\url{https://github.com/bit-bots/imu_module})
 \end{itemize}

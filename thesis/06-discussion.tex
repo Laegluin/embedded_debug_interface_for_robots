@@ -12,7 +12,7 @@ performant enough to not lose any data, especially considering that a bus load o
 is not possible in reality.
 
 It is clear that there is a constant overhead of about \SI{4}{\milli\second} in the
-\textit{time between buffers}. This overhead could be seen as the median \textit{time between buffers}
+\textit{time between buffers}. This overhead can be seen as the median \textit{time between buffers}
 in all experiments. This overhead is not small; compared to the approximate maximum of \SI{16}{\milli\second},
 it is \SI{25}{\percent} of the entire time spent.
 
@@ -22,10 +22,23 @@ not surprising considering that \textit{Ping} instructions may require allocatin
 \lstinline{ControlTable} object. However, these allocations are only necessary when the model number
 changes constantly as was the case in these two experiments. This is simply not a realistic scenario;
 in practice, \textit{Ping} instructions are incredible rare, usually only sent when the master
-connects to the bus for the first time. Thus, the number of \textit{Ping} instructions in the other
-experiments was already higher than to be expected, yet it did not impact performance in any
-meaningful way.
+connects to the bus for the first time.
 
-Generally, the amount of load on the bus was noticeable when interacting with the UI but this did
-become a problem before incoming data started to get lost, at which point the system could not perform
-its intended task anyway. Nevertheless, there certainly is room for improvement.
+The number of \textit{Ping} instructions in the other experiments was already higher than to be expected
+because the data they used contained at least one \textit{Ping} instruction and response for every device.
+This means that \textit{Ping} instructions were sent every time the data was repeated. This unusually
+high frequency did not impact performance in any meaningful way, however. All four experiments processed
+the incoming data in time.
+
+Generally, the amount of load on the bus was noticeable when interacting with the UI. It manifested
+as periodic increases in latency and low framerate. These became especially severe when the load was
+too high to be processed in time.
+
+This is a direct consequence of how the UI and the data processing task are configured. Since the UI
+task is only assigned a fixed amount of time after all incoming data in one half of the buffer has
+been processed, higher processing times decrease the overall amount time spent updating the UI.
+
+While this only seriously affected the UI once incoming data was already getting lost, the user
+experience was still not acceptable. There is certainly room for improvement, either by optimizing
+the firmware, redesigning the way the priorities of the two tasks are handled or by switching to
+hardware with greater processing power.

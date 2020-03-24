@@ -19,12 +19,13 @@
 % optional packages, see LaTeX documentation
 % ----------------------------------------------------------------------------
 
-% \usepackage{tabularx}		% self-adjusting tabulars
+\usepackage{tabularx}		% self-adjusting tabulars
 \usepackage{color}			% colors
 \usepackage{colortbl}
 \usepackage{xcolor}
 \usepackage{soul}
 \usepackage{siunitx}
+\usepackage{nameref}
 
 \usepackage{subcaption}
 \captionsetup[subfigure]{position=top}
@@ -64,6 +65,7 @@
 % hyperref setup
 % ----------------------------------------------------------------------------
 
+\PassOptionsToPackage{hyphens}{url}
 \usepackage[hidelinks]{hyperref}
 
 \usepackage{pdfpages}
@@ -135,6 +137,8 @@
 \addcontentsline{toc} {chapter}{List of Figures}
 \cleardoublepage
 \pagenumbering{arabic}
+
+% TODO: indent paragraphs
 
 \include{01-introduction}
 \include{02-related-work}

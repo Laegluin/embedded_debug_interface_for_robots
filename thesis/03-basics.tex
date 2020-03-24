@@ -15,7 +15,6 @@ voltage on A and a negative voltage on B. The voltage difference between these t
 the actual logic level. A voltage difference less than or equal to \SI{-200}{\milli\volt} is a logical
 0, while a difference greater than or equal to \SI{200}{\milli\volt} is a logical 1~\cite{rs-485-overview}.
 
-% TODO: explain why two cables == less noise?
 This two wire setup makes the bus more resilient towards noise, allowing for operation in noisy
 environments or over long distances.
 
@@ -26,7 +25,6 @@ logic level. Such a signal can then easily be consumed by a UART.
 \section{ROBOTIS Dynamixel Protocol 2.0}
 \label{basics/dynamixel-protocol}
 
-% TODO: citations for paragraphs?
 The ROBOTIS Dynamixel Protocol is a packet based master/slave protocol used by all of ROBOTIS' products.
 This section describes only the improved version 2.0. Official documentation can be found at ROBOTIS'
 website~\cite{dynamixel-protocol-2}.
@@ -63,7 +61,7 @@ be easily extended or reused by custom devices.
         \caption{Generic layout of a status packet}
     \end{subfigure}
 
-    \caption{Packet layout}
+    \caption{Generic packet layout}
 \end{figure}
 
 Each packet has some metadata preceding the actual payload. It starts with a fixed byte sequence that allows
@@ -248,7 +246,6 @@ devices can be configured to not send any status packets on writes.
 \subsection{Byte-Order}
 \label{basics/dynamixel-protocol/byte-order}
 
-% TODO: citation for endianness?
 All multi-byte values (packet fields, values in packet payloads and \textit{control table} fields) are
 \textit{little-endian}. That is, for multi-byte values, the least significant byte comes first, then the
 second least significant byte, etc.

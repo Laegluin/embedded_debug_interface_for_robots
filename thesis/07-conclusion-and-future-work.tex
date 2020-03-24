@@ -9,15 +9,35 @@ discusses possible future work.
 \label{conclusion-and-future-work/conclusion}
 
 In this thesis firmware for the STM32F7508-DK board has been developed that allows monitoring and
-debugging the status of devices connected to a UART compatible ROBOTIS Dynamixel Protocol 2.0 based
-bus. The UI has been designed to clearly highlight any disconnected devices.
+debugging the status of devices connected to a ROBOTIS Dynamixel Protocol 2.0 based bus. The targeted
+\textit{Wolfgang} robot platform uses \textit{RS-485} but any bus compatible with a UART interface
+can be used. Like with \textit{RS-485}, a transceiver or converter has to be used to interface the
+bus with the board itself. It is also possible to directly connect a bus using TTL logic levels
+(\SIrange{3.3}{5}{\volt}). This is effectively what was done during testing and evaluation.
+
+The STM32F7508-DK board is well suited for the development of graphical applications. Because the
+touchscreen display is already part of the board, no further assembly was required. The speed of
+the STM32F750N8H6 microcontroller is sufficient but any less powerful hardware would most likely
+have caused serious issues. A significant amount of processing power is needed just to render and
+update the UI.
+
+The UI has been designed to clearly highlight any disconnected devices. Consistent color coding
+(red for disconnected, green for connected) is used across all views. The different views allow
+users to select varying levels of detail. While the UI performs well enough to be usable, there
+is noticeable lag, especially under high load.
 
 The firmware is performant enough to handle the data rate of \SI{2000000}{Bd} used with the
 \textit{Wolfgang} robot platform. Future improvements would allow for even higher data rates or
 multiple bus connections (see section \ref{conclusion-and-future-work/future-work}).
 
 The source code of the firmware makes it easy to add support for new device models or update the
-definition of already supported ones.
+definition of already supported ones by constraining necessary changes to mostly one well defined
+interface. The code must be recompiled and flashed to the board to deploy changes.
+
+Most of the firmware code is either platform independent or uses the emWin library. Porting the
+firmware to different (Arm Cortex-M based) hardware should be possible with reasonable effort: both
+bootloader and hardware initialization as well as the emWin and FreeRTOS configuration would have to
+modified.
 
 \section{Future Work}
 \label{conclusion-and-future-work/future-work}

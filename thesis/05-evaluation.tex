@@ -1,8 +1,6 @@
 \chapter{Evaluation}
 \label{evaluation}
 
-% TODO: consistently use `experiment` where appropriate
-
 This chapter evaluates the performance of the implementation described in chapter \ref{implementation}.
 Two measurements were taken to assess the performance:
 
@@ -25,7 +23,6 @@ subsection \ref{implementation/software/packet-processing-task}, no incoming dat
 In addition, the perceived responsiveness of the UI is also reported. These observations are entirely
 subjective and only meant to give an impression of the responsiveness to be expected.
 
-% TODO: actually tag the branch tip
 The source code of the firmware and scripts used for measurements as well as the results can be found
 at \url{https://github.com/Laegluin/embedded_debug_interface_for_robots/tree/thesis-benchmark-ref}.
 The version used for measurements is tagged as \lstinline{thesis-benchmark-ref}.
@@ -64,8 +61,8 @@ had a size of at least \SI{400}{KiB}. When the file was smaller, it was made big
 repeating the contents.
 
 All combinations of the aforementioned parameters (for a total of six different combinations) were
-used for measurements. Before starting the measurements, the microcontroller was reset and every
-view of the UI was opened at least once to ensure that every view would be updated. Measurements
+tested as separate experiments. Before starting the experiments, the microcontroller was reset and
+every view of the UI was opened at least once to ensure that every view would be updated. Measurements
 were taken for at least \SI{80}{\second} after reset.
 
 The firmware had to be modified slightly to allow for collection of the measurements. An additional
@@ -85,16 +82,18 @@ minimal, however.
 \section{Results}
 \label{evaluation/results}
 
-This section presents the results of the measurements for each of the six combinations mentioned
-above. Every combination is presented in a separate subsection. There are four different plots
-for each combination. The scatter plots show the \textit{time per buffer} and
+This section presents the results of the experiments for each of the six combinations mentioned
+above. Every experiment is presented in a separate subsection. There are four different plots
+for each experiment. The scatter plots show the \textit{time per buffer} and
 \textit{time between buffers} over time. Since each data point represents a duration, points in the
 plots are placed at the geometric mean of the start and end point of the duration. The histograms
 show the distribution of durations for each scatter plot.
 
-The first \SI{20}{\second} of measurements were discarded to allow for the manual setup, the next
-\SI{60}{\second} were used to generate the following plots.
+Subsection \ref{evaluation/results/results-by-experiment} contains tables for maximum, median, mean
+and minimum \textit{time per buffer} and \textit{time between buffers} for each experiment.
 
+The first \SI{20}{\second} of measurements were discarded to allow for the manual setup, the next
+\SI{60}{\second} were used to generate the following plots and tables.
 
 \subsection{Trace, no delay}
 \label{evaluation/results/trace-no-delay}
@@ -190,9 +189,9 @@ task. These wait times may have been what caused the tight clustering.
 The UI was responsive, there was only occasional minimal stuttering.
 \bigbreak
 
-All measurements look extremely similar to those with no delay. Since the additional delay reduced
-the effective data rate, there were less packets processed in the same time frame and the influence
-of malformed packets was not as severe.
+All measurements look extremely similar to those in the experiment with no delay. Since the additional
+delay reduced the effective data rate, there were less packets processed in the same time frame and
+the influence of malformed packets was not as severe.
 
 The \textit{time between buffers} is absolutely dominated by measurements taken when there was no
 data to process. This is not suprising, as even less time was spent processing data when there was
@@ -235,7 +234,7 @@ also a delay per packet.
 The UI was still usable but there was heavy stuttering. Using the UI was not pleasant.
 \bigbreak
 
-Compared to the results with the recorded trace, there are almost no outliers in the measurements.
+Compared to the experiments using the recorded trace, there are almost no outliers in the measurements.
 The synthetic nature of the data is clearly visible. Measurements are extremely clustered and all
 clusters are very close to each other.
 
@@ -282,8 +281,8 @@ depending on the types of packets it contained.
 The UI was responsive, there was only occasional short stuttering.
 \bigbreak
 
-Like the results with the recorded trace, results when adding a delay per packet are very similar to
-those without delay. Again, clusters in the \textit{time per buffer} plots are less pronounced as
+Like the experiment using the recorded trace, results when adding a delay per packet are very similar
+to those without delay. Again, clusters in the \textit{time per buffer} plots are less pronounced as
 there are less measurements and the measurements for the \textit{time between buffers} are dominated
 by constant overhead.
 
@@ -325,9 +324,9 @@ The UI was not responsive at all. While it was still possible to use, scrolling 
 and any action caused significant and noticeable delays.
 \bigbreak
 
-The results for the \textit{time per buffer} are significantly worse than any other results. The
-maximum \textit{time per buffer} exceeds \SI{50}{\milli\second}. There are also many outliers. These
-outliers were most likely caused by errors during parsing: since the buffers were not processed
+The results for the \textit{time per buffer} are significantly worse than in the previous experiments.
+The maximum \textit{time per buffer} exceeds \SI{50}{\milli\second} and there are many outliers.
+These outliers were most likely caused by errors during parsing: since the buffers were not processed
 quickly enough, the DMA controller was overwriting buffers as they were being read.
 
 The \textit{time between buffers} reflects the measurements for \textit{time per buffer}. However,
@@ -380,13 +379,134 @@ The UI was mostly usable but there was significant stuttering. Scrolling mostly 
 pleasant to use. The were noticeable but not significant delays when interacting with buttons. 
 \bigbreak
 
-Results with delay per packet look remarkably similar to those with synthetic \textit{Read} and
-\textit{Write} instructions. The only difference is that all times increased drastically to about
-\SIrange{57}{59}{\milli\second}. The reason is that while the average \textit{time per buffer} was
-still about four times higher than the allowed maximum of \SI{16}{\milli\second}, the delay per
-packet slowed down the effective data rate enough to make the actual allowed maximum greater than
-the measured maximum \textit{time per buffer}.
+Results with delay per packet look remarkably similar to those for the experiments with synthetic
+\textit{Read} and \textit{Write} instructions. The only difference is that all times increased
+drastically to about \SIrange{57}{59}{\milli\second}. The reason is that while the average
+\textit{time per buffer} was still about four times higher than the allowed maximum of
+\SI{16}{\milli\second}, the delay per packet slowed down the effective data rate enough to make the
+actual allowed maximum greater than the measured maximum \textit{time per buffer}.
 
 This is also the reason the UI was so much more responsive than without any delay. The problems
 caused by high latencies were still present but the UI task did have enough time to render the UI
 at a sufficient speed.
+
+\subsection{Results by Experiment}
+\label{evaluation/results/results-by-experiment}
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.1}
+    \begin{tabularx}{\textwidth}{|>{\raggedleft\arraybackslash}X||c|c|c|c|}
+        \hline
+        \textbf{Experiment} & \textbf{Maximum} & \textbf{Median} & \textbf{Mean} & \textbf{Minimum} \\
+        \hline
+        
+        \nameref{evaluation/results/trace-no-delay} &
+        \SI{10.1}{\milli\second} &
+        \SI{8.8}{\milli\second} &
+        \SI{8.6}{\milli\second} &
+        \SI{0.9}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/trace-100us-delay} &
+        \SI{9.4}{\milli\second} &
+        \SI{7.7}{\milli\second} &
+        \SI{7.6}{\milli\second} &
+        \SI{0.9}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-read-write-instructions-no-delay} &
+        \SI{11.9}{\milli\second} &
+        \SI{11.2}{\milli\second} &
+        \SI{11.2}{\milli\second} &
+        \SI{10.6}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-read-write-instructions-100us-delay} &
+        \SI{11.7}{\milli\second} &
+        \SI{10.9}{\milli\second} &
+        \SI{10.9}{\milli\second} &
+        \SI{10.3}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-ping-instructions-no-delay} &
+        \SI{54.2}{\milli\second} &
+        \SI{52.7}{\milli\second} &
+        \SI{50.8}{\milli\second} &
+        \SI{37.0}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-ping-instructions-100us-delay} &
+        \SI{58.7}{\milli\second} &
+        \SI{57.9}{\milli\second} &
+        \SI{57.9}{\milli\second} &
+        \SI{57.0}{\milli\second}
+        \\
+        \hline
+    \end{tabularx}
+    \caption{Maximum, median, mean and minimum \textit{time per buffer} for each experiment}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.1}
+    \begin{tabularx}{\textwidth}{|>{\raggedleft\arraybackslash}X||c|c|c|c|}
+        \hline
+        \textbf{Experiment} & \textbf{Maximum} & \textbf{Median} & \textbf{Mean} & \textbf{Minimum} \\
+        \hline
+
+        \nameref{evaluation/results/trace-no-delay} &
+        \SI{15.0}{\milli\second} &
+        \SI{4.0}{\milli\second} &
+        \SI{6.7}{\milli\second} &
+        \SI{3.8}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/trace-100us-delay} &
+        \SI{13.1}{\milli\second} &
+        \SI{4.0}{\milli\second} &
+        \SI{4.3}{\milli\second} &
+        \SI{3.7}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-read-write-instructions-no-delay} &
+        \SI{17.0}{\milli\second} &
+        \SI{4.0}{\milli\second} &
+        \SI{8.6}{\milli\second} &
+        \SI{3.7}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-read-write-instructions-100us-delay} &
+        \SI{16.1}{\milli\second} &
+        \SI{4.0}{\milli\second} &
+        \SI{4.5}{\milli\second} &
+        \SI{3.7}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-ping-instructions-no-delay} &
+        \SI{59.1}{\milli\second} &
+        \SI{4.0}{\milli\second} &
+        \SI{22.6}{\milli\second} &
+        \SI{3.7}{\milli\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-ping-instructions-100us-delay} &
+        \SI{64.0}{\milli\second} &
+        \SI{4.0}{\milli\second} &
+        \SI{8.9}{\milli\second} &
+        \SI{3.7}{\milli\second}
+        \\
+        \hline
+    \end{tabularx}
+    \caption{Maximum, median, mean and minimum \textit{time between buffers} for each experiment}
+\end{table}
