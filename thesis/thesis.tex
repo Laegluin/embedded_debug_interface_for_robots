@@ -3,7 +3,7 @@
 
 \documentclass[12pt,DIV=13,BCOR=1.5cm,a4paper,twoside,bibliography=totoc,headings=small,headinclude,headsepline,numbers=noenddot]{scrbook}
 
-\usepackage[english]{babel}
+\usepackage[ngerman,english]{babel}
 \usepackage[utf8x]{inputenc}
 \usepackage{scrhack}
 \usepackage{graphicx}
@@ -70,6 +70,9 @@
 
 \usepackage{pdfpages}
 \usepackage[resetlabels]{multibib}
+
+% do not justify footnotes (does not work well with URLs)
+\let\raggedfootnote\raggedright
 
 \setlength{\parindent}{0cm}
 
@@ -138,8 +141,6 @@
 \cleardoublepage
 \pagenumbering{arabic}
 
-% TODO: indent paragraphs
-
 \include{01-introduction}
 \include{02-related-work}
 \include{03-basics}
@@ -148,9 +149,12 @@
 \include{06-discussion}
 \include{07-conclusion-and-future-work}
 
+\begingroup
+\raggedright
 \bibliographystyle{alpha}
 \bibliography{literature}
 \cleardoublepage
+\endgroup
 
 \newpage
 \null\thispagestyle{empty}

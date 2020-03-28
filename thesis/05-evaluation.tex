@@ -90,38 +90,42 @@ plots are placed at the geometric mean of the start and end point of the duratio
 show the distribution of durations for each scatter plot.
 
 Subsection \ref{evaluation/results/results-by-experiment} contains tables for maximum, median, mean
-and minimum \textit{time per buffer} and \textit{time between buffers} for each experiment.
+and minimum \textit{time per buffer} and \textit{time between buffers} for each experiment. It also
+shows the data rates that can be derived from the results in an additional table.
 
 The first \SI{20}{\second} of measurements were discarded to allow for the manual setup, the next
 \SI{60}{\second} were used to generate the following plots and tables.
 
+\clearpage
 \subsection{Trace, no delay}
 \label{evaluation/results/trace-no-delay}
 
 \begin{figure}[H]
-    \centering
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_no_wait_per_buffer_scatter.png}
+            \caption{Scatter plot of \textit{time per buffer}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_no_wait_per_buffer_hist.png}
+            \caption{Histogram of \textit{time per buffer}}
+        \end{subfigure}
+    }
 
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_no_wait_per_buffer_scatter.png}
-        \caption{Scatter plot of \textit{time per buffer}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_no_wait_per_buffer_hist.png}
-        \caption{Histogram of \textit{time per buffer}}
-    \end{subfigure}
-
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_no_wait_between_buffers_scatter.png}
-        \caption{Scatter plot of \textit{time between buffers}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_no_wait_between_buffers_hist.png}
-        \caption{Histogram of \textit{time between buffers}}
-    \end{subfigure}
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_no_wait_between_buffers_scatter.png}
+            \caption{Scatter plot of \textit{time between buffers}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_no_wait_between_buffers_hist.png}
+            \caption{Histogram of \textit{time between buffers}}
+        \end{subfigure}
+    }
 
     \caption{\textit{Time per buffer} and \textit{time between buffers} for trace traffic with no delay}
     \label{evaluation/results/trace-no-delay/plots}
@@ -152,33 +156,36 @@ time the UI task was holding a lock was always the same and since FreeRTOS could
 every millisecond, there was only a very limited set of possible wait times for the packet processing
 task. These wait times may have been what caused the tight clustering.
 
+\clearpage
 \subsection{Trace, \SI{100}{\micro\second} delay}
 \label{evaluation/results/trace-100us-delay}
 
 \begin{figure}[H]
-    \centering
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_wait_100us_per_buffer_scatter.png}
+            \caption{Scatter plot of \textit{time per buffer}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_wait_100us_per_buffer_hist.png}
+            \caption{Histogram of \textit{time per buffer}}
+        \end{subfigure}
+    }
 
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_wait_100us_per_buffer_scatter.png}
-        \caption{Scatter plot of \textit{time per buffer}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_wait_100us_per_buffer_hist.png}
-        \caption{Histogram of \textit{time per buffer}}
-    \end{subfigure}
-
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_wait_100us_between_buffers_scatter.png}
-        \caption{Scatter plot of \textit{time between buffers}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/trace_wait_100us_between_buffers_hist.png}
-        \caption{Histogram of \textit{time between buffers}}
-    \end{subfigure}
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_wait_100us_between_buffers_scatter.png}
+            \caption{Scatter plot of \textit{time between buffers}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/trace_wait_100us_between_buffers_hist.png}
+            \caption{Histogram of \textit{time between buffers}}
+        \end{subfigure}
+    }
 
     \caption{\textit{Time per buffer} and \textit{time between buffers} for trace traffic with \SI{100}{\micro\second} delay}
     \label{evaluation/results/trace-100us-delay/plots}
@@ -190,40 +197,44 @@ The UI was responsive, there was only occasional minimal stuttering.
 \bigbreak
 
 All measurements look extremely similar to those in the experiment with no delay. Since the additional
-delay reduced the effective data rate, there were less packets processed in the same time frame and
-the influence of malformed packets was not as severe.
+delay reduced the effective data rate (see table \ref{evaluation/results/results-by-experiment/data-rates}),
+there were less packets processed in the same time frame and the influence of malformed packets was
+not as severe.
 
 The \textit{time between buffers} is absolutely dominated by measurements taken when there was no
 data to process. This is not suprising, as even less time was spent processing data when there was
 also a delay per packet.
 
+\clearpage
 \subsection{Synthetic Read/Write instructions, no delay}
 \label{evaluation/results/synthetic-read-write-instructions-no-delay}
 
 \begin{figure}[H]
-    \centering
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_no_wait_per_buffer_scatter.png}
+            \caption{Scatter plot of \textit{time per buffer}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_no_wait_per_buffer_hist.png}
+            \caption{Histogram of \textit{time per buffer}}
+        \end{subfigure}
+    }
 
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_no_wait_per_buffer_scatter.png}
-        \caption{Scatter plot of \textit{time per buffer}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_no_wait_per_buffer_hist.png}
-        \caption{Histogram of \textit{time per buffer}}
-    \end{subfigure}
-
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_no_wait_between_buffers_scatter.png}
-        \caption{Scatter plot of \textit{time between buffers}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_no_wait_between_buffers_hist.png}
-        \caption{Histogram of \textit{time between buffers}}
-    \end{subfigure}
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_no_wait_between_buffers_scatter.png}
+            \caption{Scatter plot of \textit{time between buffers}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_no_wait_between_buffers_hist.png}
+            \caption{Histogram of \textit{time between buffers}}
+        \end{subfigure}
+    }
 
     \caption{\textit{Time per buffer} and \textit{time between buffers} for synthetic read/write traffic with no delay}
     \label{evaluation/results/synthetic-read-write-instructions-no-delay/plots}
@@ -244,33 +255,36 @@ and took a slightly different path through the program. This did not make a sign
 the overall time but it was enough to consistently change the time it took to process a buffer,
 depending on the types of packets it contained.
 
+\clearpage
 \subsection{Synthetic Read/Write instructions, \SI{100}{\micro\second} delay}
 \label{evaluation/results/synthetic-read-write-instructions-100us-delay}
 
 \begin{figure}[H]
-    \centering
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_wait_100us_per_buffer_scatter.png}
+            \caption{Scatter plot of \textit{time per buffer}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_wait_100us_per_buffer_hist.png}
+            \caption{Histogram of \textit{time per buffer}}
+        \end{subfigure}
+    }
 
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_wait_100us_per_buffer_scatter.png}
-        \caption{Scatter plot of \textit{time per buffer}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_wait_100us_per_buffer_hist.png}
-        \caption{Histogram of \textit{time per buffer}}
-    \end{subfigure}
-
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_wait_100us_between_buffers_scatter.png}
-        \caption{Scatter plot of \textit{time between buffers}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_read_writes_wait_100us_between_buffers_hist.png}
-        \caption{Histogram of \textit{time between buffers}}
-    \end{subfigure}
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_wait_100us_between_buffers_scatter.png}
+            \caption{Scatter plot of \textit{time between buffers}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_read_writes_wait_100us_between_buffers_hist.png}
+            \caption{Histogram of \textit{time between buffers}}
+        \end{subfigure}
+    }
 
     \caption{\textit{Time per buffer} and \textit{time between buffers} for synthetic read/write traffic with \SI{100}{\micro\second} delay}
     \label{evaluation/results/synthetic-read-write-instructions-100us-delay/plots}
@@ -286,33 +300,36 @@ to those without delay. Again, clusters in the \textit{time per buffer} plots ar
 there are less measurements and the measurements for the \textit{time between buffers} are dominated
 by constant overhead.
 
+\clearpage
 \subsection{Synthetic Ping instructions, no delay}
 \label{evaluation/results/synthetic-ping-instructions-no-delay}
 
 \begin{figure}[H]
-    \centering
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_no_wait_per_buffer_scatter.png}
+            \caption{Scatter plot of \textit{time per buffer}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_no_wait_per_buffer_hist.png}
+            \caption{Histogram of \textit{time per buffer}}
+        \end{subfigure}
+    }
 
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_no_wait_per_buffer_scatter.png}
-        \caption{Scatter plot of \textit{time per buffer}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_no_wait_per_buffer_hist.png}
-        \caption{Histogram of \textit{time per buffer}}
-    \end{subfigure}
-
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_no_wait_between_buffers_scatter.png}
-        \caption{Scatter plot of \textit{time between buffers}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_no_wait_between_buffers_hist.png}
-        \caption{Histogram of \textit{time between buffers}}
-    \end{subfigure}
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_no_wait_between_buffers_scatter.png}
+            \caption{Scatter plot of \textit{time between buffers}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_no_wait_between_buffers_hist.png}
+            \caption{Histogram of \textit{time between buffers}}
+        \end{subfigure}
+    }
 
     \caption{\textit{Time per buffer} and \textit{time between buffers} for synthetic ping traffic with no delay}
     \label{evaluation/results/synthetic-ping-instructions-no-delay/plots}
@@ -341,33 +358,36 @@ the latency increased. The high latencies caused problems with input handling si
 processed in time. Less time for the UI task also meant the real time required for rendering the UI
 increased.
 
+\clearpage
 \subsection{Synthetic Ping instructions, \SI{100}{\micro\second} delay}
 \label{evaluation/results/synthetic-ping-instructions-100us-delay}
 
 \begin{figure}[H]
-    \centering
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_wait_100us_per_buffer_scatter.png}
+            \caption{Scatter plot of \textit{time per buffer}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_wait_100us_per_buffer_hist.png}
+            \caption{Histogram of \textit{time per buffer}}
+        \end{subfigure}
+    }
 
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_wait_100us_per_buffer_scatter.png}
-        \caption{Scatter plot of \textit{time per buffer}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_wait_100us_per_buffer_hist.png}
-        \caption{Histogram of \textit{time per buffer}}
-    \end{subfigure}
-
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_wait_100us_between_buffers_scatter.png}
-        \caption{Scatter plot of \textit{time between buffers}}
-    \end{subfigure}%
-    \begin{subfigure}[t]{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.45]{img/synthetic_pings_wait_100us_between_buffers_hist.png}
-        \caption{Histogram of \textit{time between buffers}}
-    \end{subfigure}
+    \makebox[\textwidth][c]{
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_wait_100us_between_buffers_scatter.png}
+            \caption{Scatter plot of \textit{time between buffers}}
+        \end{subfigure}%
+        \begin{subfigure}[t]{0.61\textwidth}
+            \centering
+            \includegraphics[scale=0.55]{img/synthetic_pings_wait_100us_between_buffers_hist.png}
+            \caption{Histogram of \textit{time between buffers}}
+        \end{subfigure}
+    }
 
     \caption{\textit{Time per buffer} and \textit{time between buffers} for synthetic ping traffic with \SI{100}{\micro\second} delay}
     \label{evaluation/results/synthetic-ping-instructions-100us-delay/plots}
@@ -386,10 +406,15 @@ drastically to about \SIrange{57}{59}{\milli\second}. The reason is that while t
 \SI{16}{\milli\second}, the delay per packet slowed down the effective data rate enough to make the
 actual allowed maximum greater than the measured maximum \textit{time per buffer}.
 
-This is also the reason the UI was so much more responsive than without any delay. The problems
-caused by high latencies were still present but the UI task did have enough time to render the UI
-at a sufficient speed.
+This can clearly be seen when comparing the effective data rates in table \ref{evaluation/results/results-by-experiment/data-rates}:
+the effective data rates with added delay are all comparable, whereas the effective data rate for
+synthetic \textit{Ping} instructions with no delay is significantly lower than the others.
 
+It is also the reason the UI was so much more responsive than without any delay. The problems caused
+by high latencies were still present but the UI task did have enough time to render the UI at a
+sufficient speed.
+
+\clearpage
 \subsection{Results by Experiment}
 \label{evaluation/results/results-by-experiment}
 
@@ -509,4 +534,59 @@ at a sufficient speed.
         \hline
     \end{tabularx}
     \caption{Maximum, median, mean and minimum \textit{time between buffers} for each experiment}
+\end{table}
+
+\clearpage
+\begin{table}[ht]
+    \centering
+    \renewcommand{\arraystretch}{1.1}
+    \begin{tabularx}{\textwidth}{|>{\raggedleft\arraybackslash}X||c|c|c|c|}
+        \hline
+        \textbf{Experiment} & \textbf{Effective data rate} & \textbf{Processing data rate} \\
+        \hline
+
+        \nameref{evaluation/results/trace-no-delay} &
+        \SI{1600717}{bit\per\second} &
+        \SI{3788589}{bit\per\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/trace-100us-delay} &
+        \SI{313481}{bit\per\second} &
+        \SI{4306544}{bit\per\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-read-write-instructions-no-delay} &
+        \SI{1600717}{bit\per\second} &
+        \SI{2916174}{bit\per\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-read-write-instructions-100us-delay} &
+        \SI{314027}{bit\per\second} &
+        \SI{2999109}{bit\per\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-ping-instructions-no-delay} &
+        \SI{534118}{bit\per\second} &
+        \SI{644432}{bit\per\second}
+        \\
+        \hline
+
+        \nameref{evaluation/results/synthetic-ping-instructions-100us-delay} &
+        \SI{314027}{bit\per\second} &
+        \SI{565894}{bit\per\second}
+        \\
+        \hline
+    \end{tabularx}
+    \caption{
+        The effective and processing data rates for each experiment. The effective data rate is the
+        number of bits that were received divided by the duration of the experiment (\SI{60}{\second}).
+        The processing data rate is the rate at which the actual packet processing task could in
+        theory process packets. It is calculated by dividing the number of bits that were received
+        by the time spent processing them (the sum of all \textit{time per buffer} measurements).
+    }
+    \label{evaluation/results/results-by-experiment/data-rates}
 \end{table}

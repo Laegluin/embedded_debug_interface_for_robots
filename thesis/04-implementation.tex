@@ -9,7 +9,7 @@ firmware is intended to give a high level overview and discusses tradeoffs as we
 interest.
 
 Since the implementation targets the \textit{Wolfgang} robot platform, it must be compatible with
-its \textit{RS-485} bus running at a speed of \SI{2000000}{Bd}.
+its \textit{RS-485} bus running at a speed of \SI{2}{\mega{Bd}}.
 
 \section{Hardware}
 \label{implementation/hardware}
@@ -26,8 +26,8 @@ The MAX485 transceiver is used to connect the \textit{RS-485} bus to the STM32F7
 outputs a \SI{5}{\volt} signal that can be interpreted by one of the board's UARTs. STM32F7508-DK
 is built around a STM32F750N8H6 Arm Cortex-M7 based microcontroller. The controller's \textit{UART6}
 is used, as it is easily accessible through the board's Arduino Uno compatible connectors at the
-back. All UARTs have a theoretical maximum speed of \SI{27000000}{Bd}~\cite{mcu-ref-manual} (depending
-on the clock configuration), making the MAX485's maximum speed of \SI{2500000}{Bd} the maximum speed
+back. All UARTs have a theoretical maximum speed of \SI{27}{\mega{Bd}}~\cite{mcu-ref-manual} (depending
+on the clock configuration), making the MAX485's maximum speed of \SI{2.5}{\mega{Bd}} the maximum speed
 of this setup~\cite{max-485-manual}\cite{board-user-manual}.
 
 The STM32F7508-DK board has a built in \SI{4.3}{"} 480x272 LCD-TFT capacitive touchscreen. It is
@@ -307,6 +307,7 @@ to differentiate between connected and disconnected devices. Every list item or 
 a connected device is colored green, those representing disconnected devices are colored red. The
 following four paragraphs give a brief overview of each view.
 
+\clearpage
 \paragraph{Device overview}
 
 Displays the total number of devices and the number of devices for each model. It is the view shown
@@ -328,6 +329,7 @@ disconnected devices are immediately visible. The view is updated every \SI{500}
     }
 \end{figure}
 
+\clearpage
 \paragraph{Model overview}
 
 Displays the status and ID of each device of a certain model. Each device in the list can be clicked
@@ -348,6 +350,7 @@ the exact device that is disconnected. The view is updated every \SI{500}{\milli
     }
 \end{figure}
 
+\clearpage
 \paragraph{Device details view}
 
 Displays all known values of single device's \textit{control table}. Different devices can be selected
@@ -367,6 +370,7 @@ but makes it harder to determine the status of all connected devices at once. Th
     }
 \end{figure}
 
+\clearpage
 \paragraph{Log view}
 
 Displays profiling information such as free memory and maximum and average processing times, as well
@@ -399,7 +403,7 @@ for too long, it will miss incoming data.
 \label{implementation/software/packet-processing-task}
 
 The packet processing task is responsible for processing the data the UART connected to the \textit{RS-485}
-bus receives. Since the bus has a data rate of \SI{2000000}{Bd}, performance is crucial. Data must be
+bus receives. Since the bus has a data rate of \SI{2}{\mega{Bd}}, performance is crucial. Data must be
 processed faster than it arrives in order to not lose any of it. At the same time, there needs to be
 enough processing time left to also update to UI.
 
@@ -428,18 +432,7 @@ been filled, the DMA controller starts at the beginning of the buffer again. The
 sets a flag that determines which part of the buffer is now ready. As long as the data is processed
 faster than it is received, no data will be lost. Even when the data is not processed quickly enough,
 there will be no serious malfunctions. Some data may be corrupted but this will usually be detected
-by the CRC checksums that are part of the ROBOTIS Dynamixel protocol.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[scale=1.0]{img/dma_buffer.pdf}
-    \caption[Layout of the DMA buffer]{
-        After more than half of the DMA buffer has been filled, the front of it is ready and can be
-        read. At the same time, the back of it is now invalid because the DMA controller is writing
-        to it. The situation is reversed when the DMA controller has finished writing to the back
-        and starts at the front again.
-    }
-\end{figure}
+by the CRC checksums that are part of the ROBOTIS Dynamixel protocol (see section \ref{basics/dynamixel-protocol}).
 
 The size of the buffer has a significant impact on the maximum time allowed before data is lost. A
 larger buffer increases this time but also increases the latency. The latency can largely be ignored
@@ -450,7 +443,7 @@ is limited to \SI{65535}{B} by the size of the DMA controller's NDT register~\ci
 
 The buffer's size is \SI{8192}{B}. This means that even assuming the absolute worst case, the maximum
 amount of time for processing one half of the buffer is
-$\frac{\SI{4096}{B}}{\SI{2000000}{Bd} \mathbin{/} 8} \approx \SI{16}{\milli\second}$. Realistically,
+$\frac{\SI{4096}{B}}{\SI{2}{\mega{Bd}} \mathbin{/} 8} \approx \SI{16}{\milli\second}$. Realistically,
 the maximum amount of time will be higher for multiple reasons:
 
 \begin{itemize}
@@ -465,6 +458,17 @@ the maximum amount of time will be higher for multiple reasons:
 
 For these reasons, if the maximum amount of time between processing one half of the buffer never
 exceeds \SI{16}{\milli\second}, there will be no data loss or corruption.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=1.0]{img/dma_buffer.pdf}
+    \caption[Layout of the DMA buffer]{
+        After more than half of the DMA buffer has been filled, the front of it is ready and can be
+        read. At the same time, the back of it is now invalid because the DMA controller is writing
+        to it. The situation is reversed when the DMA controller has finished writing to the back
+        and starts at the front again.
+    }
+\end{figure}
 
 Since the buffer is written to by the DMA controller and then read by the CPU, the CPU must not cache
 reads. This is accomplished by placing the buffer in the DTCM RAM section of the microcontroller's
