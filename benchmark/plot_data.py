@@ -150,6 +150,13 @@ elif plot_type == "between-buffers-hist":
     plt.xlabel("time between buffers (ms)")
     plt.ylabel("count")
     plt.show()
+elif plot_type == "data-rate":
+    deltas = np.array([delta.delta_millis() for delta in times_per_buffer])
+    overall_data_rate = len(deltas) * 4096 / 60.0 * 8
+    processing_data_rate = len(deltas) * 4096 / (np.sum(deltas) / 1000.0) * 8
+
+    print(f"overall data rate:      {overall_data_rate:.0f} bit/s")
+    print(f"processing data rate:   {processing_data_rate:.0f} bit/s")
 else:
     sys.stderr.write(f"unknown plot type `{plot_type}`\n")
     exit(1)
