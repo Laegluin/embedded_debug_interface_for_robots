@@ -41,6 +41,18 @@ processing power for a microcontroller, it is needed to drive an interactive UI 
 processing incoming data quickly enough. The DMA controller allows transferring data from the UART to
 memory at high data rates without using up CPU time.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.4]{img/board.jpg}
+    \caption[The STM32F7508-DK development board]{
+        The STM32F7508-DK development board\footnotemark
+    }
+\end{figure}
+\footnotetext{
+    Source: \url{https://www.st.com/bin/ecommerce/api/image.PF267270.en.feature-description-include-personalized-no-cpn-large.jpg}
+    (Accessed: 2020-03-30)
+}
+
 The controller itself comes with only \SI{64}{KiB} of embedded flash memory. However, it also has a
 Quad-SPI memory interface that can be used with external flash memory~\cite{mcu-datasheet}. The
 STM32F7508-DK board has \SI{16}{MiB} of pre-installed flash memory~\cite{board-user-manual}.
@@ -96,7 +108,7 @@ When the bootloader starts, it initializes the USB controller and the Quad-SPI m
 also blinks the board's LED at regular intervals to indicate that it is running. It then listens on
 the USB interface as a communication class device.
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
 
     \begin{subfigure}[t]{0.5\textwidth}
@@ -129,7 +141,7 @@ A \textit{flash} packet instructs the bootloader to erase and then program the Q
 with all the bytes in the \textit{Image} field, beginning at the start address of the Quad-SPI flash
 memory.
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includegraphics[scale=1.0]{img/bootloader_flowchart.pdf}
     \caption[Bootloader program flow]{
