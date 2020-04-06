@@ -22,7 +22,7 @@ not surprising considering that \textit{Ping} instructions may require allocatin
 \lstinline{ControlTable} object (see subsection \ref{implementation/software/packet-processing-task}).
 However, these allocations are only necessary when the model number changes constantly as was the case
 in these two experiments. This is simply not a realistic scenario; in practice, \textit{Ping} instructions
-are incredible rare, usually only sent when the master connects to the bus for the first time.
+are incredibly rare, usually only sent when the master connects to the bus for the first time.
 
 The number of \textit{Ping} instructions in the other experiments was already higher than to be expected
 because the data they used contained at least one \textit{Ping} instruction and response for every device.
@@ -36,7 +36,7 @@ too high to be processed in time.
 
 This is a direct consequence of how the UI and the data processing task are configured. Since the UI
 task is only assigned a fixed amount of time after all incoming data in one half of the buffer has
-been processed, higher processing times decrease the overall amount time spent updating the UI (see
+been processed, higher processing times decrease the overall amount of time spent updating the UI (see
 subsection \ref{implementation/software/overview} for details).
 
 While this only seriously affected the UI once incoming data was already getting lost, the user

@@ -10,23 +10,23 @@ operating systems. The implementation uses an embedded OS to meet its latency re
 \label{basics/rs-485}
 
 \textit{RS-485} is a commonly used name for the ANSI TIA/EIA-485 standard. It is a specification for
-a half duplex serial bus. Data is transmitted over two wires, usually labeled A and B, with a positive
+a half-duplex serial bus. Data is transmitted over two wires, usually labeled A and B, with a positive
 voltage on A and a negative voltage on B. The voltage difference between these two wires determines
 the actual logic level. A voltage difference less than or equal to \SI{-200}{\milli\volt} is a logical
 0, while a difference greater than or equal to \SI{200}{\milli\volt} is a logical 1~\cite{rs-485-overview}.
 
-This two wire setup makes the bus more resilient towards noise, allowing for operation in noisy
+This two-wire setup makes the bus more resilient towards noise, allowing for operation in noisy
 environments or over long distances.
 
-For the purpose of this thesis the only interesting fact is the differential transmission. It requires
-an additional transceiver to that converts the two signals into a single signal at the microcontroller's
+For the purpose of this thesis, the only interesting fact is the differential transmission. It requires
+an additional transceiver that converts the two signals into a single signal at the microcontroller's
 logic level. Such a signal can then easily be consumed by a UART.
 
 \section{ROBOTIS Dynamixel Protocol 2.0}
 \label{basics/dynamixel-protocol}
 
-The ROBOTIS Dynamixel Protocol is a packet based master/slave protocol used by all of ROBOTIS' products.
-This section describes only the improved version 2.0. Official documentation can be found at ROBOTIS'
+The ROBOTIS Dynamixel Protocol is a packet-based master/slave protocol used by all of ROBOTIS's products.
+This section describes only the improved version 2.0. Official documentation can be found at ROBOTIS's
 website~\cite{dynamixel-protocol-2}.
 
 Each device is assigned a unique 8-bit ID that is used to determine the sender or receiver of packets.
@@ -43,7 +43,7 @@ or status packets may be lost, the master has to resend instruction packets if n
 received after a certain amount of time.
 
 Devices are seen as linear byte-addressed memory with 16-bit addresses (referred to as \textit{control tables}
-by the official documentation). Usually these are memory-mapped registers that can be used to read or change
+by the official documentation). Usually, these are memory-mapped registers that can be used to read or change
 the state of a device. However, due to this simple view of a device as some amount of memory, the protocol can
 be easily extended or reused by custom devices.
 
@@ -66,12 +66,12 @@ be easily extended or reused by custom devices.
 
 Each packet has some metadata preceding the actual payload. It starts with a fixed byte sequence that allows
 detecting a packet start without knowing where the last packet ended. It is followed by the device ID. For
-instruction packets this is the device that is targeted, for status packets it is the device that sent the
+instruction packets, this is the device that is targeted, for status packets it is the device that sent the
 packet. The \textit{Length} field determines the remaining length of the packet. This allows for a payload of variable
-size, depending on the instruction used or the data returned by status packet. The next field is the instruction;
+size, depending on the instruction used or the data returned by the status packet. The next field is the instruction;
 status packets use a reserved instruction. While the exact content of the payload varies, status packets always
 store an additional error field as the first byte. This field can be used to indicate any errors that occurred
-during processing of an instruction.
+during the processing of an instruction.
 
 Since the payload can contain arbitrary values, it can also contain the byte sequence used to mark the start of
 a new packet. To prevent a receiver from misinterpreting this byte sequence, \textit{byte stuffing} is used.
@@ -82,8 +82,8 @@ start of a new packet. The receiver simply removes the extra byte that was added
 
 The last two bytes of every packet contain the \textit{CRC-16/BUYPASS}~\cite{crc-16-buypass} checksum of
 every byte in the packet, including the starting sequence (and excluding the CRC itself). This checksum
-can be used to detect transmission errors, in case the underlying bus does not have error detection built
-in (\textit{RS-485} does not).
+can be used to detect transmission errors, in case the underlying bus does not have error detection
+built-in (\textit{RS-485} does not).
 
 \subsection{Instructions}
 \label{basics/dynamixel-protocol/instructions}
@@ -178,7 +178,7 @@ additional payload.
 
 \paragraph{Clear (\lstinline{0x10})}
 
-Resets the multi turn information of the device. This instruction is very closely tied to servos
+Resets the multi-turn information of the device. This instruction is very closely tied to servos
 and generally not useful for other kinds of devices.
 
 \begin{figure}[H]
@@ -191,7 +191,7 @@ and generally not useful for other kinds of devices.
 
 Reads bytes from the \textit{control tables} of multiple devices at once. The device ID of the
 instruction packet must be broadcast (\lstinline{0xfe}). The status packet of each device contains
-the requested bytes. Devices respond in the same order as the their IDs in the instruction packet
+the requested bytes. Devices respond in the same order as their IDs in the instruction packet
 payload.
 
 \begin{figure}[H]
@@ -206,7 +206,7 @@ payload.
 Writes bytes to the \textit{control tables} of multiple devices at once. The data for each device
 can be different. The device ID of the instruction packet must be broadcast (\lstinline{0xfe}). The
 status packet of each device indicates whether the write was executed successfully and contains no
-additional payload. Devices respond in the same order as the their IDs in the instruction packet
+additional payload. Devices respond in the same order as their IDs in the instruction packet
 payload. Many devices can be configured to not send any status packets on writes.
 
 \begin{figure}[H]
@@ -221,7 +221,7 @@ payload. Many devices can be configured to not send any status packets on writes
 Reads bytes from the \textit{control tables} of multiple devices at once. Unlike \textit{Sync Read},
 this instruction allows for different addresses and lengths for each device. The device ID of the
 instruction packet must be broadcast (\lstinline{0xfe}). The status packet of each device contains
-the requested bytes. Devices respond in the same order as the their IDs in the instruction packet
+the requested bytes. Devices respond in the same order as their IDs in the instruction packet
 payload.
 
 \begin{figure}[H]
@@ -237,7 +237,7 @@ Writes bytes to the \textit{control tables} of multiple devices at once. Unlike 
 this instruction allows not only for different data but also for different addresses and lengths for
 each device. The device ID of the instruction packet must be broadcast (\lstinline{0xfe}). The status
 packet of each device indicates whether the write was executed successfully and contains no additional
-payload. Devices respond in the same order as the their IDs in the instruction packet payload. Many
+payload. Devices respond in the same order as their IDs in the instruction packet payload. Many
 devices can be configured to not send any status packets on writes.
 
 \begin{figure}[H]
@@ -274,8 +274,8 @@ not needed~\cite{modern-os-embedded-os}.
 
 The core of an embedded OS are threads and context switching. Being part of the user program, the
 application must configure an interrupt that calls the scheduler, which in turn runs application
-code in one of the threads. Threads can run on separate CPU cores but they are also useful on single
-core systems. Threads are preemptive: one thread can be paused and another one started instead. This
+code in one of the threads. Threads can run on separate CPU cores but they are also useful for single-core
+systems. Threads are preemptive: one thread can be paused and another one started instead. This
 makes it possible to guarantee that some threads always get the CPU time they need, for example to
 process incoming data~\cite{freertos-fundamentals}.
 

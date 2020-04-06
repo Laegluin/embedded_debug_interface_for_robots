@@ -65,7 +65,7 @@ tested as separate experiments. Before starting the experiments, the microcontro
 every view of the UI was opened at least once to ensure that every view would be updated. Measurements
 were taken for at least \SI{80}{\second} after reset.
 
-The firmware had to be modified slightly to allow for collection of the measurements. An additional
+The firmware had to be modified slightly to allow for the collection of the measurements. An additional
 timer was used to generate an interrupt every \SI{0.1}{\milli\second}. The interrupt handler incremented
 a counter every time it was called. This counter was used in calls to \lstinline{process_buffer} to
 determine the current time. Thus, every measurement has an accuracy of \SI{0.1}{\milli\second}.
@@ -84,10 +84,10 @@ minimal, however.
 
 This section presents the results of the experiments for each of the six combinations mentioned
 above. Every experiment is presented in a separate subsection. There are four different plots
-for each experiment. The scatter plots show the \textit{time per buffer} and
+for each experiment. The scatterplots show the \textit{time per buffer} and
 \textit{time between buffers} over time. Since each data point represents a duration, points in the
-plots are placed at the geometric mean of the start and end point of the duration. The histograms
-show the distribution of durations for each scatter plot.
+plots are placed at the geometric mean of the start- and endpoint of the duration. The histograms
+show the distribution of durations for each scatterplot.
 
 Subsection \ref{evaluation/results/results-by-experiment} contains tables for maximum, median, mean
 and minimum \textit{time per buffer} and \textit{time between buffers} for each experiment. It also
@@ -105,7 +105,7 @@ The first \SI{20}{\second} of measurements were discarded to allow for the manua
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/trace_no_wait_per_buffer_scatter.png}
-            \caption{Scatter plot of \textit{time per buffer}}
+            \caption{Scatterplot of \textit{time per buffer}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -118,7 +118,7 @@ The first \SI{20}{\second} of measurements were discarded to allow for the manua
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/trace_no_wait_between_buffers_scatter.png}
-            \caption{Scatter plot of \textit{time between buffers}}
+            \caption{Scatterplot of \textit{time between buffers}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -145,9 +145,9 @@ impact due to the extremely short cable length. In addition, these errors would 
 intervals, while recorded errors would be repeated every time the trace is repeated, which happened
 frequently since the size of the trace was only \SI{516}{KiB}.
 
-There are two distincts spikes in the \textit{time between buffers}. The higher spike is caused by
-those measurements that were taken while a buffer was being processed. Most of the measurements a
-around \SI{4}{\milli\second}. These are the measurements taken when there was no data to process.
+There are two distinct spikes in the \textit{time between buffers}. The higher spike is caused by
+those measurements that were taken while a buffer was being processed. Most of the measurements
+about \SI{4}{\milli\second}. These are the measurements taken when there was no data to process.
 They are the majority, indicating that higher data rates could be handled without a problem.
 
 It is unclear why the \textit{time between buffers} is so tightly clustered around certain times.
@@ -165,7 +165,7 @@ task. These wait times may have been what caused the tight clustering.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/trace_wait_100us_per_buffer_scatter.png}
-            \caption{Scatter plot of \textit{time per buffer}}
+            \caption{Scatterplot of \textit{time per buffer}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -178,7 +178,7 @@ task. These wait times may have been what caused the tight clustering.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/trace_wait_100us_between_buffers_scatter.png}
-            \caption{Scatter plot of \textit{time between buffers}}
+            \caption{Scatterplot of \textit{time between buffers}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -198,11 +198,11 @@ The UI was responsive, there was only occasional minimal stuttering.
 
 All measurements look extremely similar to those in the experiment with no delay. Since the additional
 delay reduced the effective data rate (see table \ref{evaluation/results/results-by-experiment/data-rates}),
-there were less packets processed in the same time frame and the influence of malformed packets was
+there were fewer packets processed in the same time frame and the influence of malformed packets was
 not as severe.
 
 The \textit{time between buffers} is absolutely dominated by measurements taken when there was no
-data to process. This is not suprising, as even less time was spent processing data when there was
+data to process. This is not surprising, as even less time was spent processing data when there was
 also a delay per packet.
 
 \clearpage
@@ -214,7 +214,7 @@ also a delay per packet.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_read_writes_no_wait_per_buffer_scatter.png}
-            \caption{Scatter plot of \textit{time per buffer}}
+            \caption{Scatterplot of \textit{time per buffer}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -227,7 +227,7 @@ also a delay per packet.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_read_writes_no_wait_between_buffers_scatter.png}
-            \caption{Scatter plot of \textit{time between buffers}}
+            \caption{Scatterplot of \textit{time between buffers}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -264,7 +264,7 @@ depending on the types of packets it contained.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_read_writes_wait_100us_per_buffer_scatter.png}
-            \caption{Scatter plot of \textit{time per buffer}}
+            \caption{Scatterplot of \textit{time per buffer}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -277,7 +277,7 @@ depending on the types of packets it contained.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_read_writes_wait_100us_between_buffers_scatter.png}
-            \caption{Scatter plot of \textit{time between buffers}}
+            \caption{Scatterplot of \textit{time between buffers}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -309,7 +309,7 @@ by constant overhead.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_pings_no_wait_per_buffer_scatter.png}
-            \caption{Scatter plot of \textit{time per buffer}}
+            \caption{Scatterplot of \textit{time per buffer}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -322,7 +322,7 @@ by constant overhead.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_pings_no_wait_between_buffers_scatter.png}
-            \caption{Scatter plot of \textit{time between buffers}}
+            \caption{Scatterplot of \textit{time between buffers}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -348,14 +348,14 @@ quickly enough, the DMA controller was overwriting buffers as they were being re
 
 The \textit{time between buffers} reflects the measurements for \textit{time per buffer}. However,
 it is notable that there are many measurements of only about \SI{4}{\milli\second}, even though the
-processing was too slow. This is because after processing one buffer, there was a high likelyhood
-that the next buffer was not currently ready. Data was not lost during these waits but during
-processing itself, meaning that the amount of waits only decreased because more time was spent
+processing was too slow. This is because after processing one buffer, there was a high likelihood
+that the next buffer was not currently ready. Data was not lost during these waits but during the
+processing itself, meaning that the number of waits only decreased because more time was spent
 processing data.
 
 Because so much time was spent processing data, the amount of time dedicated to the UI decreased and
 the latency increased. The high latencies caused problems with input handling since it could not be
-processed in time. Less time for the UI task also meant the real time required for rendering the UI
+processed in time. Less time for the UI task also meant the real-time required for rendering the UI
 increased.
 
 \clearpage
@@ -367,7 +367,7 @@ increased.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_pings_wait_100us_per_buffer_scatter.png}
-            \caption{Scatter plot of \textit{time per buffer}}
+            \caption{Scatterplot of \textit{time per buffer}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -380,7 +380,7 @@ increased.
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
             \includegraphics[scale=0.55]{img/synthetic_pings_wait_100us_between_buffers_scatter.png}
-            \caption{Scatter plot of \textit{time between buffers}}
+            \caption{Scatterplot of \textit{time between buffers}}
         \end{subfigure}%
         \begin{subfigure}[t]{0.61\textwidth}
             \centering
@@ -396,7 +396,7 @@ increased.
 \paragraph{UI responsiveness}
 
 The UI was mostly usable but there was significant stuttering. Scrolling mostly worked but was not
-pleasant to use. The were noticeable but not significant delays when interacting with buttons. 
+pleasant to use. There were noticeable but not significant delays when interacting with buttons. 
 \bigbreak
 
 Results with delay per packet look remarkably similar to those for the experiments with synthetic

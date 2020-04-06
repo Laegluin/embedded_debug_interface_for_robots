@@ -5,7 +5,7 @@ This chapter describes the hardware the implementation uses (section \ref{implem
 and the developed firmware (section \ref{implementation/software}). The source code for the firmware
 can be found at \url{https://github.com/Laegluin/embedded_debug_interface_for_robots/tree/thesis-ref}.
 The version referenced by this thesis is tagged as \lstinline{thesis-ref}. The description of the
-firmware is intended to give a high level overview and discusses tradeoffs as well as points of
+firmware is intended to give a high-level overview and discusses tradeoffs as well as points of
 interest.
 
 Since the implementation targets the \textit{Wolfgang} robot platform, it must be compatible with
@@ -24,19 +24,19 @@ The following hardware is used:
 
 The MAX485 transceiver is used to connect the \textit{RS-485} bus to the STM32F7508-DK board. It
 outputs a \SI{5}{\volt} signal that can be interpreted by one of the board's UARTs. STM32F7508-DK
-is built around a STM32F750N8H6 Arm Cortex-M7 based microcontroller. The controller's \textit{UART6}
+is built around an STM32F750N8H6 Arm Cortex-M7 based microcontroller. The controller's \textit{UART6}
 is used, as it is easily accessible through the board's Arduino Uno compatible connectors at the
 back. All UARTs have a theoretical maximum speed of \SI{27}{\mega{Bd}}~\cite{mcu-ref-manual} (depending
 on the clock configuration), making the MAX485's maximum speed of \SI{2.5}{\mega{Bd}} the maximum speed
 of this setup~\cite{max-485-manual}\cite{board-user-manual}.
 
-The STM32F7508-DK board has a built in \SI{4.3}{"} 480x272 LCD-TFT capacitive touchscreen. It is
-used to display and interact with the UI. Because it is built in, no further assembly is required~\
+The STM32F7508-DK board has a built-in \SI{4.3}{"} 480x272 LCD-TFT capacitive touchscreen. It is
+used to display and interact with the UI. Because it is built-in, no further assembly is required~\
 \cite{board-user-manual}.
 
 The STM32F750N8H6 microcontroller is based on an Arm Cortex-M7 CPU. It supports clock speeds of up to
 \SI{216}{\mega\hertz} and has both data and instruction caches. It is equipped with a single-precision
-FPU (floating point unit) and a DMA controller~\cite{mcu-datasheet}. While this is quite a lot of
+FPU (floating-point unit) and a DMA controller~\cite{mcu-datasheet}. While this is quite a lot of
 processing power for a microcontroller, it is needed to drive an interactive UI while at the same time
 processing incoming data quickly enough. The DMA controller allows transferring data from the UART to
 memory at high data rates without using up CPU time.
@@ -66,7 +66,7 @@ FMC (flexible memory controller). The board has \SI{8}{MiB} of pre-installed ext
 
 The STM32F7508-DK board is equipped with an ST-LINK/V2-1 in-circuit debugger. It can be used for
 debugging and for programming the internal flash memory~\cite{board-user-manual}. External flash
-cannot be programmed using the ST-LINK; instead a standalone bootloader must be used (see subsection
+cannot be programmed using the ST-LINK; instead, a standalone bootloader must be used (see subsection
 \ref{implementation/software/bootloader}).
 
 The FT232R USB to UART converter is only used for testing and benchmarking. It can easily be connected
@@ -86,8 +86,8 @@ This section describes the firmware for the STM32F7508-DK board. The bootloader 
 
 When the microcontroller is reset, it loads the \textit{vector table} from address \mbox{\lstinline{0x00000000}.}
 The \textit{vector table} contains the addresses of all possible interrupt handlers. In addition, the
-first item is the initial value of the stackpointer and the second is the address of the entry point.
-After loading the \textit{vector table}, the stackpointer is set to the configured value and the
+first item is the initial value of the stack pointer and the second is the address of the entry point.
+After loading the \textit{vector table}, the stack pointer is set to the configured value and the
 processor jumps to the entry point~\cite{mcu-ref-manual}. By default, addresses in the range
 \lstinline{[0x00000000, 0x08000000)} are mapped to \lstinline{0x08000000}, which in turn is mapped
 to internal flash memory~\cite{mcu-ref-manual}.
@@ -99,8 +99,8 @@ accepts commands as well as data from said device and allows programming and boo
 unsupported memory.
 
 In this case, the bootloader must allow programming and booting from Quad-SPI flash memory. It uses
-one of the STM32F7508-DK board's micro-USB ports for I/O~\cite{board-user-manual}. USB is a well
-suited interface because data integrity checks are built in~\cite{usb-2-spec}. STMicroelectronics
+one of the STM32F7508-DK board's micro-USB ports for I/O~\cite{board-user-manual}. USB is a well-suited
+interface because data integrity checks are built-in~\cite{usb-2-spec}. STMicroelectronics
 provides a USB 2.0 compliant library for applicable microcontrollers that the bootloader uses for
 USB support~\cite{stm32-usb-lib}.
 
@@ -126,7 +126,7 @@ the USB interface as a communication class device.
     \label{implementation/software/bootloader/packet-layout}
 \end{figure}
 
-The bytes received are interpreted according to a custom, packet based protocol. The packet layout
+The bytes received are interpreted according to a custom, packet-based protocol. The packet layout
 can be seen in figure \ref{implementation/software/bootloader/packet-layout}. Packets start with a
 start sequence that makes it possible to identify the beginning of a packet even if it is preceded
 by unrelated bytes. To prevent unwanted start sequences in the packet itself, all bytes following
@@ -153,15 +153,15 @@ memory.
 
 The \textit{start} packet instructs the bootloader to start an application previously flashed. It
 disables all (pending) interrupts, exits interrupt handler mode if necessary and enables the
-memory-mapped mode for the Quad-SPI memory interface. In addition it also enables the board's LED
+memory-mapped mode for the Quad-SPI memory interface. In addition, it also enables the board's LED
 permanently, indicating that the application is now running. Finally, it starts the application by
-loading the stackpointer and jumping to the entry point in the same way the microcontroller does
+loading the stack pointer and jumping to the entry point in the same way the microcontroller does
 when it boots from internal flash memory. The bootloader assumes that the application's \textit{vector table}
 starts at the beginning of the Quad-SPI flash memory space (\lstinline{0x90000000}~\cite{mcu-ref-manual}).
 The application can also be started by pressing the board's programmable button (next to the reset
 button). The procedure is identical to the one described above.
 
-The bootloader only has to be flashed to internal flash memory once. Afterwards, it can be used to
+The bootloader only has to be flashed to internal flash memory once. Afterward, it can be used to
 program the Quad-SPI flash memory and start an application from it using the board's micro-USB port.
 In this case, the application is the actual firmware that controls the UI and processes packets
 sent over the \textit{Wolfgang} robot platform's \textit{RS-485} bus.
@@ -169,7 +169,7 @@ sent over the \textit{Wolfgang} robot platform's \textit{RS-485} bus.
 \subsection{Used Libraries}
 \label{implementation/software/used-libraries}
 
-The following software libraries were used to aid development of the firmware:
+The following software libraries were used to aid the development of the firmware:
 
 \begin{itemize}
     \item STM32F7 HAL and Low-layer drivers\footnote{\url{https://www.st.com/resource/en/user_manual/dm00189702-description-of-stm32f7-hal-and-lowlayer-drivers-stmicroelectronics.pdf}}
@@ -183,7 +183,7 @@ The following software libraries were used to aid development of the firmware:
 
 The STM32F7 HAL and Low-layer drivers are various independent drivers for peripherals found on
 hardware produced by STMicroelectronics. Despite the name (HAL - hardware abstraction layer) they
-still require the user to write hardware specific code. They do offer simplified interfaces that do
+still require the user to write hardware-specific code. They do offer simplified interfaces that do
 not require manipulation of memory-mapped peripheral device registers. For more complicated peripherals
 like the LCD controller this can be helpful~\cite{stm32-hal-docs}.
 
@@ -191,7 +191,7 @@ Similarly, the STM32F7508-Discovery board support package offers drivers based o
 Low-layer drivers that are customized for the STM32F7508-DK board. They encapsulate all of the
 hardware and have easier to use interfaces than their HAL counterparts~\cite{stm32-cube-getting-started}.
 
-STemWin is GUI library based on emWin by SEGGER Microcontroller GmbH \& Co. KG. It is effectively
+STemWin is a GUI library based on emWin by SEGGER Microcontroller GmbH \& Co. KG. It is effectively
 a precompiled version of emWin with driver support for STMicroelectronics' hardware. While emWin is
 commercially licensed, STemWin is licensed as free of charge for use with STMicroelectronics' products~\
 \cite{stm32-cube-getting-started}\cite{stemwin-release-notes}\cite{emwin-manual}. Since it is otherwise
@@ -211,14 +211,14 @@ build system configuration is necessary~\cite{catch2-why}.
 \subsection{Testing}
 \label{implementation/software/testing}
 
-Automatic testing of the hardware specific code and the UI is difficult. Tests concerning the bus
+Automatic testing of the hardware-specific code and the UI is difficult. Tests concerning the bus
 were done using the FT232R USB to UART converter to send test data as well as traces of real bus
-traffic directly to microcontroller's UART. UI tests were also performed manually, usually as part
-of the aforementioned tests.
+traffic directly to the microcontroller's UART. UI tests were also performed manually, usually as
+part of the aforementioned tests.
 
 Most of the core logic deals with data received over the bus. The actual origin of the data is not
-relevant for testing. This code is carefully structured to avoid any dependencies on hardware 
-specific code. It is tested using Catch2 unit tests running on the host platform (Linux on AMD64).
+relevant for testing. This code is carefully structured to avoid any dependencies on hardware-specific
+code. It is tested using Catch2 unit tests running on the host platform (Linux on AMD64).
 While this is not a perfect solution as there are still differences between the platforms like pointer
 sizes, alignment requirements or hardware protection mechanisms provided by the operating system,
 it creates high confidence in the correctness of the code nevertheless.
@@ -230,15 +230,15 @@ bugs.
 \subsection{Overview}
 \label{implementation/software/overview}
 
-On startup the firmware first configures the required peripheral devices. This includes the UART
-(specifically \textit{UART6}), the LCD controller and the external RAM used as frame buffer for emWin.
+On startup, the firmware first configures the required peripheral devices. This includes the UART
+(specifically \textit{UART6}), the LCD controller and the external RAM used as a frame buffer for emWin.
 Care must be taken when using the external RAM in combination with another device (the LCD controller
 in this case) as external RAM is cached by the CPU. Since the LCD controller does not know about
 any CPU caches, writes to the frame buffers will not be visible to it until the writes are flushed
 to memory, causing visible artifacts on the screen~\cite{mcu-ref-manual}.
 
 This can be prevented by using the microcontroller's MPU (memory protection unit). The MPU allows
-disabling write caching for certain memory regions~\cite{mcu-ref-manual}. Reads can still be cached,
+disabling write caching for certain memory regions~\cite{mcu-ref-manual}. Reads can still be cached
 since only the CPU writes to the frame buffer. Additionally, the MPU is also used to disable access
 to a \SI{4}{KiB} region starting at \lstinline{0x00000000}. This helps catch dereferences of 
 \textit{null}-pointers---a common programming error---early. Otherwise, \textit{null}-pointer
@@ -270,7 +270,7 @@ The \lstinline{Log} object stores recent errors and profiling information wherea
 \lstinline{ControlTableMap} stores all currently known information about devices connected to the
 \textit{RS-485} bus (for more detail see \ref{implementation/software/packet-processing-task}).
 
-The packet processing task runs at higher priority than the UI task. This means it will run until
+The packet processing task runs at a higher priority than the UI task. This means it will run until
 it deliberately yields control to lower priority tasks for a short amount of time. This way the UI
 task only gets a limited amount of processing time, leaving the rest for packet processing. If the
 UI task is currently holding the lock on a mutex and the packet processing task is trying to lock the
@@ -305,7 +305,7 @@ Some of these functions only apply to some types of windows, like for example fu
 manipulating buttons~\cite{emwin-manual}.
 
 Every window also has a \textit{callback} function associated with it. This function is called whenever
-the window receives a messages. Messages can be user input, elapsed timers, notifications from other
+the window receives a message. Messages can be user input, elapsed timers, notifications from other
 windows or even a request to draw itself. \textit{Callbacks} can be overridden by supplying a new
 function to use instead. Often, this function only handles some messages and delegates the remaining
 messages to the original \textit{callback} function. Most importantly, \textit{callbacks} are a way
@@ -313,7 +313,7 @@ to react to user input on a specific window~\cite{emwin-manual}.
 
 The goal of the UI is to make it easy to identify the status of devices at a glance. It is split
 into three separate views, each displaying information at a different level of detail: the device
-overview, the model overview and the device details view. A fourth view displays profiling information
+overview, the model overview, and the device details view. A fourth view displays profiling information
 and log messages. Every view is a distinct window that covers the entire screen. Color coding is used
 to differentiate between connected and disconnected devices. Every list item or button representing
 a connected device is colored green, those representing disconnected devices are colored red. The
@@ -323,7 +323,7 @@ following four paragraphs give a brief overview of each view.
 \paragraph{Device overview}
 
 Displays the total number of devices and the number of devices for each model. It is the view shown
-when the application is started and is meant to give a brief summary for all devices. Each summary
+when the application is started and is meant to give a brief summary of all devices. Each summary
 for a certain model can be clicked to open the model overview of that model. It also features buttons
 to reach the device details view and the log view. While this view does not provide much detail,
 disconnected devices are immediately visible. The view is updated every \SI{500}{\milli\second}.
@@ -365,8 +365,8 @@ the exact device that is disconnected. The view is updated every \SI{500}{\milli
 \clearpage
 \paragraph{Device details view}
 
-Displays all known values of single device's \textit{control table}. Different devices can be selected
-by using the list on the left hand side. This view provides the maximum amount of detail per device
+Displays all known values of a single device's \textit{control table}. Different devices can be selected
+by using the list on the left-hand side. This view provides the maximum amount of detail per device
 but makes it harder to determine the status of all connected devices at once. The view is updated every
 \SI{500}{\milli\second}.
 
@@ -375,10 +375,10 @@ but makes it harder to determine the status of all connected devices at once. Th
     \setlength{\fboxsep}{0mm}
     \fbox{\includegraphics[scale=0.75]{img/device_details_view.png}}
     \caption[Screenshot of the device details view]{
-        Screenshot of the device details view. The list on the left hand side contains an item for
+        Screenshot of the device details view. The list on the left-hand side contains an item for
         each connected device that is colored green when the device is connected and red otherwise.
         Clicking an item will select that device and show all values of its \textit{control table}
-        in the table on the right hand side.
+        in the table on the right-hand side.
     }
 \end{figure}
 
@@ -395,8 +395,8 @@ to actually read an individual error message.
     \setlength{\fboxsep}{0mm}
     \fbox{\includegraphics[scale=0.75]{img/log_view.png}}
     \caption[Screenshot of the log view]{
-        Screenshot of the log view. The left hand side contains profiling information like processing
-        times and free memory, the right hand side shows the 50 most recent error messages. The
+        Screenshot of the log view. The left-hand side contains profiling information like processing
+        times and free memory, the right-hand side shows the 50 most recent error messages. The
         timestamps in the error log are relative to the start of the application. The view is only
         refreshed when the \textit{Refresh} button is clicked.
     }
@@ -438,8 +438,8 @@ while (true) {
 }
 \end{lstlisting}
 
-The buffer is automatically filled by the DMA controller. It transfers the bytes from the UARTs
-receive register and raises interrupts when half or the entire buffer has been filled. Once it has
+The buffer is automatically filled by the DMA controller. It transfers the bytes from the UART's
+receive register and raises interrupts when half of or the entire buffer has been filled. Once it has
 been filled, the DMA controller starts at the beginning of the buffer again. The interrupt handler
 sets a flag that determines which part of the buffer is now ready. As long as the data is processed
 faster than it is received, no data will be lost. Even when the data is not processed quickly enough,
@@ -450,7 +450,7 @@ The size of the buffer has a significant impact on the maximum time allowed befo
 larger buffer increases this time but also increases the latency. The latency can largely be ignored
 because it is still low (for human time scales) given the possible buffer sizes. Latency would
 increase drastically if there were no or only very little traffic on the bus, as data is only ever
-processed once one half of the buffer is ready. Other than by memory contraints, the size of the buffer
+processed once one half of the buffer is ready. Other than by memory constraints, the size of the buffer
 is limited to \SI{65535}{B} by the size of the DMA controller's NDT register~\cite{mcu-ref-manual}.
 
 The buffer's size is \SI{8192}{B}. This means that even assuming the absolute worst case, the maximum
@@ -461,7 +461,7 @@ the maximum amount of time will be higher for multiple reasons:
 \begin{itemize}
     \item The baud rate of the bus is not equivalent to the bit rate of the incoming data, since
           this equation ignores overhead like stop bits.
-    \item In practice it is impossible to have \SI{100}{\percent} load on the bus.
+    \item In practice, it is impossible to have \SI{100}{\percent} load on the bus.
     \item The equation assumes that processing starts right after an interrupt signals that one half
           of the buffer is ready, and does not actually process a single byte. Normally, data is
           then being processed, which continuously moves the point at which a collision with the DMA
@@ -493,7 +493,7 @@ of the UI while increasing the time spent between the processing of data.
 The \lstinline{process_buffer} function then parses packets until all the data in the ready buffer
 has been consumed. Each successfully parsed packet is passed to \lstinline{ControlTableMap::receive},
 which processes the contents of the packets. Errors and profiling information are passed to the
-\lstinline{Log} object afterwards.
+\lstinline{Log} object afterward.
 
 Due to this, the mutexes for the \lstinline{ControlTableMap} and the \lstinline{Log} object are
 never locked at the same time. The UI task also never locks more than one of these mutexes at a time.
@@ -558,7 +558,7 @@ Status packets are left as is but instruction packets are parsed into \lstinline
 structs. An \lstinline{InstructionPacket} is a discriminated union of structs for each instruction.
 Because the instruction specific fields are part of the payload of a packet, parsing them is simple.
 Unlike the packet parser, the instruction packet parser is just a function. It also reuses previous
-\lstinline{InstructionPacket}s, but does allocate memory. Further optimization was not required to
+\lstinline{InstructionPacket}s but does allocate memory. Further optimization was not required to
 achieve the desired performance.
 
 \begin{lstlisting}[language=C++, caption={Definition of the \lstinline{InstructionPacket} struct}]
@@ -621,7 +621,7 @@ a \lstinline{std::unordered_map} was used but the performance proved to be insuf
 objects are stored in a custom data structure. It takes advantage of the fact that device IDs are
 only one byte and that \lstinline{ControlTable} objects must be accessed through a pointer (four bytes
 on a Cortex M7 processor~\cite{mcu-ref-manual}). The objects are simply stored in an array that is
-indexed by the device ID. An additional boolean flag indicates presence or absence of the object. The
+indexed by the device ID. An additional boolean flag indicates the presence or absence of the object. The
 entire array only requires $256 \cdot (4 + 1 + 3) = \SI{2048}{B}$ of memory (this includes three bytes
 of padding).
 This solution trades memory and iteration speed for fast access times. Since objects must be accessed
@@ -630,7 +630,7 @@ for almost every received packet, this provides a serious speedup compared to \l
 \paragraph{ControlTable}
 
 The \textit{control table} of each device is represented by a \lstinline{ControlTable} object. For
-each device model there is a different sub class of \lstinline{ControlTable}. Most received packets
+each device model, there is a different subclass of \lstinline{ControlTable}. Most received packets
 update the \lstinline{ControlTable} object of at least one device, performance is thus an important
 design consideration. Adding or changing the \lstinline{ControlTable} of a device has to be easy.
 
@@ -638,7 +638,7 @@ The interface definition of the \lstinline{ControlTable} base class can be seen 
 \ref{implementation/software/packet-processing-task/control-table-def}. \lstinline{is_unknown_model}
 determines if the model number is known and \lstinline{model_number} returns its value if present.
 \lstinline{set_firmware_version} is called when the firmware version is reported by the response
-to a \textit{Ping} instruction. \lstinline{device_name} simply returns a human readable name of the
+to a \textit{Ping} instruction. \lstinline{device_name} simply returns a human-readable name of the
 model represented by the \lstinline{ControlTable}. It is used for display purposes only.
 
 \begin{lstlisting}[
@@ -719,7 +719,7 @@ function is used to display the contents of a device's \textit{control table}. F
 is quite slow, which is why the UI task first copies the entire \lstinline{ControlTable} object using
 the \lstinline{clone} method. It effectively acts as a virtual copy constructor.
 
-To add support for a new device model, one only has to create a new sub class of \lstinline{ControlTable}
+To add support for a new device model, one only has to create a new subclass of \lstinline{ControlTable}
 and construct an instance of it when a response to a \textit{Ping} instruction is received. Currently,
 the following device models are supported:
 

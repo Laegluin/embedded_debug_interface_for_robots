@@ -31,12 +31,12 @@ The firmware is performant enough to handle the data rate of \SI{2}{\mega{Bd}} u
 multiple bus connections (see section \ref{conclusion-and-future-work/future-work}).
 
 The source code of the firmware makes it easy to add support for new device models or update the
-definition of already supported ones by constraining necessary changes to mostly one well defined
+definition of already supported ones by constraining necessary changes to one well-defined
 interface. The code must be recompiled and flashed to the board to deploy changes.
 
-Most of the firmware code is either platform independent or uses the emWin library. Porting the
+Most of the firmware code is either platform-independent or uses the emWin library. Porting the
 firmware to different (Arm Cortex-M based) hardware should be possible with reasonable effort: both
-bootloader and hardware initialization as well as the emWin and FreeRTOS configuration would have to
+bootloader and hardware initialization, as well as the emWin and FreeRTOS configuration, would have to
 modified.
 
 \section{Future Work}
@@ -53,15 +53,15 @@ There are various ways in which the current implementation can be improved:
           without difficulties. Further investigation would be required on how to physically connect
           additional buses. The increased data rate most likely also requires performance improvements.
     \item Performance may be improved by increasing the size of the receive buffers. This may also
-          allow to improve UI performance by increasing the yield time of the data processing task.
+          allow improving UI performance by increasing the yield time of the data processing task.
     \item Performance may be improved by further optimizing the code and data structures used. This
           is unlikely to result in large improvements, however.
     \item Performance could also be improved by using more powerful hardware.
     \item Some display flickering may be removed by enabling and using V-Sync with the LCD controller.
     \item UI performance may be improved by using the dedicated 2D hardware accelerator included in
           the STM32F750N8H6 microcontroller~\cite{mcu-ref-manual}. This is unlikely to have a noticeable
-          effect, as the UI task appears to spent most of the time updating the state of the widgets.
-    \item UI performance may be improved significantly by using a dual core CPU. A dedicated CPU core
+          effect, as the UI task appears to spend most of the time updating the state of the widgets.
+    \item UI performance may be improved significantly by using a dual-core CPU. A dedicated CPU core
           could be used for rendering the UI, which would also decrease latency and simplify the
           code since the data processing task would not have to yield to allow for UI updates.
 \end{itemize}
