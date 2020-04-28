@@ -57,7 +57,7 @@ The controller itself comes with only \SI{64}{KiB} of embedded flash memory. How
 Quad-SPI memory interface that can be used with external flash memory~\cite{mcu-datasheet}. The
 STM32F7508-DK board has \SI{16}{MiB} of pre-installed flash memory~\cite{board-user-manual}.
 
-Similarly, \SI{320}{KiB} of RAM are embedded in controller~\cite{mcu-datasheet}. This is more than
+Similarly, \SI{320}{KiB} of RAM are embedded in the controller~\cite{mcu-datasheet}. This is more than
 enough for most applications but not enough for the video RAM (VRAM) used by the display. When using
 double buffering and 8 bits per pixel, at least $480 \cdot 272 \cdot 3 \cdot 2 = 765\,\si{KiB}$ are
 needed for VRAM alone. VRAM can be located in external RAM which can be controlled by the microcontroller's
@@ -246,7 +246,7 @@ dereferences would be perfectly valid, since the address \lstinline{0x00000000} 
 start of the internal flash memory (see subsection \ref{implementation/software/bootloader}).
 
 Finally, the FreeRTOS scheduler has to be started. It takes over the execution and starts scheduling
-tasks (FreeRTOS uses this term instead of thread). The \textit{SysTick}, \textit{SVCall} and
+tasks (FreeRTOS uses this term instead of thread). The \textit{SysTick}, \textit{SVCall}, and
 \textit{PendSV} interrupts must use the handlers provided by FreeRTOS in order for FreeRTOS to
 function correctly. The \textit{SysTick} interrupt must also run at the lowest possible interrupt
 priority~\cite{freertos-arm-cortex-m}. This conflicts with STMicroelectronics' HAL library, which
@@ -326,7 +326,7 @@ Displays the total number of devices and the number of devices for each model. I
 when the application is started and is meant to give a brief summary of all devices. Each summary
 for a certain model can be clicked to open the model overview of that model. It also features buttons
 to reach the device details view and the log view. While this view does not provide much detail,
-disconnected devices are immediately visible. The view is updated every \SI{500}{\milli\second}.
+disconnected devices are immediately visible. It is updated every \SI{500}{\milli\second}.
 
 \begin{figure}[H]
     \centering
@@ -347,7 +347,7 @@ disconnected devices are immediately visible. The view is updated every \SI{500}
 Displays the status and ID of each device of a certain model. Each device in the list can be clicked
 to open the device details view and select that device. This view does not provide as much detail as
 the device details view but it only shows devices of one particular model, making it easy to find
-the exact device that is disconnected. The view is updated every \SI{500}{\milli\second}.
+the exact device that is disconnected. It is updated every \SI{500}{\milli\second}.
 
 \begin{figure}[H]
     \centering
@@ -367,7 +367,7 @@ the exact device that is disconnected. The view is updated every \SI{500}{\milli
 
 Displays all known values of a single device's \textit{control table}. Different devices can be selected
 by using the list on the left-hand side. This view provides the maximum amount of detail per device
-but makes it harder to determine the status of all connected devices at once. The view is updated every
+but makes it harder to determine the status of all connected devices at once. It is updated every
 \SI{500}{\milli\second}.
 
 \begin{figure}[H]
@@ -499,7 +499,7 @@ Due to this, the mutexes for the \lstinline{ControlTableMap} and the \lstinline{
 never locked at the same time. The UI task also never locks more than one of these mutexes at a time.
 Holding only one lock at the same time prevents deadlocks.
 
-The lock for the \lstinline{ControlTableMap} object is intentionally is held for almost the whole
+The lock for the \lstinline{ControlTableMap} object is intentionally held for almost the whole
 duration of the call. Unlike with the UI task where holding the lock for a long time would block
 the packet processing task, there is no task to block since the only other task is the UI task which
 can only run when the packet processing explicitly yields control. Maximizing the time holding a
@@ -614,7 +614,7 @@ UI. Only the following instructions are handled properly:
 The remaining instructions are mostly ignored but still used for detecting disconnected devices.
 Adding support for them would be a significant effort especially considering that these instructions
 do not appear in most traffic. The current implementation also assumes that writes do not require a
-status packet response, as this is how the \textit{Wolfgang} robot platform is configured.
+status packet response, as that is how the \textit{Wolfgang} robot platform is configured.
 
 The \lstinline{ControlTable} objects are identified by the ID of the device they belong to. Initially,
 a \lstinline{std::unordered_map} was used but the performance proved to be insufficient. Instead, the

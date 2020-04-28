@@ -8,7 +8,7 @@ Two measurements were taken to assess the performance:
     \item The time required to process the ready half of the receive buffer (see subsection
           \ref{implementation/software/packet-processing-task}). This measurement will be called
           \textbf{time per buffer} in the following.
-    \item The time that passes between two calls of \lstinline{process_buffer} function (again, see
+    \item The time that passes between two calls of the \lstinline{process_buffer} function (again, see
           subsection \ref{implementation/software/packet-processing-task}). This measurement will be
           called \textbf{time between buffers} in the following.
 \end{itemize}
@@ -146,7 +146,7 @@ intervals, while recorded errors would be repeated every time the trace is repea
 frequently since the size of the trace was only \SI{516}{KiB}.
 
 There are two distinct spikes in the \textit{time between buffers}. The higher spike is caused by
-those measurements that were taken while a buffer was being processed. Most of the measurements
+those measurements that were taken while a buffer was being processed. Most of the measurements are
 about \SI{4}{\milli\second}. These are the measurements taken when there was no data to process.
 They are the majority, indicating that higher data rates could be handled without a problem.
 
@@ -354,7 +354,7 @@ processing itself, meaning that the number of waits only decreased because more 
 processing data.
 
 Because so much time was spent processing data, the amount of time dedicated to the UI decreased and
-the latency increased. The high latencies caused problems with input handling since it could not be
+the latency increased. The high latencies caused problems with input handling since input could not be
 processed in time. Less time for the UI task also meant the real-time required for rendering the UI
 increased.
 
